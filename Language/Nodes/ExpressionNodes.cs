@@ -18,6 +18,14 @@ public class NumberNode(double value) : Node {
 	}
 }
 
+public class StringNode(string value) : Node {
+	public readonly string Value = value;
+    
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitString(this);
+	}
+}
+
 public class BoolNode(bool value) : Node {
 	public readonly bool Value = value;
     
@@ -63,5 +71,15 @@ public class AssignmentNode(string name, Node value) : Node {
     
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitAssignment(this);
+	}
+}
+
+public class ShorthandAssignmentNode(string name, string op, Node? value) : Node {
+	public readonly string Name = name;
+	public readonly string Op = op;
+	public readonly Node? Value = value;
+    
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitShorthandAssignment(this);
 	}
 }

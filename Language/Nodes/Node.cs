@@ -9,6 +9,7 @@ public interface INodeVisitor<out T> {
 	
 	T? VisitNull(NullNode node);
 	T VisitNumber(NumberNode node);
+	T VisitString(StringNode node);
 	T VisitBool(BoolNode node);
 	
 	// Operations
@@ -21,5 +22,6 @@ public interface INodeVisitor<out T> {
 	
 	T? VisitLet(LetNode node);
 	T VisitAssignment(AssignmentNode node);
+	T VisitShorthandAssignment(ShorthandAssignmentNode node);
 	T? VisitIF(IFNode node);
 }

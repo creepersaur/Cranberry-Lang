@@ -1,4 +1,4 @@
-﻿var text = File.ReadAllText("Hello.cranberry");
+﻿var text = File.ReadAllText("Hello.js");
 var program = new Cranberry.Program(text);
 
 program.RunProgram();

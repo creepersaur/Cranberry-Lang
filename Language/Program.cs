@@ -6,12 +6,16 @@ public class Program {
 
 	public Program(string text) {
 		var tokens = new Lexer(text).GetTokens();
+		// Lexer.PrintTokens(tokens);
 		parser = new Parser(tokens.ToArray());
 	}
 	
 	public void RunProgram() {
 		while (parser.PeekAhead() != null) {
 			interpreter.Evaluate(parser.Parse());
+			if (parser.Check(";")) {
+				parser.Advance();
+			}
 		}
 	}
 }

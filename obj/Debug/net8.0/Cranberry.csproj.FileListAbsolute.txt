@@ -12,4 +12,4 @@ D:\Coding\Rider\Cranberry\obj\Debug\net8.0\refint\Cranberry.dll
 D:\Coding\Rider\Cranberry\obj\Debug\net8.0\Cranberry.pdb
 D:\Coding\Rider\Cranberry\obj\Debug\net8.0\Cranberry.genruntimeconfig.cache
 D:\Coding\Rider\Cranberry\obj\Debug\net8.0\ref\Cranberry.dll
-D:\Coding\Rider\Cranberry\bin\Debug\net8.0\Hello.cranberry
+D:\Coding\Rider\Cranberry\bin\Debug\net8.0\Hello.js

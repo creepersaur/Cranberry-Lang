@@ -5,6 +5,7 @@ namespace Cranberry;
 
 public class Parser(string[] Tokens) {
     private int Pos = -1;
+    private static readonly string[] SHORTHANDS = ["+=", "-=", "*=", "/=", "^=", "%=", "++", "--"];
 
     // Get the token ahead (or by offset) as a string?
     public string? PeekAhead(int offset = 1) {
@@ -21,12 +22,12 @@ public class Parser(string[] Tokens) {
     }
     
     // Check if token is equal to ahead (no error)
-    private bool Check(string token, int offset = 1) {
+    public bool Check(string token, int offset = 1) {
         return PeekAhead(offset) == token;
     }
 
     // Advances and returns the token
-    private string? Advance() {
+    public string? Advance() {
         Pos += 1;
         return PeekAhead(0);
     }
@@ -50,6 +51,10 @@ public class Parser(string[] Tokens) {
             return ParseAssignment();
         }
         
+        if (IsIdentifier(token) && SHORTHANDS.Contains(PeekAhead(2))) {
+            return ParseShorthandAssignment();
+        }
+
         return ParseExpression();
     }
 
@@ -67,7 +72,41 @@ public class Parser(string[] Tokens) {
 
         Advance();
 
-        return new IFNode(condition, then.ToArray());
+        var elif = new List<(Node, Node[])>();
+        var else_statements = new List<Node>();
+        
+        while (Check("else")) {
+            Advance();
+            if (Check("if")) {
+                Advance();
+                var elif_condition = ParseExpression();
+                
+                Expect("{");
+                Advance();
+
+                var elif_statements = new List<Node>();
+                while (!Check("}")) {
+                    elif_statements.Add(Parse());
+                }
+
+                Advance();
+                
+                elif.Add((elif_condition, elif_statements.ToArray()));
+            } else {
+                Expect("{");
+                Advance();
+                
+                while (!Check("}")) {
+                    else_statements.Add(Parse());
+                }
+
+                Advance();
+
+                break;
+            }
+        }
+
+        return new IFNode(condition, then.ToArray(), elif.ToArray(), else_statements.ToArray());
     }
 
     private Node ParseLet() {
@@ -95,12 +134,43 @@ public class Parser(string[] Tokens) {
         Node value = ParseExpression(); // right side
         return new AssignmentNode(varName, value);
     }
+    
+    private Node ParseShorthandAssignment() {
+        string varName = Advance()!;
+        string op = Advance()!; // consume `+=`
+
+        Node? value = null;
+        if (op != "++" && op != "--") {
+            value = ParseExpression(); // right side
+        }
+        return new ShorthandAssignmentNode(varName, op, value);
+    }
 
     
     ////////////////////////////////////////////////////////////
     // HANDLE EXPRESSIONS
     ////////////////////////////////////////////////////////////
     public Node ParseExpression() {
+        return ParseComparison();
+    }
+
+    public Node ParseComparison() {
+        Node left = ParseAddSubtract(); // Next higher precedence
+
+        while (Pos < Tokens.Length) {
+            string? op = PeekAhead();
+            if (op != "==" && op != "!=" && op != "<" && op != ">" && op != "<=" && op != ">=") 
+                break;
+            
+            Advance();
+            Node right = ParseAddSubtract();
+            left = new BinaryOpNode(left, op, right);
+        }
+
+        return left;
+    }
+
+    public Node ParseAddSubtract() {
         Node left = ParseTerm();
 
         while (Pos < Tokens.Length) {
@@ -174,6 +244,11 @@ public class Parser(string[] Tokens) {
                 return new BoolNode(false);
         }
 
+        if (IsString(token)) {
+            Advance();
+            return new StringNode(token![1..^1]);
+        }
+
         // variable (identifier)
         if (IsIdentifier(token)) {
             Advance();
@@ -191,12 +266,17 @@ public class Parser(string[] Tokens) {
             return expr;
         }
 
-        throw new ParseError($"Unexpected token '{token}'", Pos);
+        throw new ParseError($"Unexpected token '{token}'", Pos + 1);
     }
     
     private static bool IsIdentifier(string? token) {
         return token != null && 
-               char.IsLetter(token[0]) && 
+               char.IsLetter(token[0]) || token![0] == '_' && 
                token.All(c => char.IsLetterOrDigit(c) || c == '_');
+    }
+
+    private static bool IsString(string? token) {
+        var Quotes = "'\"".ToCharArray();
+        return token != null && Quotes.Contains(token[0]) && Quotes.Contains(token[^1]);
     }
 }
