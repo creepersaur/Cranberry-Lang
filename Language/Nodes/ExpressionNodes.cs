@@ -1,4 +1,6 @@
-﻿namespace Cranberry.Nodes;
+﻿using System.Globalization;
+
+namespace Cranberry.Nodes;
 
 /////////////////////////////////////////////////////////
 // TYPES
@@ -8,6 +10,8 @@ public class NullNode : Node {
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitNull(this)!;
 	}
+
+	public override string ToString() => "nil";
 }
 
 public class NumberNode(double value) : Node {
@@ -16,6 +20,8 @@ public class NumberNode(double value) : Node {
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitNumber(this);
 	}
+
+	public override string ToString() => Convert.ToString(Value, CultureInfo.InvariantCulture);
 }
 
 public class StringNode(string value) : Node {
@@ -23,6 +29,16 @@ public class StringNode(string value) : Node {
     
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitString(this);
+	}
+
+	public override string ToString() => Value;
+}
+
+public class BlockNode(Node[] statements) : Node {
+	public readonly Node[] Statements = statements;
+	
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitBlock(this)!;
 	}
 }
 
@@ -32,14 +48,35 @@ public class BoolNode(bool value) : Node {
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitBool(this);
 	}
+
+	public override string ToString() => Convert.ToString(Value);
 }
 
-public class FunctionNode(string[] args, Node[] statements) : Node {
+public class FunctionNode(string[] args, BlockNode block) : Node {
 	public readonly string[] Args = args;
-	public readonly Node[] Statements = statements;
+	public readonly BlockNode Block = block;
 	
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFunction(this);
+	}
+}
+
+public class RangeNode(Node start, Node end, Node step, bool inclusive) : Node {
+	public readonly Node Start = start;
+	public readonly Node End = end;
+	public readonly Node Step = step;
+	public readonly bool Inclusive = inclusive;
+	
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitRange(this);
+	}
+
+	public override string ToString() {
+		if (Step is not NullNode) {
+			return $"Range<{Start} .. {End}, {Step}>";
+		}
+		
+		return $"Range<{Start} .. {End}>";
 	}
 }
 
@@ -96,7 +133,7 @@ public class ShorthandAssignmentNode(string name, string op, Node? value) : Node
 public class FunctionCall(string name, Node[] args) : Node {
 	public readonly string Name = name;
 	public readonly Node[] Args = args;
-	public Node? Target { get; set; } // What we're calling (for lambdas)
+	public Node? Target { get; init; } // What we're calling (for lambdas)
 
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFunctionCall(this)!;

@@ -1,5 +1,6 @@
 ﻿using Cranberry.Errors;
 using Cranberry.Nodes;
+
 // ReSharper disable ConvertIfStatementToSwitchStatement
 // ReSharper disable DuplicatedStatements
 
@@ -28,10 +29,11 @@ public class Interpreter : INodeVisitor<object> {
 	//////////////////////////////////////////
 
 	public object VisitNumber(NumberNode node) => node.Value;
-	public object? VisitNull(NullNode node) => null;
+	public object VisitNull(NullNode node) => node;
 	public object VisitBool(BoolNode node) => node.Value;
 	public object VisitString(StringNode node) => node.Value;
 	public object VisitFunction(FunctionNode node) => node;
+	public object VisitRange(RangeNode node) => node;
 
 	//////////////////////////////////////////
 	// EXPRESSIONS
@@ -67,7 +69,7 @@ public class Interpreter : INodeVisitor<object> {
 		};
 	}
 
-	private object HandleAddition(object? left, object? right) {
+	private static object HandleAddition(object? left, object? right) {
 		// String concatenation
 		if (left is string || right is string) {
 			return $"{left}{right}";
@@ -76,7 +78,7 @@ public class Interpreter : INodeVisitor<object> {
 		// Number addition
 		return Convert.ToDouble(left) + Convert.ToDouble(right);
 	}
-	
+
 	private static object HandleMultiplication(object? left, object? right) {
 		// String multiplication
 		if (left is string && right is double) {
@@ -87,7 +89,7 @@ public class Interpreter : INodeVisitor<object> {
 		return Convert.ToDouble(left) * Convert.ToDouble(right);
 	}
 
-	private bool AreEqual(object? left, object? right) {
+	private static bool AreEqual(object? left, object? right) {
 		if (left == null && right == null) return true;
 		if (left == null || right == null) return false;
 
@@ -99,7 +101,7 @@ public class Interpreter : INodeVisitor<object> {
 		return left.Equals(right);
 	}
 
-	private int CompareValues(object? left, object? right) {
+	private static int CompareValues(object? left, object? right) {
 		// String comparison
 		if (left is string leftStr && right is string rightStr) {
 			return string.CompareOrdinal(leftStr, rightStr);
@@ -131,7 +133,7 @@ public class Interpreter : INodeVisitor<object> {
 			var value = Evaluate(node.Values[index]);
 			env.Define(name, value);
 		}
-		
+
 		return null;
 	}
 
@@ -151,40 +153,40 @@ public class Interpreter : INodeVisitor<object> {
 				if (node.Value == null) throw new RuntimeError("'+=' requires a value");
 				newValue = HandleAddition(currentValue, Evaluate(node.Value));
 				break;
-            
+
 			case "-=":
 				if (node.Value == null) throw new RuntimeError("'-=' requires a value");
 				newValue = Convert.ToDouble(currentValue) - Convert.ToDouble(Evaluate(node.Value));
 				break;
-            
+
 			case "*=":
 				if (node.Value == null) throw new RuntimeError("'*=' requires a value");
 				newValue = HandleMultiplication(currentValue, Evaluate(node.Value));
 				break;
-            
+
 			case "/=":
 				if (node.Value == null) throw new RuntimeError("'/=' requires a value");
 				newValue = Convert.ToDouble(currentValue) / Convert.ToDouble(Evaluate(node.Value));
 				break;
-            
+
 			case "^=":
 				if (node.Value == null) throw new RuntimeError("'^=' requires a value");
 				newValue = Math.Pow(Convert.ToDouble(currentValue), Convert.ToDouble(Evaluate(node.Value)));
 				break;
-            
+
 			case "%=":
 				if (node.Value == null) throw new RuntimeError("'%=' requires a value");
 				newValue = Convert.ToDouble(currentValue) % Convert.ToDouble(Evaluate(node.Value));
 				break;
-            
+
 			case "++":
 				newValue = Convert.ToDouble(currentValue) + 1;
 				break;
-            
+
 			case "--":
 				newValue = Convert.ToDouble(currentValue) - 1;
 				break;
-            
+
 			default:
 				throw new RuntimeError($"Unknown shorthand operator: {node.Op}");
 		}
@@ -192,61 +194,57 @@ public class Interpreter : INodeVisitor<object> {
 		env.Set(node.Name, newValue);
 		return newValue;
 	}
-	
+
 	public object? VisitIF(IFNode node) {
 		if (IsTruthy(Evaluate(node.Condition))) {
 			env.Push();
-			foreach (var n in node.Then) {
-				Evaluate(n);
+			try {
+				return Evaluate(node.Then);
+			} finally {
+				env.Pop();
 			}
-
-			env.Pop();
-
-			return null;
 		}
 
 		for (int i = 0; i < node.Elif.Length; i++) {
 			if (IsTruthy(Evaluate(node.Elif[i].Item1))) {
 				env.Push();
-				foreach (var n in node.Elif[i].Item2) {
-					Evaluate(n);
+				try {
+					return Evaluate(node.Elif[i].Item2);
+				} finally {
+					env.Pop();
 				}
-
-				env.Pop();
-
-				return null;
 			}
 		}
 
-		if (node.ElseStatements.Length > 0) {
+		if (node.ElseStatements != null) {
 			env.Push();
-			foreach (var n in node.ElseStatements) {
-				Evaluate(n);
+			try {
+				return Evaluate(node.ElseStatements);
+			} finally {
+				env.Pop();
 			}
+		}
 
+		return null;
+	}
+
+	public object? VisitBlock(BlockNode node) {
+		foreach (var statement in node.Statements) {
+			Evaluate(statement);
+		}
+
+		return null;
+	}
+
+	public object VisitScope(ScopeNode node) {
+		env.Push();
+		try {
+			return Evaluate(node.Block);
+		} finally {
 			env.Pop();
 		}
-
-		return null;
 	}
 
-	public object? VisitScope(ScopeNode node) {
-		env.Push();
-
-		foreach (var statement in node.Statements) {
-			var value = Evaluate(statement);
-
-			if (statement is ReturnNode) {
-				env.Pop();
-				return value;
-			}
-		}
-			
-		env.Pop();
-
-		return null;
-	}
-	
 	public object? VisitFunctionCall(FunctionCall node) {
 		object?[] args = new object?[node.Args.Length];
 
@@ -260,44 +258,98 @@ public class Interpreter : INodeVisitor<object> {
 		}
 
 		FunctionNode? func = null;
-		// Check named function first
+
 		if (!string.IsNullOrEmpty(node.Name) && env.Get(node.Name) is FunctionNode namedFunc) {
 			func = namedFunc;
-		}
-		// Check target function (lambda/IIFE)
-		else if (node.Target != null && Evaluate(node.Target) is FunctionNode targetFunc) {
+		} else if (node.Target != null && Evaluate(node.Target) is FunctionNode targetFunc) {
 			func = targetFunc;
 		}
-		
+
 		if (func != null) {
 			env.Push();
-
-			foreach (var (index, arg) in func.Args.WithIndex()) {
-				env.Define(arg, Evaluate(node.Args[index]));
-			}
-
-			foreach (var statement in func.Statements) {
-				var value = Evaluate(statement);
-
-				if (statement is ReturnNode) {
-					env.Pop();
-					return value;
+			try {
+				for (int i = 0; i < func.Args.Length; i++) {
+					env.Define(func.Args[i], args[i]); // use args array
 				}
+
+				try {
+					// Evaluate the function's scope; if it returns normally, we get null or a value
+					var rv = Evaluate(func.Block);
+					return rv;
+				} catch (ReturnException re) {
+					// A return inside the function body landed here
+					return re.Value;
+				}
+			} finally {
+				env.Pop();
 			}
-			
-			env.Pop();
 		}
-		
-		return null;
+
+		return new NullNode();
 	}
 
 	public object? VisitFunctionDef(FunctionDef node) {
-		env.Define(node.Name, new FunctionNode(node.Args, node.Statements));
+		env.Define(node.Name, new FunctionNode(node.Args, node.Block));
 		return null;
 	}
 
 	public object VisitReturn(ReturnNode node) {
-		return Evaluate(node.Value);
+		if (node.Value != null) {
+			throw new ReturnException(Evaluate(node.Value));
+		}
+
+		throw new ReturnException(null);
+	}
+
+	public object VisitBreak(BreakNode node) {
+		if (node.Value != null) {
+			throw new BreakException(Evaluate(node.Value));
+		}
+
+		throw new BreakException(null);
+	}
+
+	public object? VisitWhile(WhileNode node) {
+		while (IsTruthy(Evaluate(node.Condition))) {
+			env.Push();
+			try {
+				Evaluate(node.Block);
+			} catch (BreakException be) {
+				return be.Value;
+			} finally {
+				env.Pop();
+			}
+		}
+
+		return new NullNode();
+	}
+
+	public object? VisitFOR(ForNode node) {
+		if (node.Iterable is RangeNode range) {
+			var step = Evaluate(range.Step);
+			if (step is null or NullNode)
+				step = 1;
+			
+			for (double i = Convert.ToDouble(Evaluate(range.Start));
+			     range.Inclusive switch {
+				     true => i <= Convert.ToDouble(Evaluate(range.End)),
+				     _ => i < Convert.ToDouble(Evaluate(range.End))
+			     };
+			     i += Convert.ToDouble(step)
+			    ) {
+				env.Push();
+				try {
+					env.Define(node.VarName, i);
+					Evaluate(node.Block);
+				} catch (BreakException be) {
+					return be.Value;
+				} finally {
+					env.Pop();
+				}
+			}
+		}
+
+		return new NullNode();
 	}
 }
 

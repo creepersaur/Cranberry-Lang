@@ -1,11 +1,13 @@
-﻿using Cranberry.Nodes;
+﻿using Cranberry.Errors;
+using Cranberry.Nodes;
+
 // ReSharper disable LoopCanBeConvertedToQuery
 namespace Cranberry.Builtin;
 
 public static class BuiltinFunctions {
 	public static Node Print(object?[] args, bool new_line = false) {
 		string output = "";
-		
+
 		foreach (var t in args) {
 			output += Convert.ToString(t) + " ";
 		}

@@ -4,7 +4,7 @@ public class Lexer {
 	private static readonly char[] PUNCTUATION = "!@$%^&*()[]{},./:;\\-=+`~<>?".ToCharArray();
 	private static readonly char[] QUOTES = "\"\'".ToCharArray();
 	private static readonly char[] SPACE = " \n\t\r".ToCharArray();
-	private static readonly string[] DOUBLE_PUNCS = ["+=", "-=", "*=", "/=", "++", "--", "//"];
+	private static readonly string[] DOUBLE_PUNCS = ["+=", "-=", "*=", "/=", "++", "--", "//", "..", "==", "!=", ">=", "<="];
 
 	private readonly char[] Text;
 	private int Pos;
@@ -30,7 +30,7 @@ public class Lexer {
 	bool IsQuote(char? c) => c.HasValue && QUOTES.Contains(c.Value);
 
 	bool IsSpace(char? c) => c.HasValue && SPACE.Contains(c.Value);
-	
+
 	private static string ProcessEscapeSequences(string str) {
 		return str.Replace("\\n", "\n")
 			.Replace("\\t", "\t")
@@ -46,17 +46,17 @@ public class Lexer {
 		var curToken = "";
 		char? instr = null;
 		bool in_comment = false;
-		
+
 		while (CurChar.HasValue) {
 			if (in_comment) {
 				if (CurChar == '\n') {
 					in_comment = false;
 				}
-				
+
 				Advance();
 				continue;
 			}
-			
+
 			if (IsSpace(CurChar) && !instr.HasValue) {
 				if (curToken.Length > 0) {
 					tokens.Add(curToken);
@@ -67,17 +67,17 @@ public class Lexer {
 					tokens.Add(curToken);
 					curToken = "";
 				}
-				
+
 				in_comment = true;
 			} else if (IsPunctuation(CurChar) && !instr.HasValue) {
-				if (CurChar == '.' && int.TryParse(curToken, out int _)) {
+				if (CurChar == '.' && int.TryParse(curToken, out int _) && Pos + 1 < Text.Length && int.TryParse(Text[Pos + 1].ToString(), out int _)) {
 					curToken += CurChar;
 				} else {
 					if (curToken.Length > 0) {
 						tokens.Add(curToken);
 						curToken = "";
 					}
-					
+
 					if (Pos + 1 < Text.Length && IsPunctuation(Text[Pos + 1])) {
 						var double_punctuation = CurChar.Value + Text[Pos + 1].ToString();
 						if (DOUBLE_PUNCS.Contains(double_punctuation)) {
