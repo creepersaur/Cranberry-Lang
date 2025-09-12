@@ -34,6 +34,15 @@ public class BoolNode(bool value) : Node {
 	}
 }
 
+public class FunctionNode(string[] args, Node[] statements) : Node {
+	public readonly string[] Args = args;
+	public readonly Node[] Statements = statements;
+	
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitFunction(this);
+	}
+}
+
 /////////////////////////////////////////////////////////
 // OPERATIONS
 /////////////////////////////////////////////////////////
@@ -81,5 +90,15 @@ public class ShorthandAssignmentNode(string name, string op, Node? value) : Node
     
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitShorthandAssignment(this);
+	}
+}
+
+public class FunctionCall(string name, Node[] args) : Node {
+	public readonly string Name = name;
+	public readonly Node[] Args = args;
+	public Node? Target { get; set; } // What we're calling (for lambdas)
+
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitFunctionCall(this)!;
 	}
 }

@@ -11,17 +11,22 @@ public interface INodeVisitor<out T> {
 	T VisitNumber(NumberNode node);
 	T VisitString(StringNode node);
 	T VisitBool(BoolNode node);
+	T VisitFunction(FunctionNode node);
 	
 	// Operations
 	
-	T VisitVariable(VariableNode node);
 	T VisitBinaryOp(BinaryOpNode node);
 	T VisitUnaryOp(UnaryOpNode node);
+	T VisitVariable(VariableNode node);
+	T VisitAssignment(AssignmentNode node);
+	T VisitShorthandAssignment(ShorthandAssignmentNode node);
+	T? VisitFunctionCall(FunctionCall node);
 	
 	// Statements
 	
 	T? VisitLet(LetNode node);
-	T VisitAssignment(AssignmentNode node);
-	T VisitShorthandAssignment(ShorthandAssignmentNode node);
 	T? VisitIF(IFNode node);
+	T? VisitFunctionDef(FunctionDef node);
+	T? VisitReturn(ReturnNode node);
+	T? VisitScope(ScopeNode node);
 }

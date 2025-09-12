@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <None Update="Hello.js">
+      <None Update="Hello.cranberry">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>

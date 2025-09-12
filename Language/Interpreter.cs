@@ -1,5 +1,7 @@
 ﻿using Cranberry.Errors;
 using Cranberry.Nodes;
+// ReSharper disable ConvertIfStatementToSwitchStatement
+// ReSharper disable DuplicatedStatements
 
 namespace Cranberry;
 
@@ -29,6 +31,7 @@ public class Interpreter : INodeVisitor<object> {
 	public object? VisitNull(NullNode node) => null;
 	public object VisitBool(BoolNode node) => node.Value;
 	public object VisitString(StringNode node) => node.Value;
+	public object VisitFunction(FunctionNode node) => node;
 
 	//////////////////////////////////////////
 	// EXPRESSIONS
@@ -50,6 +53,7 @@ public class Interpreter : INodeVisitor<object> {
 			"*" => HandleMultiplication(leftVal, rightVal),
 			"^" => Math.Pow(Convert.ToDouble(leftVal), Convert.ToDouble(rightVal)),
 			"%" => Convert.ToDouble(leftVal) % Convert.ToDouble(rightVal),
+			"//" => Math.Floor(Convert.ToDouble(leftVal) / Convert.ToDouble(rightVal)),
 
 			// Comparisons - handle different types
 			"==" => AreEqual(leftVal, rightVal),
@@ -74,7 +78,7 @@ public class Interpreter : INodeVisitor<object> {
 	}
 	
 	private static object HandleMultiplication(object? left, object? right) {
-		// String concatenation
+		// String multiplication
 		if (left is string && right is double) {
 			return string.Concat(Enumerable.Repeat(left, Convert.ToInt32(right)));
 		}
@@ -123,8 +127,11 @@ public class Interpreter : INodeVisitor<object> {
 	//////////////////////////////////////////
 
 	public object? VisitLet(LetNode node) {
-		var value = Evaluate(node.Value);
-		env.Define(node.name, value);
+		foreach (var (index, name) in node.Names.WithIndex()) {
+			var value = Evaluate(node.Values[index]);
+			env.Define(name, value);
+		}
+		
 		return null;
 	}
 
@@ -221,5 +228,81 @@ public class Interpreter : INodeVisitor<object> {
 		}
 
 		return null;
+	}
+
+	public object? VisitScope(ScopeNode node) {
+		env.Push();
+
+		foreach (var statement in node.Statements) {
+			var value = Evaluate(statement);
+
+			if (statement is ReturnNode) {
+				env.Pop();
+				return value;
+			}
+		}
+			
+		env.Pop();
+
+		return null;
+	}
+	
+	public object? VisitFunctionCall(FunctionCall node) {
+		object?[] args = new object?[node.Args.Length];
+
+		for (int i = 0; i < args.Length; i++) {
+			args[i] = Evaluate(node.Args[i]);
+		}
+
+		switch (node.Name) {
+			case "print": return Builtin.BuiltinFunctions.Print(args);
+			case "println": return Builtin.BuiltinFunctions.Print(args, true);
+		}
+
+		FunctionNode? func = null;
+		// Check named function first
+		if (!string.IsNullOrEmpty(node.Name) && env.Get(node.Name) is FunctionNode namedFunc) {
+			func = namedFunc;
+		}
+		// Check target function (lambda/IIFE)
+		else if (node.Target != null && Evaluate(node.Target) is FunctionNode targetFunc) {
+			func = targetFunc;
+		}
+		
+		if (func != null) {
+			env.Push();
+
+			foreach (var (index, arg) in func.Args.WithIndex()) {
+				env.Define(arg, Evaluate(node.Args[index]));
+			}
+
+			foreach (var statement in func.Statements) {
+				var value = Evaluate(statement);
+
+				if (statement is ReturnNode) {
+					env.Pop();
+					return value;
+				}
+			}
+			
+			env.Pop();
+		}
+		
+		return null;
+	}
+
+	public object? VisitFunctionDef(FunctionDef node) {
+		env.Define(node.Name, new FunctionNode(node.Args, node.Statements));
+		return null;
+	}
+
+	public object VisitReturn(ReturnNode node) {
+		return Evaluate(node.Value);
+	}
+}
+
+public static class EnumerableExtensions {
+	public static IEnumerable<(int Index, T Item)> WithIndex<T>(this IEnumerable<T> source) {
+		return source.Select((item, index) => (index, item));
 	}
 }

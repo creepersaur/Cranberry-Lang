@@ -1,9 +1,10 @@
 ﻿namespace Cranberry;
 
 public class Lexer {
-	private static readonly char[] PUNCTUATION = "!@#$%^&*()[]{},./:;\\-=+`~<>?".ToCharArray();
+	private static readonly char[] PUNCTUATION = "!@$%^&*()[]{},./:;\\-=+`~<>?".ToCharArray();
 	private static readonly char[] QUOTES = "\"\'".ToCharArray();
 	private static readonly char[] SPACE = " \n\t\r".ToCharArray();
+	private static readonly string[] DOUBLE_PUNCS = ["+=", "-=", "*=", "/=", "++", "--", "//"];
 
 	private readonly char[] Text;
 	private int Pos;
@@ -29,18 +30,45 @@ public class Lexer {
 	bool IsQuote(char? c) => c.HasValue && QUOTES.Contains(c.Value);
 
 	bool IsSpace(char? c) => c.HasValue && SPACE.Contains(c.Value);
+	
+	private static string ProcessEscapeSequences(string str) {
+		return str.Replace("\\n", "\n")
+			.Replace("\\t", "\t")
+			.Replace("\\r", "\r")
+			.Replace(@"\\", "\\")
+			.Replace("\\\"", "\"")
+			.Replace("\\'", "'")
+			.Replace("\\0", "\0");
+	}
 
 	public List<string> GetTokens() {
 		var tokens = new List<string>();
 		var curToken = "";
 		char? instr = null;
-
+		bool in_comment = false;
+		
 		while (CurChar.HasValue) {
+			if (in_comment) {
+				if (CurChar == '\n') {
+					in_comment = false;
+				}
+				
+				Advance();
+				continue;
+			}
+			
 			if (IsSpace(CurChar) && !instr.HasValue) {
 				if (curToken.Length > 0) {
 					tokens.Add(curToken);
 					curToken = "";
 				}
+			} else if (CurChar == '#') {
+				if (curToken.Length > 0) {
+					tokens.Add(curToken);
+					curToken = "";
+				}
+				
+				in_comment = true;
 			} else if (IsPunctuation(CurChar) && !instr.HasValue) {
 				if (CurChar == '.' && int.TryParse(curToken, out int _)) {
 					curToken += CurChar;
@@ -51,8 +79,13 @@ public class Lexer {
 					}
 					
 					if (Pos + 1 < Text.Length && IsPunctuation(Text[Pos + 1])) {
-						tokens.Add(CurChar.Value.ToString() + Text[Pos + 1].ToString());
-						Advance();
+						var double_punctuation = CurChar.Value + Text[Pos + 1].ToString();
+						if (DOUBLE_PUNCS.Contains(double_punctuation)) {
+							tokens.Add(CurChar.Value + Text[Pos + 1].ToString());
+							Advance();
+						} else {
+							tokens.Add(CurChar.Value.ToString());
+						}
 					} else {
 						tokens.Add(CurChar.Value.ToString());
 					}
@@ -63,7 +96,7 @@ public class Lexer {
 						instr = null;
 						curToken += CurChar;
 
-						tokens.Add(curToken);
+						tokens.Add(ProcessEscapeSequences(curToken));
 						curToken = "";
 
 						Advance();
