@@ -31,6 +31,7 @@ public interface INodeVisitor<out T> {
 	T? VisitFunctionDef(FunctionDef node);
 	T? VisitReturn(ReturnNode node);
 	T? VisitBreak(BreakNode node);
+	T? VisitContinue(ContinueNode node);
 	T? VisitScope(ScopeNode node);
 	T? VisitWhile(WhileNode node);
 	T? VisitFOR(ForNode node);

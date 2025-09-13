@@ -309,6 +309,10 @@ public class Interpreter : INodeVisitor<object> {
 		throw new BreakException(null);
 	}
 
+	public object VisitContinue(ContinueNode node) {
+		throw new ContinueException();
+	}
+
 	public object? VisitWhile(WhileNode node) {
 		while (IsTruthy(Evaluate(node.Condition))) {
 			env.Push();
@@ -316,6 +320,7 @@ public class Interpreter : INodeVisitor<object> {
 				Evaluate(node.Block);
 			} catch (BreakException be) {
 				return be.Value;
+			} catch (ContinueException) {
 			} finally {
 				env.Pop();
 			}
@@ -329,11 +334,17 @@ public class Interpreter : INodeVisitor<object> {
 			var step = Evaluate(range.Step);
 			if (step is null or NullNode)
 				step = 1;
-			
+
 			for (double i = Convert.ToDouble(Evaluate(range.Start));
-			     range.Inclusive switch {
-				     true => i <= Convert.ToDouble(Evaluate(range.End)),
-				     _ => i < Convert.ToDouble(Evaluate(range.End))
+			     (step is double && Convert.ToDouble(step) < 0) switch {
+				     true => range.Inclusive switch {
+					     true => i >= Convert.ToDouble(Evaluate(range.End)),
+					     _ => i > Convert.ToDouble(Evaluate(range.End))
+				     },
+				     _ => range.Inclusive switch {
+					     true => i <= Convert.ToDouble(Evaluate(range.End)),
+					     _ => i < Convert.ToDouble(Evaluate(range.End))
+				     }
 			     };
 			     i += Convert.ToDouble(step)
 			    ) {
@@ -343,6 +354,7 @@ public class Interpreter : INodeVisitor<object> {
 					Evaluate(node.Block);
 				} catch (BreakException be) {
 					return be.Value;
+				} catch (ContinueException) {
 				} finally {
 					env.Pop();
 				}

@@ -54,6 +54,12 @@ public class BreakNode(Node? value) : Node {
 	}
 }
 
+public class ContinueNode : Node {
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitContinue(this)!;
+	}
+}
+
 public class WhileNode(Node condition, BlockNode block) : Node {
 	public readonly Node Condition = condition;
 	public readonly Node Block = block;

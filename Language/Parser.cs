@@ -64,6 +64,11 @@ public class Parser(string[] Tokens) {
                 return new BreakNode(new NullNode());
             return new BreakNode(ParseExpression());
         }
+        
+        if (token == "continue") {
+            Advance();
+            return new ContinueNode();
+        }
 
         if (token == "{") {
             return new ScopeNode(ParseBlock());
@@ -103,6 +108,16 @@ public class Parser(string[] Tokens) {
     }
     
     private BlockNode ParseBlock() {
+        if (Check("=>")) {
+            Advance();
+            var node = Parse();
+            
+            if (Check(";"))
+                Advance();
+            
+            return new BlockNode([node]);
+        }
+        
         Expect("{");
         Advance();
         
@@ -269,18 +284,43 @@ public class Parser(string[] Tokens) {
     }
 
     private Node ParseTerm() {
-        Node left = ParseUnary();
+        Node left = ParseRange();
 
         while (Pos < Tokens.Length) {
             string? op = PeekAhead();
             if (op != "*" && op != "/" && op != "%" && op != "//") break;
 
             Advance();
-            Node right = ParseUnary();
+            Node right = ParseRange();
             left = new BinaryOpNode(left, op, right);
         }
 
         return left;
+    }
+
+    private Node ParseRange() {
+        Node first = ParseUnary();
+
+        if (Check("..")) {
+            Advance();
+            
+            bool inclusive = Check("=");
+            if (inclusive)
+                Advance();
+            
+            Node second = ParseUnary();
+            
+            if (Check("..")) {
+                Advance();
+                
+                Node third = ParseUnary();
+                return new RangeNode(first, second, third, inclusive);
+            }
+            
+            return new RangeNode(first, second, new NullNode(), inclusive);
+        }
+        
+        return first;
     }
 
     private Node ParseUnary() {
@@ -295,43 +335,18 @@ public class Parser(string[] Tokens) {
     }
 
     private Node ParsePower() {
-        Node left = ParseRange();
+        Node left = ParseFactor();
 
         while (Pos < Tokens.Length) {
             string? op = PeekAhead();
             if (op != "^") break;
 
             Advance();
-            Node right = ParseRange();
+            Node right = ParseFactor();
             left = new BinaryOpNode(left, op, right);
         }
 
         return left;
-    }
-
-    private Node ParseRange() {
-        Node first = ParseFactor();
-
-        if (Check("..")) {
-            Advance();
-            
-            bool inclusive = Check("=");
-            if (inclusive)
-                Advance();
-            
-            Node second = ParseFactor();
-            
-            if (Check("..")) {
-                Advance();
-                
-                Node third = ParseFactor();
-                return new RangeNode(first, second, third, inclusive);
-            }
-            
-            return new RangeNode(first, second, new NullNode(), inclusive);
-        }
-        
-        return first;
     }
     
     private Node ParseFactor() {

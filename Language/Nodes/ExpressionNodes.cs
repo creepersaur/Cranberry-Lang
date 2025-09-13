@@ -101,6 +101,8 @@ public class UnaryOpNode(string op, Node value) : Node {
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitUnaryOp(this);
 	}
+	
+	public override string ToString() => Op + Value;
 }
 
 public class VariableNode(string name) : Node {
