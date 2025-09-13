@@ -34,12 +34,13 @@ public class Interpreter : INodeVisitor<object> {
 	public object VisitString(StringNode node) => node.Value;
 	public object VisitFunction(FunctionNode node) => node;
 	public object VisitRange(RangeNode node) => node;
+	public object VisitList(ListNode node) => node;
 
 	//////////////////////////////////////////
 	// EXPRESSIONS
 	//////////////////////////////////////////
 
-	public object VisitVariable(VariableNode node) => env.Get(node.Name);
+	public object VisitVariable(VariableNode node) => env.Get(node.Name) ?? new NullNode();
 
 	public object VisitBinaryOp(BinaryOpNode node) {
 		object leftVal = Evaluate(node.Left);
@@ -145,7 +146,7 @@ public class Interpreter : INodeVisitor<object> {
 	}
 
 	public object VisitShorthandAssignment(ShorthandAssignmentNode node) {
-		object currentValue = env.Get(node.Name);
+		object currentValue = env.Get(node.Name)!;
 		object newValue;
 
 		switch (node.Op) {
@@ -200,6 +201,8 @@ public class Interpreter : INodeVisitor<object> {
 			env.Push();
 			try {
 				return Evaluate(node.Then);
+			} catch (OutException re) {
+				return re.Value;
 			} finally {
 				env.Pop();
 			}
@@ -210,6 +213,8 @@ public class Interpreter : INodeVisitor<object> {
 				env.Push();
 				try {
 					return Evaluate(node.Elif[i].Item2);
+				} catch (OutException re) {
+					return re.Value;
 				} finally {
 					env.Pop();
 				}
@@ -220,12 +225,14 @@ public class Interpreter : INodeVisitor<object> {
 			env.Push();
 			try {
 				return Evaluate(node.ElseStatements);
+			} catch (OutException re) {
+				return re.Value;
 			} finally {
 				env.Pop();
 			}
 		}
 
-		return null;
+		return new NullNode();
 	}
 
 	public object? VisitBlock(BlockNode node) {
@@ -236,10 +243,12 @@ public class Interpreter : INodeVisitor<object> {
 		return null;
 	}
 
-	public object VisitScope(ScopeNode node) {
+	public object? VisitScope(ScopeNode node) {
 		env.Push();
 		try {
 			return Evaluate(node.Block);
+		} catch (OutException re) {
+			return re.Value;
 		} finally {
 			env.Pop();
 		}
@@ -273,11 +282,11 @@ public class Interpreter : INodeVisitor<object> {
 				}
 
 				try {
-					// Evaluate the function's scope; if it returns normally, we get null or a value
 					var rv = Evaluate(func.Block);
 					return rv;
 				} catch (ReturnException re) {
-					// A return inside the function body landed here
+					return re.Value;
+				} catch (OutException re) {
 					return re.Value;
 				}
 			} finally {
@@ -309,6 +318,14 @@ public class Interpreter : INodeVisitor<object> {
 		throw new BreakException(null);
 	}
 
+	public object VisitOut(OutNode node) {
+		if (node.Value != null) {
+			throw new OutException(Evaluate(node.Value));
+		}
+
+		throw new OutException(null);
+	}
+
 	public object VisitContinue(ContinueNode node) {
 		throw new ContinueException();
 	}
@@ -320,6 +337,8 @@ public class Interpreter : INodeVisitor<object> {
 				Evaluate(node.Block);
 			} catch (BreakException be) {
 				return be.Value;
+			} catch (OutException re) {
+				return re.Value;
 			} catch (ContinueException) {
 			} finally {
 				env.Pop();
@@ -354,6 +373,8 @@ public class Interpreter : INodeVisitor<object> {
 					Evaluate(node.Block);
 				} catch (BreakException be) {
 					return be.Value;
+				} catch (OutException be) {
+					return be.Value;
 				} catch (ContinueException) {
 				} finally {
 					env.Pop();
@@ -362,6 +383,53 @@ public class Interpreter : INodeVisitor<object> {
 		}
 
 		return new NullNode();
+	}
+
+	public object? VisitSwitch(SwitchNode node) {
+		var value = Evaluate(node.Expr);
+
+		foreach (var (expr, block) in node.Cases) {
+			if (value.Equals(Evaluate(expr))) {
+				env.Push();
+				try {
+					return Evaluate(block);
+				} catch (OutException re) {
+					return re.Value;
+				} finally {
+					env.Pop();
+				}
+			}
+		}
+
+		if (node.DefaultCase != null) {
+			env.Push();
+			try {
+				Evaluate(node.DefaultCase);
+			} catch (OutException re) {
+				return re.Value;
+			} finally {
+				env.Pop();
+			}
+		}
+
+		return new NullNode();
+	}
+
+	public object VisitMemberAccess(MemberAccessNode node) {
+		var target = Evaluate(node.Target);
+
+		if (target is RangeNode) {
+			var result = node.Member switch {
+				"hello" => new StringNode("world"),
+				
+				_ => null
+			};
+
+			if (result != null)
+				return result;
+		}
+
+		throw new ReturnException($"Cannot access member '{node.Member}' on value '{target}'");
 	}
 }
 

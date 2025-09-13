@@ -4,494 +4,563 @@ using Cranberry.Nodes;
 namespace Cranberry;
 
 public class Parser(string[] Tokens) {
-    private int Pos = -1;
-    private static readonly string[] SHORTHANDS = ["+=", "-=", "*=", "/=", "^=", "%=", "++", "--"];
+	private int Pos = -1;
+	private static readonly string[] SHORTHANDS = ["+=", "-=", "*=", "/=", "^=", "%=", "++", "--"];
 
-    // Get the token ahead (or by offset) as a string?
-    public string? PeekAhead(int offset = 1) {
-        int index = Pos + offset;
-        return index >= Tokens.Length ? null : Tokens[index];
-    }
+	// Get the token ahead (or by offset) as a string?
+	public string? PeekAhead(int offset = 1) {
+		int index = Pos + offset;
+		return index >= Tokens.Length ? null : Tokens[index];
+	}
 
-    // Peek ahead and throw and error if token isn't expected
-    private void Expect(string token) {
-        string? ahead = PeekAhead();
-        if (ahead != token) {
-            throw new ParseError($"Expected '{token}', got '{ahead}'", Pos + 1);
-        }
-    }
-    
-    // Check if token is equal to ahead (no error)
-    public bool Check(string token, int offset = 1) {
-        return PeekAhead(offset) == token;
-    }
+	// Peek ahead and throw and error if token isn't expected
+	private void Expect(string token) {
+		string? ahead = PeekAhead();
+		if (ahead != token) {
+			throw new ParseError($"Expected '{token}', got '{ahead}'", Pos + 1);
+		}
+	}
 
-    // Advances and returns the token
-    public string? Advance() {
-        Pos += 1;
-        return PeekAhead(0);
-    }
-    
-    
-    ////////////////////////////////////////////////////////////
-    // HANDLE STATEMENTS
-    ////////////////////////////////////////////////////////////
-    public Node Parse() {
-        string? token = PeekAhead();
+	// Check if token is equal to ahead (no error)
+	public bool Check(string token, int offset = 1) {
+		return PeekAhead(offset) == token;
+	}
 
-        if (token == "let") {
-            return ParseLet();
-        }
-        
-        if (token == "if") {
-            return ParseIF();
-        }
+	// Advances and returns the token
+	public string? Advance() {
+		Pos += 1;
+		return PeekAhead(0);
+	}
 
-        if (token == "fn") {
-            return ParseFunctionDef();
-        }
 
-        if (token == "return") {
-            Advance();
-            if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
-                return new ReturnNode(new NullNode());
-            return new ReturnNode(ParseExpression());
-        }
-        
-        if (token == "break") {
-            Advance();
-            if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
-                return new BreakNode(new NullNode());
-            return new BreakNode(ParseExpression());
-        }
-        
-        if (token == "continue") {
-            Advance();
-            return new ContinueNode();
-        }
+	////////////////////////////////////////////////////////////
+	// HANDLE STATEMENTS
+	////////////////////////////////////////////////////////////
+	public Node Parse() {
+		string? token = PeekAhead();
 
-        if (token == "{") {
-            return new ScopeNode(ParseBlock());
-        }
-        
-        var is_identifier = IsIdentifier(token);
-        
-        if (is_identifier && Check("=", 2)) {
-            return ParseAssignment();
-        }
-        
-        if (is_identifier && SHORTHANDS.Contains(PeekAhead(2))) {
-            return ParseShorthandAssignment();
-        }
+		if (token == "let") {
+			return ParseLet();
+		}
 
-        return ParseExpression();
-    }
+		if (token == "fn") {
+			return ParseFunctionDef();
+		}
 
-    private WhileNode ParseWhile() {
-        Advance();
+		if (token == "return") {
+			Advance();
+			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
+				return new ReturnNode(new NullNode());
+			return new ReturnNode(ParseExpression());
+		}
 
-        return new WhileNode(ParseExpression(), ParseBlock());
-    }
-    
-    private ForNode ParseFOR() {
-        Advance();
+		if (token == "break") {
+			Advance();
+			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
+				return new BreakNode(new NullNode());
+			return new BreakNode(ParseExpression());
+		}
 
-        string var_name = Advance()!;
-        if (!IsIdentifier(var_name)) {
-            throw new ParseError("For-loop variable name must be an identifier", Pos);
-        }
-        
-        Expect("in");
-        Advance();
+		if (token == "continue") {
+			Advance();
+			return new ContinueNode();
+		}
 
-        return new ForNode(var_name, ParseExpression(), ParseBlock());
-    }
-    
-    private BlockNode ParseBlock() {
-        if (Check("=>")) {
-            Advance();
-            var node = Parse();
-            
-            if (Check(";"))
-                Advance();
-            
-            return new BlockNode([node]);
-        }
-        
-        Expect("{");
-        Advance();
-        
-        var statements = new List<Node>();
-        while (!Check("}")) {
-            statements.Add(Parse());
-            if (Check(";"))
-                Advance();
-        }
-        
-        Expect("}");
-        Advance();
+		var is_identifier = IsIdentifier(token);
 
-        return new BlockNode(statements.ToArray());
-    }
+		if (is_identifier && Check("=", 2)) {
+			return ParseAssignment();
+		}
 
-    private FunctionDef ParseFunctionDef() {
-        Advance();
+		if (is_identifier && SHORTHANDS.Contains(PeekAhead(2))) {
+			return ParseShorthandAssignment();
+		}
 
-        var func_name = Advance();
-        if (!IsIdentifier(func_name)) {
-            throw new ParseError("Function name must be an identifier.", Pos);
-        }
-        
-        Expect("(");
-        Advance();
+		return ParseExpression();
+	}
 
-        var args = new List<string>();
+	private WhileNode ParseWhile() {
+		Advance();
 
-        while (!Check(")")) {
-            args.Add(Advance()!);
-            if (Check(",")) {
-                Advance();
-            } else {
-                break;
-            }
-        }
-        
-        Expect(")");
-        Advance();
+		return new WhileNode(ParseExpression(), ParseBlock());
+	}
 
-        return new FunctionDef(func_name!, args.ToArray(), ParseBlock());
-    }
+	private ForNode ParseFOR() {
+		Advance();
 
-    private IFNode ParseIF() {
-        Advance();
-        var condition = ParseExpression();
-        var then = ParseBlock();
+		string var_name = Advance()!;
+		if (!IsIdentifier(var_name)) {
+			throw new ParseError("For-loop variable name must be an identifier", Pos);
+		}
 
-        var elif = new List<(Node, BlockNode)>();
-        BlockNode? else_statement = null;
-        
-        while (Check("else")) {
-            Advance();
-            if (Check("if")) {
-                Advance();
-                var elif_condition = ParseExpression();
-                elif.Add((elif_condition, ParseBlock()));
-            } else {
-                else_statement = ParseBlock();
-                break;
-            }
-        }
+		Expect("in");
+		Advance();
 
-        return new IFNode(condition, then, elif.ToArray(), else_statement);
-    }
+		return new ForNode(var_name, ParseExpression(), ParseBlock());
+	}
 
-    private LetNode ParseLet() {
-        Advance();
-        var names = new List<string>();
-        var first_name = Advance();
-        if (!IsIdentifier(first_name)) {
-            throw new ParseError($"Expected identifier as variable name, got: `{first_name}`", Pos + 1);
-        }
-        names.Add(first_name!);
-        
-        while (Check(",")) {
-            Advance();
-            var name = Advance();
-            if (!IsIdentifier(name)) {
-                throw new ParseError($"Expected identifier as variable name, got: `{name}`", Pos + 1);
-            }
-            names.Add(name!);
-        }
+	private BlockNode ParseBlock(bool arrow = false) {
+		if (Check("=>") || arrow) {
+			Advance();
+			var node = Parse();
 
-        // Initialization
-        if (Check("=")) {
-            Advance();
+			if (Check(";"))
+				Advance();
 
-            var values = new List<Node>();
-            values.Add(ParseExpression());
+			return new BlockNode([new OutNode(node)]);
+		}
 
-            while (Check(",")) {
-                Advance();
-                values.Add(ParseExpression());
-            }
+		Expect("{");
+		Advance();
 
-            if (values.Count != names.Count) {
-                throw new ParseError($"Number of expressions ({values.Count}) should match number of variables ({names.Count}).", Pos);
-            }
-            
-            return new LetNode(names.ToArray(), values.ToArray());
-        }
+		var statements = new List<Node>();
+		while (!Check("}")) {
+			statements.Add(Parse());
+			if (Check(";"))
+				Advance();
+		}
 
-        return new LetNode(names.ToArray(), Enumerable.Repeat(new NullNode(), names.Count).ToArray<Node>());
-    }
-    
-    private AssignmentNode ParseAssignment() {
-        string varName = Advance()!;
-        Advance(); // consume `=`
-        
-        Node value = ParseExpression(); // right side
-        return new AssignmentNode(varName, value);
-    }
-    
-    private ShorthandAssignmentNode ParseShorthandAssignment() {
-        string varName = Advance()!;
-        string op = Advance()!; // consume `+=`
+		Expect("}");
+		Advance();
 
-        Node? value = null;
-        if (op != "++" && op != "--") {
-            value = ParseExpression(); // right side
-        }
-        return new ShorthandAssignmentNode(varName, op, value);
-    }
+		return new BlockNode(statements.ToArray());
+	}
 
-    
-    ////////////////////////////////////////////////////////////
-    // HANDLE EXPRESSIONS
-    ////////////////////////////////////////////////////////////
-    public Node ParseExpression() {
-        return ParseComparison();
-    }
+	private FunctionDef ParseFunctionDef() {
+		Advance();
 
-    public Node ParseComparison() {
-        Node left = ParseAddSubtract(); // Next higher precedence
+		var func_name = Advance();
+		if (!IsIdentifier(func_name)) {
+			throw new ParseError("Function name must be an identifier.", Pos);
+		}
 
-        while (Pos < Tokens.Length) {
-            string? op = PeekAhead();
-            if (op != "==" && op != "!=" && op != "<" && op != ">" && op != "<=" && op != ">=") 
-                break;
-            
-            Advance();
-            Node right = ParseAddSubtract();
-            left = new BinaryOpNode(left, op, right);
-        }
+		Expect("(");
+		Advance();
 
-        return left;
-    }
+		var args = new List<string>();
 
-    public Node ParseAddSubtract() {
-        Node left = ParseTerm();
+		while (!Check(")")) {
+			args.Add(Advance()!);
+			if (Check(",")) {
+				Advance();
+			} else {
+				break;
+			}
+		}
 
-        while (Pos < Tokens.Length) {
-            string? op = PeekAhead();
-            if (op != "+" && op != "-") break;
+		Expect(")");
+		Advance();
 
-            Advance();
-            Node right = ParseTerm();
-            left = new BinaryOpNode(left, op, right);
-        }
+		return new FunctionDef(func_name!, args.ToArray(), ParseBlock());
+	}
 
-        return left;
-    }
+	private IFNode ParseIF() {
+		Advance();
+		var condition = ParseExpression();
+		var then = ParseBlock();
 
-    private Node ParseTerm() {
-        Node left = ParseRange();
+		var elif = new List<(Node, BlockNode)>();
+		BlockNode? else_statement = null;
 
-        while (Pos < Tokens.Length) {
-            string? op = PeekAhead();
-            if (op != "*" && op != "/" && op != "%" && op != "//") break;
+		while (Check("else")) {
+			Advance();
+			if (Check("if")) {
+				Advance();
+				var elif_condition = ParseExpression();
+				elif.Add((elif_condition, ParseBlock()));
+			} else {
+				else_statement = ParseBlock();
+				break;
+			}
+		}
 
-            Advance();
-            Node right = ParseRange();
-            left = new BinaryOpNode(left, op, right);
-        }
+		return new IFNode(condition, then, elif.ToArray(), else_statement);
+	}
 
-        return left;
-    }
+	private LetNode ParseLet() {
+		Advance();
+		var names = new List<string>();
+		var first_name = Advance();
+		if (!IsIdentifier(first_name)) {
+			throw new ParseError($"Expected identifier as variable name, got: `{first_name}`", Pos + 1);
+		}
 
-    private Node ParseRange() {
-        Node first = ParseUnary();
+		names.Add(first_name!);
 
-        if (Check("..")) {
-            Advance();
-            
-            bool inclusive = Check("=");
-            if (inclusive)
-                Advance();
-            
-            Node second = ParseUnary();
-            
-            if (Check("..")) {
-                Advance();
-                
-                Node third = ParseUnary();
-                return new RangeNode(first, second, third, inclusive);
-            }
-            
-            return new RangeNode(first, second, new NullNode(), inclusive);
-        }
-        
-        return first;
-    }
+		while (Check(",")) {
+			Advance();
+			var name = Advance();
+			if (!IsIdentifier(name)) {
+				throw new ParseError($"Expected identifier as variable name, got: `{name}`", Pos + 1);
+			}
 
-    private Node ParseUnary() {
-        string? token = PeekAhead();
+			names.Add(name!);
+		}
 
-        if (token is "-" or "+") {
-            Advance();
-            return new UnaryOpNode(token, ParsePower());
-        }
+		// Initialization
+		if (Check("=")) {
+			Advance();
 
-        return ParsePower();
-    }
+			var values = new List<Node>();
+			values.Add(ParseExpression());
 
-    private Node ParsePower() {
-        Node left = ParseFactor();
+			while (Check(",")) {
+				Advance();
+				values.Add(ParseExpression());
+			}
 
-        while (Pos < Tokens.Length) {
-            string? op = PeekAhead();
-            if (op != "^") break;
+			if (values.Count != names.Count) {
+				throw new ParseError($"Number of expressions ({values.Count}) should match number of variables ({names.Count}).", Pos);
+			}
 
-            Advance();
-            Node right = ParseFactor();
-            left = new BinaryOpNode(left, op, right);
-        }
+			return new LetNode(names.ToArray(), values.ToArray());
+		}
 
-        return left;
-    }
-    
-    private Node ParseFactor() {
-        Node node = ParsePrimary(); // Parse the base expression first
-    
-        // Handle function calls (can be chained)
-        if (Check("(")) {
-            Advance(); // consume '('
-        
-            var args = new List<Node>();
-            while (!Check(")")) {
-                args.Add(ParseExpression());
-                
-                if (Check(",")) {
-                    Advance();
-                } else {
-                    break;
-                }
-            }
-        
-            Expect(")");
-            Advance();
-        
-            return new FunctionCall("", args.ToArray()) { 
-                Target = node // Store what we're calling
-            };
-        }
-    
-        return node;
-    }
+		return new LetNode(names.ToArray(), Enumerable.Repeat(new NullNode(), names.Count).ToArray<Node>());
+	}
 
-    private Node ParsePrimary() {
-        string? token = PeekAhead();
-        
-        // number literal
-        if (double.TryParse(token, out double value)) {
-            Advance();
-            return new NumberNode(value);
-        }
+	private SwitchNode ParseSwitch() {
+		Advance();
 
-        switch (token) {
-            case "true":
-                Advance();
-                return new BoolNode(true);
-            case "false":
-                Advance();
-                return new BoolNode(false);
-            case "nil":
-                Advance();
-                return new NullNode();
-        }
+		var expr = ParseExpression();
+		var cases = new List<(Node, BlockNode)>();
+		BlockNode? default_case = null;
 
-        if (IsString(token)) {
-            Advance();
-            return new StringNode(token![1..^1]);
-        }
+		Expect("{");
+		Advance();
 
-        if (token == "while") {
-            return ParseWhile();
-        }
-        
-        if (token == "for") {
-            return ParseFOR();
-        }
+		while (!Check("}")) {
+			if (default_case == null && Check("_")) {
+				Advance();
+				Expect("=>");
 
-        if (token == "fn" && Check("(", 2)) {
-            return ParseLambda();
-        }
+				default_case = ParseBlock(true);
+			}
 
-        // variable (identifier)
-        if (IsIdentifier(token)) {
-            Advance();
-            
-            if (Check("(")) {
-                Advance(); // Consume `(`
+			var new_case = ParseExpression();
+			Expect("=>");
 
-                var args = new List<Node>();
-                while (!Check(")")) {
-                    args.Add(ParseExpression());
+			cases.Add((new_case, ParseBlock(true)));
+		}
 
-                    if (Check(",")) {
-                        Advance();
-                    } else {
-                        break;
-                    }
-                }
-            
-                Expect(")"); // Consume `)`
-                Advance();
-                
-                return new FunctionCall(token!, args.ToArray());
-            }
-            
-            return new VariableNode(token!);
-        }
-        
-        // parentheses
-        if (token == "(") {
-            Advance(); // Consume `(`
-            
-            Node expr = ParseExpression();
-            
-            Expect(")"); // Consume `)`
-            Advance();
-            return expr;
-        }
+		Expect("}");
+		Advance();
 
-        throw new ParseError($"Unexpected token '{token}'", Pos + 1);
-    }
-    
-    private FunctionNode ParseLambda() {
-        Advance(); // consume 'fn'
-    
-        Expect("(");
-        Advance();
-    
-        var args = new List<string>();
-        while (!Check(")")) {
-            string? arg = PeekAhead();
-            if (!IsIdentifier(arg)) {
-                throw new ParseError($"Expected parameter name, got '{arg}'", Pos);
-            }
-            args.Add(Advance()!);
-            
-            if (Check(",")) {
-                Advance();
-            } else {
-                break;
-            }
-        }
-    
-        Expect(")");
-        Advance();
-    
-        return new FunctionNode(args.ToArray(), ParseBlock());
-    }
-    
-    private static bool IsIdentifier(string? token) {
-        return token != null && 
-               char.IsLetter(token[0]) || token![0] == '_' && 
-               token.All(c => char.IsLetterOrDigit(c) || c == '_');
-    }
+		return new SwitchNode(expr, cases.ToArray(), default_case);
+	}
 
-    private static bool IsString(string? token) {
-        var Quotes = "'\"".ToCharArray();
-        return token != null && Quotes.Contains(token[0]) && Quotes.Contains(token[^1]);
-    }
+	private AssignmentNode ParseAssignment() {
+		string varName = Advance()!;
+		Advance(); // consume `=`
+
+		Node value = ParseExpression(); // right side
+		return new AssignmentNode(varName, value);
+	}
+
+	private ShorthandAssignmentNode ParseShorthandAssignment() {
+		string varName = Advance()!;
+		string op = Advance()!; // consume `+=`
+
+		Node? value = null;
+		if (op != "++" && op != "--") {
+			value = ParseExpression(); // right side
+		}
+
+		return new ShorthandAssignmentNode(varName, op, value);
+	}
+
+
+	////////////////////////////////////////////////////////////
+	// HANDLE EXPRESSIONS
+	////////////////////////////////////////////////////////////
+	public Node ParseExpression() {
+		return ParseComparison();
+	}
+
+	public Node ParseComparison() {
+		Node left = ParseAddSubtract(); // Next higher precedence
+
+		while (Pos < Tokens.Length) {
+			string? op = PeekAhead();
+			if (op != "==" && op != "!=" && op != "<" && op != ">" && op != "<=" && op != ">=")
+				break;
+
+			Advance();
+			Node right = ParseAddSubtract();
+			left = new BinaryOpNode(left, op, right);
+		}
+
+		return left;
+	}
+
+	public Node ParseAddSubtract() {
+		Node left = ParseTerm();
+
+		while (Pos < Tokens.Length) {
+			string? op = PeekAhead();
+			if (op != "+" && op != "-") break;
+
+			Advance();
+			Node right = ParseTerm();
+			left = new BinaryOpNode(left, op, right);
+		}
+
+		return left;
+	}
+
+	private Node ParseTerm() {
+		Node left = ParseRange();
+
+		while (Pos < Tokens.Length) {
+			string? op = PeekAhead();
+			if (op != "*" && op != "/" && op != "%" && op != "//") break;
+
+			Advance();
+			Node right = ParseRange();
+			left = new BinaryOpNode(left, op, right);
+		}
+
+		return left;
+	}
+
+	private Node ParseRange() {
+		Node first = ParseUnary();
+
+		if (Check("..")) {
+			Advance();
+
+			bool inclusive = Check("=");
+			if (inclusive)
+				Advance();
+
+			Node second = ParseUnary();
+
+			if (Check("..")) {
+				Advance();
+
+				Node third = ParseUnary();
+				return new RangeNode(first, second, third, inclusive);
+			}
+
+			return new RangeNode(first, second, new NullNode(), inclusive);
+		}
+
+		return first;
+	}
+
+	private Node ParseUnary() {
+		string? token = PeekAhead();
+
+		if (token is "-" or "+") {
+			Advance();
+			return new UnaryOpNode(token, ParsePower());
+		}
+
+		return ParsePower();
+	}
+
+	private Node ParsePower() {
+		Node left = ParseFactor();
+
+		while (Pos < Tokens.Length) {
+			string? op = PeekAhead();
+			if (op != "^") break;
+
+			Advance();
+			Node right = ParseFactor();
+			left = new BinaryOpNode(left, op, right);
+		}
+
+		return left;
+	}
+
+	private Node ParseFactor() {
+		Node node = ParsePrimary(); // Parse the base expression first
+
+		// Handle function calls (can be chained)
+		while (true) {
+			if (Check("(")) {
+				Advance(); // consume '('
+
+				var args = new List<Node>();
+
+				// If next token is not ')', parse one or more arguments
+				if (!Check(")")) {
+					while (true) {
+						args.Add(ParseExpression());
+
+						if (Check(",")) {
+							Advance(); // consume comma and keep parsing args
+							// allow trailing comma before ')', so if next is ')' the loop will break
+							if (Check(")")) break;
+						} else {
+							break;
+						}
+					}
+				}
+
+				Expect(")"); // verify we have a closing ')'
+				Advance(); // consume ')'
+
+				// Build a call node targeting the previous node (left-associative)
+				node = new FunctionCall("", args.ToArray()) {
+					Target = node
+				};
+
+				continue;
+			}
+
+			if (Check(".")) {
+				Advance(); // consume '.'
+				var prop = Advance()!; // implement or reuse method to get identifier token text
+				if (!IsIdentifier(prop)) {
+					throw new ParseError("Tried to get member using non-identifier.", Pos);
+				}
+				
+				node = new MemberAccessNode(node, prop);
+				continue;
+			}
+
+			break;
+		}
+
+		return node;
+	}
+
+	private Node ParsePrimary() {
+		string? token = PeekAhead();
+
+		// number literal
+		if (double.TryParse(token, out double value)) {
+			Advance();
+			return new NumberNode(value);
+		}
+
+		switch (token) {
+			case "true":
+				Advance();
+				return new BoolNode(true);
+			case "false":
+				Advance();
+				return new BoolNode(false);
+			case "nil":
+				Advance();
+				return new NullNode();
+		}
+
+		if (IsString(token)) {
+			Advance();
+			return new StringNode(token![1..^1]);
+		}
+
+		if (token == "while") {
+			return ParseWhile();
+		}
+
+		if (token == "for") {
+			return ParseFOR();
+		}
+
+		if (token == "{") {
+			return new ScopeNode(ParseBlock());
+		}
+
+		if (token == "if") {
+			return ParseIF();
+		}
+
+		if (token == "out") {
+			Advance();
+			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
+				return new OutNode(new NullNode());
+			return new OutNode(ParseExpression());
+		}
+
+		if (token == "switch") {
+			return ParseSwitch();
+		}
+
+		if (token == "fn" && Check("(", 2)) {
+			return ParseLambda();
+		}
+
+		// variable (identifier)
+		if (IsIdentifier(token)) {
+			Advance();
+
+			if (Check("(")) {
+				Advance(); // Consume `(`
+
+				var args = new List<Node>();
+				while (!Check(")")) {
+					args.Add(ParseExpression());
+
+					if (Check(",")) {
+						Advance();
+					} else {
+						break;
+					}
+				}
+
+				Expect(")"); // Consume `)`
+				Advance();
+
+				return new FunctionCall(token!, args.ToArray());
+			}
+
+			return new VariableNode(token!);
+		}
+
+		// parentheses
+		if (token == "(") {
+			Advance(); // Consume `(`
+
+			Node expr = ParseExpression();
+
+			Expect(")"); // Consume `)`
+			Advance();
+			return expr;
+		}
+
+		throw new ParseError($"Unexpected token '{token}'", Pos + 1);
+	}
+
+	private FunctionNode ParseLambda() {
+		Advance(); // consume 'fn'
+
+		Expect("(");
+		Advance();
+
+		var args = new List<string>();
+		while (!Check(")")) {
+			string? arg = PeekAhead();
+			if (!IsIdentifier(arg)) {
+				throw new ParseError($"Expected parameter name, got '{arg}'", Pos);
+			}
+
+			args.Add(Advance()!);
+
+			if (Check(",")) {
+				Advance();
+			} else {
+				break;
+			}
+		}
+
+		Expect(")");
+		Advance();
+
+		return new FunctionNode(args.ToArray(), ParseBlock());
+	}
+
+	private static bool IsIdentifier(string? token) {
+		return token != null &&
+			char.IsLetter(token[0]) || token![0] == '_' &&
+			token.All(c => char.IsLetterOrDigit(c) || c == '_');
+	}
+
+	private static bool IsString(string? token) {
+		var Quotes = "'\"".ToCharArray();
+		return token != null && Quotes.Contains(token[0]) && Quotes.Contains(token[^1]);
+	}
 }

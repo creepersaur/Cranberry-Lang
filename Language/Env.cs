@@ -18,10 +18,10 @@ public class Env {
 		Variables.Pop();
 	}
 	
-	public object Get(string name) {
+	public object? Get(string name) {
 		foreach (var scope in Variables) {
 			if (scope.TryGetValue(name, out object? value))
-				return value!;
+				return value;
 		}
 
 		throw new RuntimeError($"Undefined variable `{name}`.");

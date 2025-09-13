@@ -80,6 +80,26 @@ public class RangeNode(Node start, Node end, Node step, bool inclusive) : Node {
 	}
 }
 
+public class ListNode(List<Node> items) : Node {
+	public readonly List<Node> Items = items;
+	
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitList(this);
+	}
+
+	public override string ToString() {
+		string s = "[";
+
+		foreach (var (i, v) in Items.WithIndex()) {
+			s += v;
+			if (i != Items.Count - 1)
+				s += ", ";
+		}
+		
+		return s + "]";
+	}
+}
+
 /////////////////////////////////////////////////////////
 // OPERATIONS
 /////////////////////////////////////////////////////////
@@ -140,4 +160,15 @@ public class FunctionCall(string name, Node[] args) : Node {
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFunctionCall(this)!;
 	}
+}
+
+public class MemberAccessNode(Node target, string member) : Node {
+	public readonly Node Target = target;
+	public readonly string Member = member;
+
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitMemberAccess(this)!;
+	}
+
+	public override string ToString() => $"{Target}.{Member}";
 }

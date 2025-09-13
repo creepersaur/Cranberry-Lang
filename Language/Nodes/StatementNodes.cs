@@ -54,6 +54,14 @@ public class BreakNode(Node? value) : Node {
 	}
 }
 
+public class OutNode(Node? value) : Node {
+	public readonly Node? Value = value;
+	
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitOut(this)!;
+	}
+}
+
 public class ContinueNode : Node {
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitContinue(this)!;
@@ -76,5 +84,15 @@ public class ForNode(string var_name, Node iterable, BlockNode block) : Node {
 	
 	public override T Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFOR(this)!;
+	}
+}
+
+public class SwitchNode(Node expr, (Node, BlockNode)[] cases, BlockNode? default_case) : Node {
+	public readonly Node Expr = expr;
+	public readonly (Node, BlockNode)[] Cases = cases;
+	public readonly BlockNode? DefaultCase = default_case;
+	
+	public override T Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitSwitch(this)!;
 	}
 }

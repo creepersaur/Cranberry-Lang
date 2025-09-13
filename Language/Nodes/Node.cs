@@ -13,6 +13,7 @@ public interface INodeVisitor<out T> {
 	T VisitBool(BoolNode node);
 	T VisitFunction(FunctionNode node);
 	T VisitRange(RangeNode node);
+	T VisitList(ListNode node);
 	
 	// Operations
 	
@@ -23,6 +24,7 @@ public interface INodeVisitor<out T> {
 	T VisitShorthandAssignment(ShorthandAssignmentNode node);
 	T? VisitFunctionCall(FunctionCall node);
 	T? VisitBlock(BlockNode node);
+	T? VisitMemberAccess(MemberAccessNode node);
 	
 	// Statements
 	
@@ -32,7 +34,9 @@ public interface INodeVisitor<out T> {
 	T? VisitReturn(ReturnNode node);
 	T? VisitBreak(BreakNode node);
 	T? VisitContinue(ContinueNode node);
+	T? VisitOut(OutNode node);
 	T? VisitScope(ScopeNode node);
 	T? VisitWhile(WhileNode node);
 	T? VisitFOR(ForNode node);
+	T? VisitSwitch(SwitchNode node);
 }
