@@ -1,5 +1,6 @@
 ﻿using Cranberry.Errors;
 using Cranberry.Nodes;
+using Range = Cranberry.Types.Range;
 
 // ReSharper disable ConvertIfStatementToSwitchStatement
 // ReSharper disable DuplicatedStatements
@@ -11,11 +12,12 @@ public class Interpreter : INodeVisitor<object> {
 	private const double TOLERANCE = 1e-9;
 
 	public object Evaluate(Node node) {
-		return node.Accept(this);
+		return node.Accept(this)!;
 	}
 
 	private static bool IsTruthy(object? value) {
 		return value switch {
+			NullNode => false,
 			null => false,
 			bool b => b,
 			double d => d != 0.0, // 0 is false, everything else true
@@ -32,9 +34,30 @@ public class Interpreter : INodeVisitor<object> {
 	public object VisitNull(NullNode node) => node;
 	public object VisitBool(BoolNode node) => node.Value;
 	public object VisitString(StringNode node) => node.Value;
-	public object VisitFunction(FunctionNode node) => node;
-	public object VisitRange(RangeNode node) => node;
-	public object VisitList(ListNode node) => node;
+
+	public object VisitFunction(FunctionNode node) {
+		node.Env = env.Variables.Peek();
+		return node;
+	}
+
+	public Range VisitRange(RangeNode node) {
+		return new Range(
+			Convert.ToDouble(Evaluate(node.Start)),
+			Convert.ToDouble(Evaluate(node.End)),
+			Convert.ToDouble(Evaluate(node.Step) switch {
+				NullNode => 1,
+				{ } value => value
+			})
+		);
+	}
+
+	public object VisitList(ListNode node) => node.Items.Select(Evaluate).ToList();
+
+	public object VisitDict(DictNode node) {
+		return node.Items.Select(
+			(item, _) => (Evaluate(item.Key), Evaluate(item.Value))
+		).ToDictionary();
+	}
 
 	//////////////////////////////////////////
 	// EXPRESSIONS
@@ -123,6 +146,54 @@ public class Interpreter : INodeVisitor<object> {
 
 			_ => throw new RuntimeError($"Unknown unary expression: {node.Op}")
 		};
+	}
+
+	public object VisitMemberAccess(MemberAccessNode node) {
+		var target = Evaluate(node.Target);
+
+		if (target is ListNode list) {
+			var member = Evaluate(node.Member);
+
+			if (member is double) {
+				return list.Items[Convert.ToInt32(member)];
+			}
+
+			object? result = member switch {
+				"length" => list.Items.Count,
+				"last" => list.Items.Last(),
+
+				_ => null
+			};
+
+			if (result != null)
+				return result;
+		}
+
+		if (target is DictNode dict) {
+			var member = Evaluate(node.Member);
+
+			foreach (var (key, value) in dict.Items) {
+				var eval = Evaluate(key);
+				if (eval.Equals(member))
+					return value;
+			}
+
+			object? result = member switch {
+				"length" => dict.Items.Count,
+
+				_ => null
+			};
+
+			if (result != null)
+				return result;
+		}
+
+		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
+	}
+
+	public object VisitFallback(FallbackNode node) {
+		var left = Evaluate(node.Left);
+		return IsTruthy(left) ? left : Evaluate(node.Right);
 	}
 
 	//////////////////////////////////////////
@@ -277,6 +348,9 @@ public class Interpreter : INodeVisitor<object> {
 		if (func != null) {
 			env.Push();
 			try {
+				if (func.Env != null)
+					env.Push(func.Env);
+
 				for (int i = 0; i < func.Args.Length; i++) {
 					env.Define(func.Args[i], args[i]); // use args array
 				}
@@ -349,7 +423,9 @@ public class Interpreter : INodeVisitor<object> {
 	}
 
 	public object? VisitFOR(ForNode node) {
-		if (node.Iterable is RangeNode range) {
+		var iterable = Evaluate(node.Iterable);
+
+		if (iterable is RangeNode range) {
 			var step = Evaluate(range.Step);
 			if (step is null or NullNode)
 				step = 1;
@@ -380,9 +456,30 @@ public class Interpreter : INodeVisitor<object> {
 					env.Pop();
 				}
 			}
+
+			return null;
 		}
 
-		return new NullNode();
+		if (iterable is ListNode list) {
+			foreach (var i in list.Items) {
+				env.Push();
+				try {
+					env.Define(node.VarName, Evaluate(i));
+					Evaluate(node.Block);
+				} catch (BreakException be) {
+					return be.Value;
+				} catch (OutException be) {
+					return be.Value;
+				} catch (ContinueException) {
+				} finally {
+					env.Pop();
+				}
+			}
+
+			return null;
+		}
+
+		throw new RuntimeError($"Cannot loop over `{Evaluate(node.Iterable).GetType()}`. Expected iterable.");
 	}
 
 	public object? VisitSwitch(SwitchNode node) {
@@ -413,23 +510,6 @@ public class Interpreter : INodeVisitor<object> {
 		}
 
 		return new NullNode();
-	}
-
-	public object VisitMemberAccess(MemberAccessNode node) {
-		var target = Evaluate(node.Target);
-
-		if (target is RangeNode) {
-			var result = node.Member switch {
-				"hello" => new StringNode("world"),
-				
-				_ => null
-			};
-
-			if (result != null)
-				return result;
-		}
-
-		throw new ReturnException($"Cannot access member '{node.Member}' on value '{target}'");
 	}
 }
 

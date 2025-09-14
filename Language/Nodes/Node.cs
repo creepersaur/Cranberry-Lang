@@ -1,7 +1,9 @@
-﻿namespace Cranberry.Nodes;
+﻿using Range = Cranberry.Types.Range;
+
+namespace Cranberry.Nodes;
 
 public abstract class Node {
-	public abstract T Accept<T>(INodeVisitor<T> visitor);
+	public abstract object? Accept<T>(INodeVisitor<T> visitor);
 }
 
 public interface INodeVisitor<out T> {
@@ -12,8 +14,9 @@ public interface INodeVisitor<out T> {
 	T VisitString(StringNode node);
 	T VisitBool(BoolNode node);
 	T VisitFunction(FunctionNode node);
-	T VisitRange(RangeNode node);
+	Range VisitRange(RangeNode node);
 	T VisitList(ListNode node);
+	T VisitDict(DictNode node);
 	
 	// Operations
 	
@@ -25,6 +28,7 @@ public interface INodeVisitor<out T> {
 	T? VisitFunctionCall(FunctionCall node);
 	T? VisitBlock(BlockNode node);
 	T? VisitMemberAccess(MemberAccessNode node);
+	T VisitFallback(FallbackNode node);
 	
 	// Statements
 	

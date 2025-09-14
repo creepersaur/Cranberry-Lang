@@ -96,10 +96,10 @@ public class Parser(string[] Tokens) {
 		Expect("in");
 		Advance();
 
-		return new ForNode(var_name, ParseExpression(), ParseBlock());
+		return new ForNode(var_name, ParseExpression(), ParseBlock(false, false));
 	}
 
-	private BlockNode ParseBlock(bool arrow = false) {
+	private BlockNode ParseBlock(bool arrow = false, bool arrow_out = true) {
 		if (Check("=>") || arrow) {
 			Advance();
 			var node = Parse();
@@ -107,7 +107,7 @@ public class Parser(string[] Tokens) {
 			if (Check(";"))
 				Advance();
 
-			return new BlockNode([new OutNode(node)]);
+			return new BlockNode([arrow_out ? new OutNode(node) : node]);
 		}
 
 		Expect("{");
@@ -309,15 +309,27 @@ public class Parser(string[] Tokens) {
 	}
 
 	private Node ParseTerm() {
-		Node left = ParseRange();
+		Node left = ParseFallback();
 
 		while (Pos < Tokens.Length) {
 			string? op = PeekAhead();
 			if (op != "*" && op != "/" && op != "%" && op != "//") break;
 
 			Advance();
-			Node right = ParseRange();
+			Node right = ParseFallback();
 			left = new BinaryOpNode(left, op, right);
+		}
+
+		return left;
+	}
+
+	private Node ParseFallback() {
+		Node left = ParseRange();
+
+		if (Check("??")) {
+			Advance();
+
+			return new FallbackNode(left,ParseExpression());
 		}
 
 		return left;
@@ -379,6 +391,7 @@ public class Parser(string[] Tokens) {
 
 		// Handle function calls (can be chained)
 		while (true) {
+			// IIFE
 			if (Check("(")) {
 				Advance(); // consume '('
 
@@ -417,6 +430,16 @@ public class Parser(string[] Tokens) {
 					throw new ParseError("Tried to get member using non-identifier.", Pos);
 				}
 				
+				node = new MemberAccessNode(node, new StringNode(prop));
+				continue;
+			}
+			
+			if (Check("[")) {
+				Advance(); // consume '.'
+				var prop = ParseExpression(); // implement or reuse method to get identifier token text
+				Expect("]");
+				Advance();
+				
 				node = new MemberAccessNode(node, prop);
 				continue;
 			}
@@ -425,6 +448,60 @@ public class Parser(string[] Tokens) {
 		}
 
 		return node;
+	}
+
+	private ListNode ParseList() {
+		Advance();
+
+		var items = new List<Node>();
+		
+		while (!Check("]")) {
+			items.Add(ParseExpression());
+			if (Check(",")) {
+				Advance();
+			} else {
+				break;
+			}
+		}
+		
+		Expect("]");
+		Advance();
+
+		return new ListNode(items);
+	}
+
+	private DictNode ParseDictionary() {
+		Advance();
+
+		var items = new Dictionary<Node, Node>();
+
+		while (!Check("}")) {
+			Node key;
+			
+			string key_id = PeekAhead()!;
+			if (IsIdentifier(key_id)) {
+				key = new StringNode(key_id);
+				Advance();
+			} else {
+				key = ParseExpression();
+			}
+			
+			Expect(":");
+			Advance();
+
+			Node value = ParseExpression();
+			
+			items.Add(key, value);
+			
+			if (Check(",")) {
+				Advance();
+			} else break;
+		}
+		
+		Expect("}");
+		Advance();
+
+		return new DictNode(items);
 	}
 
 	private Node ParsePrimary() {
@@ -461,8 +538,14 @@ public class Parser(string[] Tokens) {
 			return ParseFOR();
 		}
 
-		if (token == "{") {
+		if (token == "@") {
+			Advance();
+			Expect("{");
 			return new ScopeNode(ParseBlock());
+		}
+
+		if (token == "{") {
+			return ParseDictionary();
 		}
 
 		if (token == "if") {
@@ -482,6 +565,10 @@ public class Parser(string[] Tokens) {
 
 		if (token == "fn" && Check("(", 2)) {
 			return ParseLambda();
+		}
+
+		if (token == "[") {
+			return ParseList();
 		}
 
 		// variable (identifier)

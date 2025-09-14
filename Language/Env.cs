@@ -10,8 +10,8 @@ public class Env {
 		Variables.Push(new Dictionary<string, object?>());
 	}
 
-	public void Push() {
-		Variables.Push(new Dictionary<string, object?>());
+	public void Push(Dictionary<string, object?>? vars = null) {
+		Variables.Push(vars ?? new Dictionary<string, object?>());
 	}
 
 	public void Pop() {

@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Range = Cranberry.Types.Range;
 
 namespace Cranberry.Nodes;
 
@@ -7,8 +8,8 @@ namespace Cranberry.Nodes;
 /////////////////////////////////////////////////////////
 
 public class NullNode : Node {
-	public override T Accept<T>(INodeVisitor<T> visitor) {
-		return visitor.VisitNull(this)!;
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitNull(this);
 	}
 
 	public override string ToString() => "nil";
@@ -17,7 +18,7 @@ public class NullNode : Node {
 public class NumberNode(double value) : Node {
 	public readonly double Value = value;
     
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitNumber(this);
 	}
 
@@ -27,7 +28,7 @@ public class NumberNode(double value) : Node {
 public class StringNode(string value) : Node {
 	public readonly string Value = value;
     
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitString(this);
 	}
 
@@ -37,15 +38,15 @@ public class StringNode(string value) : Node {
 public class BlockNode(Node[] statements) : Node {
 	public readonly Node[] Statements = statements;
 	
-	public override T Accept<T>(INodeVisitor<T> visitor) {
-		return visitor.VisitBlock(this)!;
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitBlock(this);
 	}
 }
 
 public class BoolNode(bool value) : Node {
 	public readonly bool Value = value;
     
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitBool(this);
 	}
 
@@ -55,8 +56,9 @@ public class BoolNode(bool value) : Node {
 public class FunctionNode(string[] args, BlockNode block) : Node {
 	public readonly string[] Args = args;
 	public readonly BlockNode Block = block;
+	public Dictionary<string, object?>? Env { get; set; }
 	
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFunction(this);
 	}
 }
@@ -67,23 +69,15 @@ public class RangeNode(Node start, Node end, Node step, bool inclusive) : Node {
 	public readonly Node Step = step;
 	public readonly bool Inclusive = inclusive;
 	
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override Range Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitRange(this);
-	}
-
-	public override string ToString() {
-		if (Step is not NullNode) {
-			return $"Range<{Start} .. {End}, {Step}>";
-		}
-		
-		return $"Range<{Start} .. {End}>";
 	}
 }
 
 public class ListNode(List<Node> items) : Node {
 	public readonly List<Node> Items = items;
 	
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitList(this);
 	}
 
@@ -100,6 +94,14 @@ public class ListNode(List<Node> items) : Node {
 	}
 }
 
+public class DictNode(Dictionary<Node, Node> items) : Node {
+	public readonly Dictionary<Node, Node> Items = items;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitDict(this);
+	}
+}
+
 /////////////////////////////////////////////////////////
 // OPERATIONS
 /////////////////////////////////////////////////////////
@@ -109,7 +111,7 @@ public class BinaryOpNode(Node left, string op, Node right) : Node {
 	public readonly string Op = op;
 	public readonly Node Right = right;
     
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitBinaryOp(this);
 	}
 }
@@ -118,7 +120,7 @@ public class UnaryOpNode(string op, Node value) : Node {
 	public readonly Node Value = value;
 	public readonly string Op = op;
     
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitUnaryOp(this);
 	}
 	
@@ -128,7 +130,7 @@ public class UnaryOpNode(string op, Node value) : Node {
 public class VariableNode(string name) : Node {
 	public readonly string Name = name;
     
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitVariable(this);
 	}
 }
@@ -137,7 +139,7 @@ public class AssignmentNode(string name, Node value) : Node {
 	public readonly string Name = name;
 	public readonly Node Value = value;
     
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitAssignment(this);
 	}
 }
@@ -147,7 +149,7 @@ public class ShorthandAssignmentNode(string name, string op, Node? value) : Node
 	public readonly string Op = op;
 	public readonly Node? Value = value;
     
-	public override T Accept<T>(INodeVisitor<T> visitor) {
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitShorthandAssignment(this);
 	}
 }
@@ -157,18 +159,27 @@ public class FunctionCall(string name, Node[] args) : Node {
 	public readonly Node[] Args = args;
 	public Node? Target { get; init; } // What we're calling (for lambdas)
 
-	public override T Accept<T>(INodeVisitor<T> visitor) {
-		return visitor.VisitFunctionCall(this)!;
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitFunctionCall(this);
 	}
 }
 
-public class MemberAccessNode(Node target, string member) : Node {
+public class MemberAccessNode(Node target, Node member) : Node {
 	public readonly Node Target = target;
-	public readonly string Member = member;
+	public readonly Node Member = member;
 
-	public override T Accept<T>(INodeVisitor<T> visitor) {
-		return visitor.VisitMemberAccess(this)!;
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitMemberAccess(this);
 	}
 
 	public override string ToString() => $"{Target}.{Member}";
+}
+
+public class FallbackNode(Node left, Node right) : Node {
+	public readonly Node Left = left;
+	public readonly Node Right = right;
+
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitFallback(this);
+	}
 }
