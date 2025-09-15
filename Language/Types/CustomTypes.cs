@@ -2,15 +2,13 @@
 
 namespace Cranberry.Types;
 
-public abstract class CustomType;
-
 public interface IMemberAccessible
 {
-	object GetMember(string name) {
-		throw new RuntimeError($"Tried to get unknown member: `{name}`");
+	object GetMember(object member) {
+		throw new RuntimeError($"Tried to get unknown member: `{member}`");
 	}
 	
-	void SetMember(string name, object value) {
-		throw new RuntimeError($"Cannot set member {name}.`");
+	void SetMember(string member, object value) {
+		throw new RuntimeError($"Cannot set member {member}.`");
 	}
 }

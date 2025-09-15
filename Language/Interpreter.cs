@@ -21,7 +21,6 @@ public class Interpreter : INodeVisitor<object> {
 			null => false,
 			bool b => b,
 			double d => d != 0.0, // 0 is false, everything else true
-			string s => !string.IsNullOrEmpty(s), // empty string is false
 			_ => true // everything else is true
 		};
 	}
@@ -52,7 +51,9 @@ public class Interpreter : INodeVisitor<object> {
 		);
 	}
 
-	public object VisitList(ListNode node) => node.Items.Select(Evaluate).ToList();
+	public object VisitList(ListNode node) {
+		return new CList(node.Items.Select(Evaluate).ToList());
+	}
 
 	public object VisitDict(DictNode node) {
 		return node.Items.Select(
@@ -152,41 +153,8 @@ public class Interpreter : INodeVisitor<object> {
 	public object VisitMemberAccess(MemberAccessNode node) {
 		var target = Evaluate(node.Target);
 
-		if (target is ListNode list) {
-			var member = Evaluate(node.Member);
-
-			if (member is double) {
-				return list.Items[Convert.ToInt32(member)];
-			}
-
-			object? result = member switch {
-				"length" => list.Items.Count,
-				"last" => list.Items.Last(),
-
-				_ => null
-			};
-
-			if (result != null)
-				return result;
-		}
-
-		if (target is DictNode dict) {
-			var member = Evaluate(node.Member);
-
-			foreach (var (key, value) in dict.Items) {
-				var eval = Evaluate(key);
-				if (eval.Equals(member))
-					return value;
-			}
-
-			object? result = member switch {
-				"length" => dict.Items.Count,
-
-				_ => null
-			};
-
-			if (result != null)
-				return result;
+		if (target is IMemberAccessible access) {
+			return access.GetMember(Evaluate(node.Member));
 		}
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
