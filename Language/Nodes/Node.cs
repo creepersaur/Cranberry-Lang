@@ -1,4 +1,5 @@
-﻿using Cranberry.Types;
+﻿using Cranberry.Builtin;
+using Cranberry.Types;
 
 namespace Cranberry.Nodes;
 
@@ -28,6 +29,7 @@ public interface INodeVisitor<out T> {
 	T? VisitFunctionCall(FunctionCall node);
 	T? VisitBlock(BlockNode node);
 	T? VisitMemberAccess(MemberAccessNode node);
+	T? VisitInternalFunction(InternalFunction node);
 	T VisitFallback(FallbackNode node);
 	
 	// Statements

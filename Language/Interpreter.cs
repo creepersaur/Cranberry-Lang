@@ -1,4 +1,5 @@
-﻿using Cranberry.Errors;
+﻿using Cranberry.Builtin;
+using Cranberry.Errors;
 using Cranberry.Nodes;
 using Cranberry.Types;
 
@@ -52,9 +53,15 @@ public class Interpreter : INodeVisitor<object> {
 	}
 
 	public object VisitList(ListNode node) {
+		if (Evaluate(node.Items[0]) is List<object> l) {
+			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList());
+		}
+		
 		return new CList(node.Items.Select(Evaluate).ToList());
 	}
 
+	public object VisitInternalFunction(InternalFunction node) => node;
+	
 	public object VisitDict(DictNode node) {
 		return node.Items.Select(
 			(item, _) => (Evaluate(item.Key), Evaluate(item.Value))
@@ -302,12 +309,22 @@ public class Interpreter : INodeVisitor<object> {
 		}
 
 		switch (node.Name) {
-			case "print": return Builtin.BuiltinFunctions.Print(args);
-			case "println": return Builtin.BuiltinFunctions.Print(args, true);
+			case "print": return BuiltinFunctions.Print(args);
+			case "println": return BuiltinFunctions.Print(args, true);
 		}
 
 		FunctionNode? func = null;
 
+		if (node.Target != null && Evaluate(node.Target) is InternalFunction f) {
+			try {
+				var rv = f.Call(args);
+				return rv;
+			} catch (ReturnException re) {
+				return re.Value;
+			} catch (OutException re) {
+				return re.Value;
+			}
+		}
 		if (!string.IsNullOrEmpty(node.Name) && env.Get(node.Name) is FunctionNode namedFunc) {
 			func = namedFunc;
 		} else if (node.Target != null && Evaluate(node.Target) is FunctionNode targetFunc) {
@@ -373,41 +390,41 @@ public class Interpreter : INodeVisitor<object> {
 		throw new ContinueException();
 	}
 
-	public object? VisitWhile(WhileNode node) {
+	public object VisitWhile(WhileNode node) {
+		var ReturnValues = new List<object>();
+		
 		while (IsTruthy(Evaluate(node.Condition))) {
 			env.Push();
 			try {
 				Evaluate(node.Block);
-			} catch (BreakException be) {
-				return be.Value;
-			} catch (OutException re) {
-				return re.Value;
+			} catch (OutException be) {
+				if (be.Value != null)
+					ReturnValues.Add(be.Value);
 			} catch (ContinueException) {
 			} finally {
 				env.Pop();
 			}
 		}
 
-		return new NullNode();
+		return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
 	}
 
 	public object? VisitFOR(ForNode node) {
 		var iterable = Evaluate(node.Iterable);
+		var ReturnValues = new List<object>();
 
-		if (iterable is RangeNode range) {
-			var step = Evaluate(range.Step);
-			if (step is null or NullNode)
-				step = 1;
+		if (iterable is CRange range) {
+			var step = range.Step;
 
-			for (double i = Convert.ToDouble(Evaluate(range.Start));
-			     (step is double && Convert.ToDouble(step) < 0) switch {
+			for (double i = Convert.ToDouble(range.Start);
+			     (Convert.ToDouble(step) < 0) switch {
 				     true => range.Inclusive switch {
-					     true => i >= Convert.ToDouble(Evaluate(range.End)),
-					     _ => i > Convert.ToDouble(Evaluate(range.End))
+					     true => i >= Convert.ToDouble(range.End),
+					     _ => i > Convert.ToDouble(range.End)
 				     },
 				     _ => range.Inclusive switch {
-					     true => i <= Convert.ToDouble(Evaluate(range.End)),
-					     _ => i < Convert.ToDouble(Evaluate(range.End))
+					     true => i <= Convert.ToDouble(range.End),
+					     _ => i < Convert.ToDouble(range.End)
 				     }
 			     };
 			     i += Convert.ToDouble(step)
@@ -419,33 +436,35 @@ public class Interpreter : INodeVisitor<object> {
 				} catch (BreakException be) {
 					return be.Value;
 				} catch (OutException be) {
-					return be.Value;
+					if (be.Value != null)
+						ReturnValues.Add(be.Value);
 				} catch (ContinueException) {
 				} finally {
 					env.Pop();
 				}
 			}
 
-			return null;
+			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
 		}
 
-		if (iterable is ListNode list) {
+		if (iterable is CList list) {
 			foreach (var i in list.Items) {
 				env.Push();
 				try {
-					env.Define(node.VarName, Evaluate(i));
+					env.Define(node.VarName, i is Node a ? Evaluate(a) : i);
 					Evaluate(node.Block);
 				} catch (BreakException be) {
 					return be.Value;
 				} catch (OutException be) {
-					return be.Value;
+					if (be.Value != null)
+						ReturnValues.Add(be.Value);
 				} catch (ContinueException) {
 				} finally {
 					env.Pop();
 				}
 			}
 
-			return null;
+			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
 		}
 
 		throw new RuntimeError($"Cannot loop over `{Evaluate(node.Iterable).GetType()}`. Expected iterable.");

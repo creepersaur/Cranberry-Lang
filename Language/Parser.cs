@@ -96,7 +96,7 @@ public class Parser(string[] Tokens) {
 		Expect("in");
 		Advance();
 
-		return new ForNode(var_name, ParseExpression(), ParseBlock(false, false));
+		return new ForNode(var_name, ParseExpression(), ParseBlock());
 	}
 
 	private BlockNode ParseBlock(bool arrow = false, bool arrow_out = true) {

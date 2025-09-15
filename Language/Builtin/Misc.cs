@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Cranberry.Errors;
+using Cranberry.Types;
 
 namespace Cranberry.Builtin;
 
@@ -17,6 +18,8 @@ public abstract class Misc {
 				return d.ToString(CultureInfo.InvariantCulture);
 			case bool b:
 				return b ? "true" : "false";
+			case CList clist:
+				return FormatValue(clist.Items);
 		}
 
 		// protect from cycles
@@ -41,7 +44,8 @@ public abstract class Misc {
 		}
 	}
 	
-	public static int DoubleToIndex(double d, int length, bool allowNegative = false, double tol = 1e-9) {
+	public static int DoubleToIndex(object _d, int length, bool allowNegative = false, double tol = 1e-9) {
+		double d = Convert.ToDouble(_d);
 		if (double.IsNaN(d)) throw new RuntimeError("Index is NaN");
 		if (double.IsInfinity(d)) throw new RuntimeError("Index is infinite");
 
