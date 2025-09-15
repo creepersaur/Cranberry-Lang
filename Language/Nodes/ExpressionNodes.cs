@@ -1,5 +1,5 @@
 ﻿using System.Globalization;
-using Range = Cranberry.Types.Range;
+using Cranberry.Types;
 
 namespace Cranberry.Nodes;
 
@@ -69,7 +69,7 @@ public class RangeNode(Node start, Node end, Node step, bool inclusive) : Node {
 	public readonly Node Step = step;
 	public readonly bool Inclusive = inclusive;
 	
-	public override Range Accept<T>(INodeVisitor<T> visitor) {
+	public override CRange Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitRange(this);
 	}
 }

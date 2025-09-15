@@ -1,8 +1,8 @@
-﻿using Range = Cranberry.Types.Range;
+﻿using Cranberry.Types;
 
 namespace Cranberry.Nodes;
 
-public abstract class Node {
+public abstract class Node : IMemberAccessible {
 	public abstract object? Accept<T>(INodeVisitor<T> visitor);
 }
 
@@ -14,7 +14,7 @@ public interface INodeVisitor<out T> {
 	T VisitString(StringNode node);
 	T VisitBool(BoolNode node);
 	T VisitFunction(FunctionNode node);
-	Range VisitRange(RangeNode node);
+	CRange VisitRange(RangeNode node);
 	T VisitList(ListNode node);
 	T VisitDict(DictNode node);
 	

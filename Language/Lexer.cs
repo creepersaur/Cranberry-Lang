@@ -62,7 +62,7 @@ public class Lexer {
 					tokens.Add(curToken);
 					curToken = "";
 				}
-			} else if (CurChar == '#') {
+			} else if (CurChar == '#' && !instr.HasValue) {
 				if (curToken.Length > 0) {
 					tokens.Add(curToken);
 					curToken = "";

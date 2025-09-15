@@ -1,6 +1,6 @@
 ﻿using Cranberry.Errors;
 using Cranberry.Nodes;
-using Range = Cranberry.Types.Range;
+using Cranberry.Types;
 
 // ReSharper disable ConvertIfStatementToSwitchStatement
 // ReSharper disable DuplicatedStatements
@@ -40,14 +40,15 @@ public class Interpreter : INodeVisitor<object> {
 		return node;
 	}
 
-	public Range VisitRange(RangeNode node) {
-		return new Range(
+	public CRange VisitRange(RangeNode node) {
+		return new CRange(
 			Convert.ToDouble(Evaluate(node.Start)),
 			Convert.ToDouble(Evaluate(node.End)),
 			Convert.ToDouble(Evaluate(node.Step) switch {
 				NullNode => 1,
 				{ } value => value
-			})
+			}),
+			node.Inclusive
 		);
 	}
 

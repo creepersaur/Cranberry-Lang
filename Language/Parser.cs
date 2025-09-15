@@ -363,7 +363,7 @@ public class Parser(string[] Tokens) {
 	private Node ParseUnary() {
 		string? token = PeekAhead();
 
-		if (token is "-" or "+") {
+		if (token is "-" or "+" or "!") {
 			Advance();
 			return new UnaryOpNode(token, ParsePower());
 		}
