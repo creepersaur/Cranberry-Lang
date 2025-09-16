@@ -1,5 +1,9 @@
-return switch 2 {
-    1 => 10
-    2 => 15
-    3 => 20
+let x = {
+	"hello" : "world"
 }
+
+println(x)
+
+x.Set("foo", "bar")
+
+println(x)

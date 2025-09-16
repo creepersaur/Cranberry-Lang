@@ -63,9 +63,9 @@ public class Interpreter : INodeVisitor<object> {
 	public object VisitInternalFunction(InternalFunction node) => node;
 	
 	public object VisitDict(DictNode node) {
-		return node.Items.Select(
+		return new CDict(node.Items.Select(
 			(item, _) => (Evaluate(item.Key), Evaluate(item.Value))
-		).ToDictionary();
+		).ToDictionary());
 	}
 
 	//////////////////////////////////////////

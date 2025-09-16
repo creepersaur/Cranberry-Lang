@@ -99,15 +99,15 @@ public class Parser(string[] Tokens) {
 		return new ForNode(var_name, ParseExpression(), ParseBlock());
 	}
 
-	private BlockNode ParseBlock(bool arrow = false, bool arrow_out = true) {
-		if (Check("=>") || arrow) {
+	private BlockNode ParseBlock() {
+		if (Check("=>")) {
 			Advance();
 			var node = Parse();
 
 			if (Check(";"))
 				Advance();
 
-			return new BlockNode([arrow_out ? new OutNode(node) : node]);
+			return new BlockNode([new OutNode(node)]);
 		}
 
 		Expect("{");
@@ -232,15 +232,19 @@ public class Parser(string[] Tokens) {
 		while (!Check("}")) {
 			if (default_case == null && Check("_")) {
 				Advance();
-				Expect("=>");
+				Expect(":");
+				Advance();
 
-				default_case = ParseBlock(true);
+				default_case = ParseBlock();
 			}
 
-			var new_case = ParseExpression();
-			Expect("=>");
+			if (Check("}")) break;
 
-			cases.Add((new_case, ParseBlock(true)));
+			var new_case = ParseExpression();
+			Expect(":");
+			Advance();
+
+			cases.Add((new_case, ParseBlock()));
 		}
 
 		Expect("}");

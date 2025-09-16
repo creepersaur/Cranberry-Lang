@@ -20,6 +20,8 @@ public abstract class Misc {
 				return b ? "true" : "false";
 			case CList clist:
 				return FormatValue(clist.Items);
+			case CDict cdict:
+				return FormatValue(cdict.Items);
 		}
 
 		// protect from cycles
