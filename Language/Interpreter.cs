@@ -166,6 +166,17 @@ public class Interpreter : INodeVisitor<object> {
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
 	}
+	
+	public object VisitMemberAssignment(MemberAssignmentNode node) {
+		var target = Evaluate(node.Target);
+
+		if (target is IMemberAccessible access) {
+			access.SetMember(Evaluate(node.Member), Evaluate(node.Value));
+			return new NullNode();
+		}
+
+		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
+	}
 
 	public object VisitFallback(FallbackNode node) {
 		var left = Evaluate(node.Left);

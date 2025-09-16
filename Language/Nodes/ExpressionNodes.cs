@@ -176,6 +176,18 @@ public class MemberAccessNode(Node target, Node member) : Node {
 	public override string ToString() => $"{Target}.{Member}";
 }
 
+public class MemberAssignmentNode(Node target, Node member, Node value) : Node {
+	public readonly Node Target = target;
+	public readonly Node Member = member;
+	public readonly Node Value = value;
+
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitMemberAssignment(this);
+	}
+
+	public override string ToString() => $"{Target}.{Member}";
+}
+
 public class FallbackNode(Node left, Node right) : Node {
 	public readonly Node Left = left;
 	public readonly Node Right = right;

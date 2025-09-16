@@ -29,6 +29,7 @@ public interface INodeVisitor<out T> {
 	T? VisitFunctionCall(FunctionCall node);
 	T? VisitBlock(BlockNode node);
 	T? VisitMemberAccess(MemberAccessNode node);
+	T? VisitMemberAssignment(MemberAssignmentNode node);
 	T? VisitInternalFunction(InternalFunction node);
 	T VisitFallback(FallbackNode node);
 	

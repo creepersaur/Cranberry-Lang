@@ -11,7 +11,6 @@ public class CList : IMemberAccessible {
 	public object GetMember(object member) {
 		if (member is string name) {
 			switch (name) {
-				case "length": return Items.Count;
 				
 				// FUNCTIONS
 				
@@ -38,6 +37,14 @@ public class CList : IMemberAccessible {
 		Items = items ?? throw new ArgumentNullException(nameof(items));
 		
 		Functions = FuncGen.GenerateFunctions([
+			FuncGen.FuncInternal(
+				"Length", 
+				args => {
+					if (args.Length != 1) throw new RuntimeError("`Length()` expects 0 arguments.");
+					return Items.Count;
+				}
+			),
+			
 			FuncGen.FuncInternal(
 				"Push", 
 				args => {

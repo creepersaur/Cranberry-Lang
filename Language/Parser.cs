@@ -429,22 +429,34 @@ public class Parser(string[] Tokens) {
 
 			if (Check(".")) {
 				Advance(); // consume '.'
-				var prop = Advance()!; // implement or reuse method to get identifier token text
-				if (!IsIdentifier(prop)) {
+				var member = Advance()!; // implement or reuse method to get identifier token text
+				if (!IsIdentifier(member)) {
 					throw new ParseError("Tried to get member using non-identifier.", Pos);
 				}
 				
-				node = new MemberAccessNode(node, new StringNode(prop));
+				if (Check("=")) {
+					Advance();
+					var value = ParseExpression();
+					node = new MemberAssignmentNode(node, new StringNode(member), value);
+				} else {
+					node = new MemberAccessNode(node, new StringNode(member));
+				}
 				continue;
 			}
 			
 			if (Check("[")) {
 				Advance(); // consume '.'
-				var prop = ParseExpression(); // implement or reuse method to get identifier token text
+				var member = ParseExpression(); // implement or reuse method to get identifier token text
 				Expect("]");
 				Advance();
-				
-				node = new MemberAccessNode(node, prop);
+
+				if (Check("=")) {
+					Advance();
+					var value = ParseExpression();
+					node = new MemberAssignmentNode(node, member, value);
+				} else {
+					node = new MemberAccessNode(node, member);
+				}
 				continue;
 			}
 

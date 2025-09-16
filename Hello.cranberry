@@ -1,9 +1,9 @@
 let x = {
-	"hello" : "world"
+	hello: "world",
+	"foo": 69420
 }
-
 println(x)
 
-x.Set("foo", "bar")
-
+x.foo = 123
 println(x)
+
