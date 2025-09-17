@@ -38,6 +38,16 @@ public class FunctionDef(string name, string[] args, BlockNode block) : Node {
 	}
 }
 
+public class ClassDef(string name, FunctionDef[] funcs, FunctionNode? constructor) : Node {
+	public readonly string Name = name;
+	public readonly FunctionDef[] Functions = funcs;
+	public readonly FunctionNode? Constructor = constructor;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitClassDef(this);
+	}
+}
+
 public class ReturnNode(Node? value) : Node {
 	public readonly Node? Value = value;
 	

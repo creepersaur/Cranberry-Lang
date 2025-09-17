@@ -5,6 +5,7 @@ namespace Cranberry;
 
 public class Parser(string[] Tokens) {
 	private int Pos = -1;
+	private static readonly string[] CASTABLE = ["string", "number", "bool", "list", "dict"];
 	private static readonly string[] SHORTHANDS = ["+=", "-=", "*=", "/=", "^=", "%=", "++", "--"];
 
 	// Get the token ahead (or by offset) as a string?
@@ -47,6 +48,10 @@ public class Parser(string[] Tokens) {
 			return ParseFunctionDef();
 		}
 
+		if (token == "class") {
+			return ParseClassDef();
+		}
+
 		if (token == "return") {
 			Advance();
 			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
@@ -77,6 +82,39 @@ public class Parser(string[] Tokens) {
 		}
 
 		return ParseExpression();
+	}
+
+	private ClassDef ParseClassDef() {
+		Advance();
+
+		var name = Advance()!;
+		if (!IsIdentifier(name))
+			throw new ParseError($"Expected Identifier for class name. Got `{name}`", Pos);
+
+		FunctionNode? constructor = null;
+		
+		Expect("{");
+		Advance();
+
+		var funcs = new List<FunctionDef>();
+		while (!Check("}")) {
+			if (Check("constructor")) {
+				if (constructor != null)
+					throw new ParseError("Only one constructor can be present per Class", Pos + 1);
+				constructor = ParseLambda();
+			}
+			
+			if (Check("fn")) {
+				funcs.Add(ParseFunctionDef());
+			}
+
+			if (Check(";")) Advance();
+		}
+		
+		Expect("}");
+		Advance();
+
+		return new ClassDef(name, funcs.ToArray(), constructor);
 	}
 
 	private WhileNode ParseWhile() {
@@ -593,6 +631,14 @@ public class Parser(string[] Tokens) {
 
 			if (Check("(")) {
 				Advance(); // Consume `(`
+				
+				if (CASTABLE.Contains(token)) {
+					var to_cast = ParseExpression();
+					Expect(")");
+					Advance();
+
+					return new CastNode(token!, to_cast);
+				}
 
 				var args = new List<Node>();
 				while (!Check(")")) {

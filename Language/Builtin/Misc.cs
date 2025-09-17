@@ -5,7 +5,7 @@ using Cranberry.Types;
 namespace Cranberry.Builtin;
 
 public abstract class Misc {
-	public static string FormatValue(object? v, bool show_quotes = false, HashSet<object>? seen = null) {
+	public static string FormatValue(object? v, bool show_quotes = false, bool simple_classes = false, HashSet<object>? seen = null) {
 		switch (v) {
 			case null:
 				return "null";
@@ -25,27 +25,57 @@ public abstract class Misc {
 		}
 
 		// protect from cycles
-		seen ??= [];
-		switch (v) {
-			case Dictionary<object, object> _ when !seen.Add(v):
-				return "{...}"; // cycle guard
-			case Dictionary<object, object> id: {
-				var parts = new List<string>();
-				foreach (var item in id) parts.Add($"{FormatValue(item.Key, true, seen)} : {FormatValue(item.Value, true, seen)}");
-				return "{" + string.Join(", ", parts) + "}";
-			}
-			case System.Collections.IEnumerable ie and not string: {
-				if (!seen.Add(v)) return "[...]"; // cycle guard
+		if (!simple_classes) {
+			seen ??= [];
+			switch (v) {
+				case Dictionary<object, object> _ when !seen.Add(v):
+					return "{...}"; // cycle guard
+				case Dictionary<object, object> id: {
+					var parts = new List<string>();
+					foreach (var item in id) parts.Add($"{FormatValue(item.Key, true, false, seen)} : {FormatValue(item.Value, true, false, seen)}");
+					return "{" + string.Join(", ", parts) + "}";
+				}
+				case System.Collections.IEnumerable ie and not string: {
+					if (!seen.Add(v)) return "[...]"; // cycle guard
 
-				var parts = new List<string>();
-				foreach (var item in ie) parts.Add(FormatValue(item, true, seen));
-				return "[" + string.Join(", ", parts) + "]";
+					var parts = new List<string>();
+					foreach (var item in ie) parts.Add(FormatValue(item, true, false, seen));
+					return "[" + string.Join(", ", parts) + "]";
+				}
 			}
-			default:
-				return v.ToString() ?? "null";
+		} else {
+			seen ??= [];
+			switch (v) {
+				case Dictionary<object, object> _ when !seen.Add(v):
+					return "{...}"; // cycle guard
+				case Dictionary<object, object> id : {
+					if (id.Count < 1) {
+						return "dict<Empty>";
+					}
+
+					var keys_type = id.Keys.First().GetType();
+					var values_type = id.Values.First().GetType();
+
+					string kname = keys_type.Name;
+					string kvalue = values_type.Name;
+					
+					foreach (var (key, value) in id) {
+						if (key.GetType() != keys_type) {
+							kname = "any";
+						}
+						if (value.GetType() != values_type) {
+							kvalue = "any";
+						}
+					}
+
+					return $"dict<{kname}, {kvalue}>";
+				}
+			}
 		}
+
+		return v.ToString() ?? "null";
 	}
-	
+
 	public static int DoubleToIndex(object _d, int length, bool allowNegative = false, double tol = 1e-9) {
 		double d = Convert.ToDouble(_d);
 		if (double.IsNaN(d)) throw new RuntimeError("Index is NaN");
@@ -71,5 +101,9 @@ public abstract class Misc {
 		if (idx < 0 || idx >= length) throw new RuntimeError($"Index {d} out of range (0..{length - 1})");
 
 		return idx;
+	}
+
+	public static bool IsNumber(object value) {
+		return value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal;
 	}
 }

@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using Cranberry.Types;
-using Cranberry.Builtin;
 
 namespace Cranberry.Nodes;
 
@@ -194,5 +193,14 @@ public class FallbackNode(Node left, Node right) : Node {
 
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFallback(this);
+	}
+}
+
+public class CastNode(string type, Node to_cast) : Node {
+	public readonly string Type = type;
+	public readonly Node ToCast = to_cast;
+
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitCast(this);
 	}
 }

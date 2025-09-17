@@ -32,12 +32,14 @@ public interface INodeVisitor<out T> {
 	T? VisitMemberAssignment(MemberAssignmentNode node);
 	T? VisitInternalFunction(InternalFunction node);
 	T VisitFallback(FallbackNode node);
+	T VisitCast(CastNode node);
 	
 	// Statements
 	
 	T? VisitLet(LetNode node);
 	T? VisitIF(IFNode node);
 	T? VisitFunctionDef(FunctionDef node);
+	T? VisitClassDef(ClassDef node);
 	T? VisitReturn(ReturnNode node);
 	T? VisitBreak(BreakNode node);
 	T? VisitContinue(ContinueNode node);

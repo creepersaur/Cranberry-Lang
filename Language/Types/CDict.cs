@@ -20,7 +20,7 @@ public class CDict : IMemberAccessible {
 			}
 		}
 
-		throw new RuntimeError($"Tried to get unknown member: `{member}` on `List`.");
+		throw new RuntimeError($"Tried to get unknown member or value: `{member}` on `dict`. (Maybe try using `.GetOrElse(key, value)`)");
 	}
 
 	public void SetMember(object member, object value) {
@@ -70,7 +70,7 @@ public class CDict : IMemberAccessible {
 					if (args.Length != 1) throw new RuntimeError("`Get(key)` expects 1 argument.");
 					if (Items.TryGetValue(args[0]!, out var value))
 						return value;
-					throw new RuntimeError("Tried getting a value that isn't in the Dict.");
+					throw new RuntimeError("Tried getting a value that isn't in the dict.");
 				}
 			),
 
@@ -106,13 +106,13 @@ public class CDict : IMemberAccessible {
 			FuncGen.FuncInternal(
 				"Merge",
 				args => {
-					if (args.Length != 1) throw new RuntimeError("`Merge(Dict)` expects 1 argument.");
+					if (args.Length != 1) throw new RuntimeError("`Merge(dict)` expects 1 argument.");
 					if (args[0] is CDict c) {
 						foreach (var (key, value) in c.Items) {
 							Items[key] = value;
 						}
 					} else {
-						throw new RuntimeError("`Merge(Dict) takes in a `Dict` and adds its values.");
+						throw new RuntimeError("`Merge(dict) takes in a `dict` and adds its values.");
 					}
 
 					return new NullNode();

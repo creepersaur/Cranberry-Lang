@@ -1,13 +1,17 @@
 ﻿using Cranberry.Errors;
+using Cranberry.Namespaces;
 
 namespace Cranberry;
 
 public class Env {
 	public readonly Stack<Dictionary<string, object?>> Variables;
+	public readonly Dictionary<string, object> Namespaces = new();
 
 	public Env() {
 		Variables = new Stack<Dictionary<string, object?>>();
 		Variables.Push(new Dictionary<string, object?>());
+		
+		BuiltinNamespaces.Init(this);
 	}
 
 	public void Push(Dictionary<string, object?>? vars = null) {
@@ -19,6 +23,9 @@ public class Env {
 	}
 	
 	public object? Get(string name) {
+		if (Namespaces.TryGetValue(name, out var o))
+			return o;
+		
 		foreach (var scope in Variables) {
 			if (scope.TryGetValue(name, out object? value))
 				return value;

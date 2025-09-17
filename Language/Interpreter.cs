@@ -56,15 +56,14 @@ public class Interpreter : INodeVisitor<object> {
 		if (Evaluate(node.Items[0]) is List<object> l) {
 			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList());
 		}
-		
+
 		return new CList(node.Items.Select(Evaluate).ToList());
 	}
 
 	public object VisitInternalFunction(InternalFunction node) => node;
-	
+
 	public object VisitDict(DictNode node) {
-		return new CDict(node.Items.Select(
-			(item, _) => (Evaluate(item.Key), Evaluate(item.Value))
+		return new CDict(node.Items.Select((item, _) => (Evaluate(item.Key), Evaluate(item.Value))
 		).ToDictionary());
 	}
 
@@ -104,12 +103,15 @@ public class Interpreter : INodeVisitor<object> {
 
 	private static object HandleAddition(object? left, object? right) {
 		// String concatenation
-		if (left is string || right is string) {
+		if (left is string && right is string) {
 			return $"{left}{right}";
 		}
 
 		// Number addition
-		return Convert.ToDouble(left) + Convert.ToDouble(right);
+		if (Misc.IsNumber(left!) && Misc.IsNumber(right!))
+			return Convert.ToDouble(left) + Convert.ToDouble(right);
+
+		throw new RuntimeError($"Cannot add {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
 	}
 
 	private static object HandleMultiplication(object? left, object? right) {
@@ -166,7 +168,7 @@ public class Interpreter : INodeVisitor<object> {
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
 	}
-	
+
 	public object VisitMemberAssignment(MemberAssignmentNode node) {
 		var target = Evaluate(node.Target);
 
@@ -181,6 +183,26 @@ public class Interpreter : INodeVisitor<object> {
 	public object VisitFallback(FallbackNode node) {
 		var left = Evaluate(node.Left);
 		return IsTruthy(left) ? left : Evaluate(node.Right);
+	}
+
+	public object VisitCast(CastNode node) {
+		var value = Evaluate(node.ToCast);
+
+		switch (node.Type) {
+			case "string": return BuiltinFunctions.ToString(value);
+			case "number": return BuiltinFunctions.ToNumber(value);
+			case "bool": return IsTruthy(value);
+
+			case "list": {
+				if (value is CList) return value;
+				if (value is CDict dict) return dict.Items.Values;
+				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => x.ToString()).ToList());
+
+				break;
+			}
+		}
+
+		throw new RuntimeError($"Cannot cast to type {node.Type}.");
 	}
 
 	//////////////////////////////////////////
@@ -313,11 +335,9 @@ public class Interpreter : INodeVisitor<object> {
 	}
 
 	public object? VisitFunctionCall(FunctionCall node) {
-		object?[] args = new object?[node.Args.Length];
-
-		for (int i = 0; i < args.Length; i++) {
-			args[i] = Evaluate(node.Args[i]);
-		}
+		// build arg list (evaluated)
+		var args = new List<object?>(node.Args.Length);
+		args.AddRange(node.Args.Select(Evaluate));
 
 		switch (node.Name) {
 			case "print": return BuiltinFunctions.Print(args);
@@ -326,20 +346,63 @@ public class Interpreter : INodeVisitor<object> {
 
 		FunctionNode? func = null;
 
-		if (node.Target != null && Evaluate(node.Target) is InternalFunction f) {
-			try {
-				var rv = f.Call(args);
-				return rv;
-			} catch (ReturnException re) {
-				return re.Value;
-			} catch (OutException re) {
-				return re.Value;
+		if (node.Target != null) {
+			var target = Evaluate(node.Target);
+
+			// class called as target: MyModule.MyClass(...)
+			if (target is CClass cTarget) {
+				var create = cTarget.GetCreateFunction();
+				try {
+					return create.Call(args.ToArray());
+				} catch (ReturnException re) {
+					return re.Value;
+				} catch (OutException re) {
+					return re.Value;
+				}
 			}
-		}
-		if (!string.IsNullOrEmpty(node.Name) && env.Get(node.Name) is FunctionNode namedFunc) {
-			func = namedFunc;
-		} else if (node.Target != null && Evaluate(node.Target) is FunctionNode targetFunc) {
-			func = targetFunc;
+
+			if (target is InternalFunction f) {
+				try {
+					return f.Call(args.ToArray());
+				} catch (ReturnException re) {
+					return re.Value;
+				} catch (OutException re) {
+					return re.Value;
+				}
+			}
+
+			if (target is ObjectMethod o) {
+				args.Insert(0, o.Target);
+				func = o.Func;
+			} else if (target is FunctionNode targetFunc) {
+				func = targetFunc;
+			}
+		} else {
+			// No target: could be named function OR a bare class call: MyClass(...)
+			if (!string.IsNullOrEmpty(node.Name)) {
+				var lookup = env.Get(node.Name);
+				if (lookup is FunctionNode namedFunc) {
+					func = namedFunc;
+				} else if (lookup is CClass namedClass) {
+					// class called by name: MyClass(...)
+					var create = namedClass.GetCreateFunction();
+					try {
+						return create.Call(args.ToArray());
+					} catch (ReturnException re) {
+						return re.Value;
+					} catch (OutException re) {
+						return re.Value;
+					}
+				} else if (lookup is InternalFunction internalF) {
+					try {
+						return internalF.Call(args.ToArray());
+					} catch (ReturnException re) {
+						return re.Value;
+					} catch (OutException re) {
+						return re.Value;
+					}
+				}
+			}
 		}
 
 		if (func != null) {
@@ -348,8 +411,10 @@ public class Interpreter : INodeVisitor<object> {
 				if (func.Env != null)
 					env.Push(func.Env);
 
+				// safe binding of args -> default to NullNode when missing
 				for (int i = 0; i < func.Args.Length; i++) {
-					env.Define(func.Args[i], args[i]); // use args array
+					object? val = i < args.Count ? args[i] : new NullNode();
+					env.Define(func.Args[i], val);
 				}
 
 				try {
@@ -403,7 +468,7 @@ public class Interpreter : INodeVisitor<object> {
 
 	public object VisitWhile(WhileNode node) {
 		var ReturnValues = new List<object>();
-		
+
 		while (IsTruthy(Evaluate(node.Condition))) {
 			env.Push();
 			try {
@@ -509,6 +574,17 @@ public class Interpreter : INodeVisitor<object> {
 		}
 
 		return new NullNode();
+	}
+
+	public object VisitClassDef(ClassDef node) {
+		var class_value = new CClass(node.Name, node.Constructor, this);
+
+		foreach (var f in node.Functions) {
+			class_value.Functions.Add(f.Name, new FunctionNode(f.Args, f.Block));
+		}
+
+		env.Define(node.Name, class_value);
+		return class_value;
 	}
 }
 
