@@ -2,10 +2,10 @@
 
 namespace Cranberry.Builtin;
 
-public class InternalFunction(Func<object?[], object> _func) : Node {
-	private readonly Func<object?[], object> func = _func;
+public class InternalFunction(Func<object?[], object?> _func) : Node {
+	private readonly Func<object?[], object?> func = _func;
 
-	public object Call(params object?[] args) => func(args);
+	public object? Call(params object[] args) => func(args);
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitInternalFunction(this);

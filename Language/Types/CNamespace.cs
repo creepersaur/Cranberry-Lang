@@ -7,9 +7,9 @@ public class CNamespace(string name, bool Constant = false) : IMemberAccessible 
 
 	public override string ToString() => $"Namespace:{Name}";
 
-	public Dictionary<string, object> Members = new();
+	protected Dictionary<string, object?> Members = new();
 	
-	public object GetMember(object member) {
+	public object? GetMember(object? member) {
 		if (member is string m) {
 			if (Members.TryGetValue(m, out var value)) {
 				return value;
@@ -21,7 +21,7 @@ public class CNamespace(string name, bool Constant = false) : IMemberAccessible 
 		throw new RuntimeError($"Namespace `{Name}` only supports getting members using strings.");
 	}
 
-	public void SetMember(object member, object value) {
+	public void SetMember(object? member, object? value) {
 		if (Constant)
 			throw new RuntimeError($"Cannot set a member of namespace `{Name}`.");
 		

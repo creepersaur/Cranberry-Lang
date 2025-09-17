@@ -4,11 +4,11 @@ namespace Cranberry.Types;
 
 public interface IMemberAccessible
 {
-	object GetMember(object member) {
+	object? GetMember(object? member) {
 		throw new RuntimeError($"Tried to get unknown member: `{member}`");
 	}
 	
-	void SetMember(object member, object value) {
+	void SetMember(object? member, object? value) {
 		throw new RuntimeError($"Cannot set member {member}.`");
 	}
 }

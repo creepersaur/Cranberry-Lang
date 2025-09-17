@@ -8,7 +8,7 @@ public class CList : IMemberAccessible {
 	public List<object> Items;
 	private static Dictionary<string, InternalFunction>? Functions;
 
-	public object GetMember(object member) {
+	public object GetMember(object? member) {
 		if (member is string name) {
 			switch (name) {
 				
@@ -33,14 +33,14 @@ public class CList : IMemberAccessible {
 	}
 	
 	
-	public CList(List<object> items) {
-		Items = items ?? throw new ArgumentNullException(nameof(items));
+	public CList(List<object?> items) {
+		Items = (items ?? throw new ArgumentNullException(nameof(items)))!;
 		
 		Functions = FuncGen.GenerateFunctions([
 			FuncGen.FuncInternal(
 				"Length", 
 				args => {
-					if (args.Length != 1) throw new RuntimeError("`Length()` expects 0 arguments.");
+					if (args.Length > 0) throw new RuntimeError("`Length()` expects 0 arguments.");
 					return Items.Count;
 				}
 			),
@@ -133,7 +133,7 @@ public class CList : IMemberAccessible {
 				"Clone", 
 				args => {
 					if (args.Length != 0) throw new RuntimeError("`Clone()` expects 0 arguments.");
-					return new CList(Items.Copy());
+					return new CList(Items.Copy()!);
 				}
 			),
 		]);

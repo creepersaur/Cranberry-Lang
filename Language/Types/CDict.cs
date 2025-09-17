@@ -5,10 +5,10 @@ using Cranberry.Nodes;
 namespace Cranberry.Types;
 
 public class CDict : IMemberAccessible {
-	public readonly Dictionary<object, object> Items;
+	public readonly Dictionary<object?, object> Items;
 	private static Dictionary<string, InternalFunction>? Functions;
 
-	public object GetMember(object member) {
+	public object? GetMember(object? member) {
 		if (member is string name) {
 			switch (name) {
 				// FUNCTIONS
@@ -23,18 +23,18 @@ public class CDict : IMemberAccessible {
 		throw new RuntimeError($"Tried to get unknown member or value: `{member}` on `dict`. (Maybe try using `.GetOrElse(key, value)`)");
 	}
 
-	public void SetMember(object member, object value) {
+	public void SetMember(object? member, object? value) {
 		Items[member] = value;
 	}
 
 	public CDict(Dictionary<object, object> items) {
-		Items = items ?? throw new ArgumentNullException(nameof(items));
+		Items = (items ?? throw new ArgumentNullException(nameof(items)))!;
 
 		Functions = FuncGen.GenerateFunctions([
 			FuncGen.FuncInternal(
 				"Length", 
 				args => {
-					if (args.Length != 1) throw new RuntimeError("`Length()` expects 0 arguments.");
+					if (args.Length > 0) throw new RuntimeError("`Length()` expects 0 arguments.");
 					return Items.Count;
 				}
 			),

@@ -1,5 +1,6 @@
 ﻿using Cranberry.Builtin;
 using Cranberry.Errors;
+using Cranberry.Namespaces;
 using Cranberry.Nodes;
 using Cranberry.Types;
 
@@ -16,7 +17,7 @@ public class Interpreter : INodeVisitor<object> {
 		return node.Accept(this)!;
 	}
 
-	private static bool IsTruthy(object? value) {
+	public static bool IsTruthy(object? value) {
 		return value switch {
 			NullNode => false,
 			null => false,
@@ -52,17 +53,17 @@ public class Interpreter : INodeVisitor<object> {
 		);
 	}
 
-	public object VisitList(ListNode node) {
+	public CList VisitList(ListNode node) {
 		if (Evaluate(node.Items[0]) is List<object> l) {
-			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList());
+			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList()!);
 		}
 
-		return new CList(node.Items.Select(Evaluate).ToList());
+		return new CList(node.Items.Select(Evaluate).ToList()!);
 	}
 
 	public object VisitInternalFunction(InternalFunction node) => node;
 
-	public object VisitDict(DictNode node) {
+	public CDict VisitDict(DictNode node) {
 		return new CDict(node.Items.Select((item, _) => (Evaluate(item.Key), Evaluate(item.Value))
 		).ToDictionary());
 	}
@@ -71,7 +72,7 @@ public class Interpreter : INodeVisitor<object> {
 	// EXPRESSIONS
 	//////////////////////////////////////////
 
-	public object VisitVariable(VariableNode node) => env.Get(node.Name) ?? new NullNode();
+	public object VisitVariable(VariableNode node) => env.Get(node.Name);
 
 	public object VisitBinaryOp(BinaryOpNode node) {
 		object leftVal = Evaluate(node.Left);
@@ -101,14 +102,14 @@ public class Interpreter : INodeVisitor<object> {
 		};
 	}
 
-	private static object HandleAddition(object? left, object? right) {
+	private static object HandleAddition(object left, object right) {
 		// String concatenation
 		if (left is string && right is string) {
 			return $"{left}{right}";
 		}
 
 		// Number addition
-		if (Misc.IsNumber(left!) && Misc.IsNumber(right!))
+		if (Misc.IsNumber(left) && Misc.IsNumber(right))
 			return Convert.ToDouble(left) + Convert.ToDouble(right);
 
 		throw new RuntimeError($"Cannot add {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
@@ -159,7 +160,7 @@ public class Interpreter : INodeVisitor<object> {
 		};
 	}
 
-	public object VisitMemberAccess(MemberAccessNode node) {
+	public object? VisitMemberAccess(MemberAccessNode node) {
 		var target = Evaluate(node.Target);
 
 		if (target is IMemberAccessible access) {
@@ -189,14 +190,14 @@ public class Interpreter : INodeVisitor<object> {
 		var value = Evaluate(node.ToCast);
 
 		switch (node.Type) {
-			case "string": return BuiltinFunctions.ToString(value);
+			case "string": return BuiltinFunctions.ToString(value)!;
 			case "number": return BuiltinFunctions.ToNumber(value);
 			case "bool": return IsTruthy(value);
 
 			case "list": {
 				if (value is CList) return value;
 				if (value is CDict dict) return dict.Items.Values;
-				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => x.ToString()).ToList());
+				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => x.ToString()).ToList()!);
 
 				break;
 			}
@@ -226,7 +227,7 @@ public class Interpreter : INodeVisitor<object> {
 	}
 
 	public object VisitShorthandAssignment(ShorthandAssignmentNode node) {
-		object currentValue = env.Get(node.Name)!;
+		object currentValue = env.Get(node.Name);
 		object newValue;
 
 		switch (node.Op) {
@@ -336,7 +337,7 @@ public class Interpreter : INodeVisitor<object> {
 
 	public object? VisitFunctionCall(FunctionCall node) {
 		// build arg list (evaluated)
-		var args = new List<object?>(node.Args.Length);
+		var args = new List<object>(node.Args.Length);
 		args.AddRange(node.Args.Select(Evaluate));
 
 		switch (node.Name) {
@@ -408,12 +409,11 @@ public class Interpreter : INodeVisitor<object> {
 		if (func != null) {
 			env.Push();
 			try {
-				if (func.Env != null)
-					env.Push(func.Env);
+				env.Push(func.Env!);
 
 				// safe binding of args -> default to NullNode when missing
 				for (int i = 0; i < func.Args.Length; i++) {
-					object? val = i < args.Count ? args[i] : new NullNode();
+					object val = i < args.Count ? args[i] : new NullNode();
 					env.Define(func.Args[i], val);
 				}
 
@@ -435,6 +435,25 @@ public class Interpreter : INodeVisitor<object> {
 
 	public object? VisitFunctionDef(FunctionDef node) {
 		env.Define(node.Name, new FunctionNode(node.Args, node.Block));
+		return null;
+	}
+
+	public object? VisitUsingDirective(UsingDirective node) {
+		var names = node.Names.GetEnumerator();
+		names.MoveNext();
+
+		if ((string)names.Current! == "Std") {
+			names.MoveNext();
+
+			if (names.Current is string m) {
+				BuiltinNamespaces.Register(this, env, m);
+			} else {
+				foreach (string i in (string[])names.Current!) {
+					BuiltinNamespaces.Register(this, env, i);
+				}
+			}
+		}
+
 		return null;
 	}
 
@@ -542,6 +561,26 @@ public class Interpreter : INodeVisitor<object> {
 
 			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
 		}
+		
+		if (iterable is string str) {
+			foreach (var i in str) {
+				env.Push();
+				try {
+					env.Define(node.VarName, i.ToString());
+					Evaluate(node.Block);
+				} catch (BreakException be) {
+					return be.Value;
+				} catch (OutException be) {
+					if (be.Value != null)
+						ReturnValues.Add(be.Value);
+				} catch (ContinueException) {
+				} finally {
+					env.Pop();
+				}
+			}
+
+			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+		}
 
 		throw new RuntimeError($"Cannot loop over `{Evaluate(node.Iterable).GetType()}`. Expected iterable.");
 	}
@@ -549,15 +588,17 @@ public class Interpreter : INodeVisitor<object> {
 	public object? VisitSwitch(SwitchNode node) {
 		var value = Evaluate(node.Expr);
 
-		foreach (var (expr, block) in node.Cases) {
-			if (value.Equals(Evaluate(expr))) {
-				env.Push();
-				try {
-					return Evaluate(block);
-				} catch (OutException re) {
-					return re.Value;
-				} finally {
-					env.Pop();
+		foreach (var (cases, block) in node.Cases) {
+			foreach (var expr in cases) {
+				if (value.Equals(Evaluate(expr))) {
+					env.Push();
+					try {
+						return Evaluate(block);
+					} catch (OutException re) {
+						return re.Value;
+					} finally {
+						env.Pop();
+					}
 				}
 			}
 		}

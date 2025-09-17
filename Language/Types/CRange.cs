@@ -15,7 +15,7 @@ public class CRange(double start, double end, double step, bool inclusive) : IMe
 	// MEMBERSHIP
 	///////////////////////////////////////////////////////// 
 
-	public object GetMember(object member) {
+	public object? GetMember(object? member) {
 		string name = Convert.ToString(member)!;
 		return name switch {
 			"length" => new NumberNode(Math.Abs(Start - End)),

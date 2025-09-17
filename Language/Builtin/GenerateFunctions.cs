@@ -11,7 +11,7 @@ public class FuncGen {
 		return funcs;
 	}
 	
-	public static (string, InternalFunction) FuncInternal(string name, Func<object?[], object> implementation) {
+	public static (string, InternalFunction) FuncInternal(string name, Func<object?[], object?> implementation) {
 		return (name, new InternalFunction(implementation));
 	}
 }

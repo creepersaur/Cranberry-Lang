@@ -44,6 +44,10 @@ public class Parser(string[] Tokens) {
 			return ParseLet();
 		}
 
+		if (token == "using") {
+			return ParseUsingDirective();
+		}
+
 		if (token == "fn") {
 			return ParseFunctionDef();
 		}
@@ -82,6 +86,50 @@ public class Parser(string[] Tokens) {
 		}
 
 		return ParseExpression();
+	}
+
+	private UsingDirective ParseUsingDirective() {
+		Advance();
+
+		var spaces = new List<object>();
+		string first = Advance()!;
+		if (!IsIdentifier(first))
+			throw new ParseError("Namespace names must always be Identifiers.", Pos);
+		
+		spaces.Add(first);
+
+		while (Check("::")) {
+			Advance();
+			if (Check("{")) {
+				Advance();
+				var imports = new List<string>();
+				
+				while (!Check("}")) {
+					string multi_name = Advance()!;
+					if (!IsIdentifier(multi_name))
+						throw new ParseError("Namespace names must always be Identifiers.", Pos);
+					
+					imports.Add(multi_name);
+
+					if (Check(",")) Advance();
+					else break;
+				}
+				
+				Expect("}");
+				Advance();
+				
+				spaces.Add(imports.ToArray());
+				break;
+			}
+			
+			string name = Advance()!;
+			if (!IsIdentifier(name))
+				throw new ParseError("Namespace names must always be Identifiers.", Pos);
+			
+			spaces.Add(name);
+		}
+
+		return new UsingDirective(spaces.ToArray());
 	}
 
 	private ClassDef ParseClassDef() {
@@ -261,7 +309,7 @@ public class Parser(string[] Tokens) {
 		Advance();
 
 		var expr = ParseExpression();
-		var cases = new List<(Node, BlockNode)>();
+		var cases = new List<(Node[], BlockNode)>();
 		BlockNode? default_case = null;
 
 		Expect("{");
@@ -278,11 +326,18 @@ public class Parser(string[] Tokens) {
 
 			if (Check("}")) break;
 
-			var new_case = ParseExpression();
+			var new_cases = new List<Node>();
+			while (!Check(":")) {
+				new_cases.Add(ParseExpression());
+				
+				if (Check(",")) Advance();
+				else break;
+			}
+			
 			Expect(":");
 			Advance();
 
-			cases.Add((new_case, ParseBlock()));
+			cases.Add((new_cases.ToArray(), ParseBlock()));
 		}
 
 		Expect("}");

@@ -9,6 +9,14 @@ public class LetNode(string[] names, Node[] values) : Node {
 	}
 }
 
+public class UsingDirective(object[] names) : Node {
+	public readonly object[] Names = names;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitUsingDirective(this);
+	}
+}
+
 public class ScopeNode(BlockNode block) : Node {
 	public readonly BlockNode Block = block;
 	
@@ -97,9 +105,9 @@ public class ForNode(string var_name, Node iterable, BlockNode block) : Node {
 	}
 }
 
-public class SwitchNode(Node expr, (Node, BlockNode)[] cases, BlockNode? default_case) : Node {
+public class SwitchNode(Node expr, (Node[], BlockNode)[] cases, BlockNode? default_case) : Node {
 	public readonly Node Expr = expr;
-	public readonly (Node, BlockNode)[] Cases = cases;
+	public readonly (Node[], BlockNode)[] Cases = cases;
 	public readonly BlockNode? DefaultCase = default_case;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {

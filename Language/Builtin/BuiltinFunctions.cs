@@ -5,7 +5,7 @@ using Cranberry.Nodes;
 namespace Cranberry.Builtin;
 
 public static class BuiltinFunctions {
-	public static Node Print(List<object?> args, bool new_line = false) {
+	public static Node Print(List<object> args, bool new_line = false) {
 		string output = "";
 
 		foreach (var t in args) {
@@ -30,7 +30,7 @@ public static class BuiltinFunctions {
 		}
 	}
 
-	public static string ToString(object? arg) {
+	public static string? ToString(object arg) {
 		try {
 			return Misc.FormatValue(arg);
 		} catch {

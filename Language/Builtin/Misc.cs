@@ -5,7 +5,7 @@ using Cranberry.Types;
 namespace Cranberry.Builtin;
 
 public abstract class Misc {
-	public static string FormatValue(object? v, bool show_quotes = false, bool simple_classes = false, HashSet<object>? seen = null) {
+	public static string? FormatValue(object v, bool show_quotes = false, bool simple_classes = false, HashSet<object?>? seen = null) {
 		switch (v) {
 			case null:
 				return "null";
@@ -38,7 +38,7 @@ public abstract class Misc {
 				case System.Collections.IEnumerable ie and not string: {
 					if (!seen.Add(v)) return "[...]"; // cycle guard
 
-					var parts = new List<string>();
+					var parts = new List<string?>();
 					foreach (var item in ie) parts.Add(FormatValue(item, true, false, seen));
 					return "[" + string.Join(", ", parts) + "]";
 				}

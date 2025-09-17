@@ -4,7 +4,7 @@ public class Lexer {
 	private static readonly char[] PUNCTUATION = "!@$%^&*()[]{},./:;\\-=+`~<>?".ToCharArray();
 	private static readonly char[] QUOTES = "\"\'".ToCharArray();
 	private static readonly char[] SPACE = " \n\t\r".ToCharArray();
-	private static readonly string[] DOUBLE_PUNCS = "+= -= *= /= ++ -- // .. == != >= <= => ??".Split();
+	private static readonly string[] DOUBLE_PUNCS = "+= -= *= /= ++ -- // .. == != >= <= => ?? ::".Split();
 
 	private readonly char[] Text;
 	private int Pos;

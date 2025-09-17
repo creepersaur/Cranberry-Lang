@@ -6,7 +6,7 @@ namespace Cranberry.Namespaces;
 
 public class N_Math : CNamespace {
 	public N_Math() : base("Math", true) {
-		Members = new Dictionary<string, object> {
+		Members = new Dictionary<string, object?> {
 			{ "PI", Math.PI },
 			{ "E", Math.E },
 			{ "Tau", Math.Tau },

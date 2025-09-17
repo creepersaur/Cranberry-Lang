@@ -1,1 +1,12 @@
-print(Math.Sin(15))
+using Std::Task;
+
+Task.Spawn(fn() {
+	println("Running")
+	for i in 0..3 {
+		println(i)
+		Task.Wait(1)
+	}
+})
+
+Task.Wait(1.5)
+println("BEFORE FINISHING HAHAHA")

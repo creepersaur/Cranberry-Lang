@@ -16,8 +16,8 @@ public interface INodeVisitor<out T> {
 	T VisitBool(BoolNode node);
 	T VisitFunction(FunctionNode node);
 	CRange VisitRange(RangeNode node);
-	T VisitList(ListNode node);
-	T VisitDict(DictNode node);
+	CList VisitList(ListNode node);
+	CDict VisitDict(DictNode node);
 	
 	// Operations
 	
@@ -37,6 +37,7 @@ public interface INodeVisitor<out T> {
 	// Statements
 	
 	T? VisitLet(LetNode node);
+	T? VisitUsingDirective(UsingDirective node);
 	T? VisitIF(IFNode node);
 	T? VisitFunctionDef(FunctionDef node);
 	T? VisitClassDef(ClassDef node);

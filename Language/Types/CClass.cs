@@ -14,9 +14,9 @@ public class CClass(string name, FunctionNode? constructor, Interpreter interpre
 			var obj = new CObject(this);
 
 			if (Constructor != null) {
-				var callList = new List<object?>();
+				var callList = new List<object>();
 				callList.Add(obj);
-				callList.AddRange(callArgs);
+				callList.AddRange(callArgs!);
 			
 				// Execute constructor similarly to Interpreter.VisitFunctionCall:
 				interpreter.env.Push();
@@ -25,7 +25,7 @@ public class CClass(string name, FunctionNode? constructor, Interpreter interpre
 
 					// Bind constructor args (missing args => NullNode)
 					for (int i = 0; i < Constructor.Args.Length; i++) {
-						object? value = i < callList.Count ? callList[i] : new NullNode();
+						object value = i < callList.Count ? callList[i] : new NullNode();
 						interpreter.env.Define(Constructor.Args[i], value);
 					}
 
@@ -45,7 +45,7 @@ public class CClass(string name, FunctionNode? constructor, Interpreter interpre
 		});
 	}
 	
-	public object GetMember(object member) {
+	public object GetMember(object? member) {
 		if (member is string m) {
 			if (Functions.TryGetValue(m, out var node)) {
 				return node;

@@ -56,7 +56,7 @@ public class BoolNode(bool value) : Node {
 public class FunctionNode(string[] args, BlockNode block) : Node {
 	public readonly string[] Args = args;
 	public readonly BlockNode Block = block;
-	public Dictionary<string, object?>? Env { get; set; }
+	public Dictionary<string, object> Env { get; set; }
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFunction(this);

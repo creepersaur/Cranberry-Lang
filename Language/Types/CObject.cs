@@ -5,9 +5,9 @@ namespace Cranberry.Types;
 
 public class CObject(CClass from_class) : IMemberAccessible {
 	public readonly CClass Class = from_class;
-	public readonly Dictionary<string, object> Properties = new();
+	public readonly Dictionary<string, object?> Properties = new();
 
-	public object GetMember(object member) {
+	public object? GetMember(object? member) {
 		if (member is string m) {
 			if (Properties.TryGetValue(m, out var value)) return value;
 			if (Class.Functions.TryGetValue(m, out var node)) return new ObjectMethod(this, node);
@@ -16,7 +16,7 @@ public class CObject(CClass from_class) : IMemberAccessible {
 		throw new RuntimeError($"Tried to get unknown member: `{member}` on `Object:{Class.Name}`.");
 	}
 
-	public void SetMember(object member, object value) {
+	public void SetMember(object? member, object? value) {
 		if (member is string m) {
 			Properties[m] = value;
 			return;
