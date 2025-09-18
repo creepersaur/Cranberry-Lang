@@ -154,9 +154,9 @@ public class ShorthandAssignmentNode(string name, string op, Node? value) : Node
 	}
 }
 
-public class FunctionCall(string name, Node[] args) : Node {
+public class FunctionCall(string name, object?[] args) : Node {
 	public readonly string Name = name;
-	public readonly Node[] Args = args;
+	public readonly object?[] Args = args;
 	public Node? Target { get; init; } // What we're calling (for lambdas)
 
 	public override object? Accept<T>(INodeVisitor<T> visitor) {

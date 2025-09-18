@@ -37,7 +37,6 @@ public interface INodeVisitor<out T> {
 	// Statements
 	
 	T? VisitLet(LetNode node);
-	T? VisitUsingDirective(UsingDirective node);
 	T? VisitIF(IFNode node);
 	T? VisitFunctionDef(FunctionDef node);
 	T? VisitClassDef(ClassDef node);
@@ -49,4 +48,7 @@ public interface INodeVisitor<out T> {
 	T? VisitWhile(WhileNode node);
 	T? VisitFOR(ForNode node);
 	T? VisitSwitch(SwitchNode node);
+	T? VisitUsingDirective(UsingDirective node);
+	T? VisitNamespaceDirective(NamespaceDirective node);
+	T? VisitIncludeDirective(IncludeDirective node);
 }

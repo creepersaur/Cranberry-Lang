@@ -9,14 +9,6 @@ public class LetNode(string[] names, Node[] values) : Node {
 	}
 }
 
-public class UsingDirective(object[] names) : Node {
-	public readonly object[] Names = names;
-	
-	public override object? Accept<T>(INodeVisitor<T> visitor) {
-		return visitor.VisitUsingDirective(this);
-	}
-}
-
 public class ScopeNode(BlockNode block) : Node {
 	public readonly BlockNode Block = block;
 	
@@ -112,5 +104,29 @@ public class SwitchNode(Node expr, (Node[], BlockNode)[] cases, BlockNode? defau
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitSwitch(this);
+	}
+}
+
+public class UsingDirective(object[] names) : Node {
+	public readonly object[] Names = names;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitUsingDirective(this);
+	}
+}
+
+public class NamespaceDirective(object[] names) : Node {
+	public readonly object[] Names = names;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitNamespaceDirective(this);
+	}
+}
+
+public class IncludeDirective(Node paths) : Node {
+	public readonly Node Paths = paths;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitIncludeDirective(this);
 	}
 }

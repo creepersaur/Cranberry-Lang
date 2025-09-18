@@ -1,4 +1,4 @@
-﻿var text = File.ReadAllText("Hello.cranberry");
-var program = new Cranberry.Program(text);
+﻿var program = new Cranberry.Program();
 
-program.RunProgram();
+var files = program.CollectFiles();
+program.RunProgram(files.Item1, files.Item2);

@@ -6,12 +6,10 @@ using Cranberry.Types;
 namespace Cranberry.Namespaces;
 
 public class N_Task : CNamespace {
-	private Interpreter Interpreter;
-	
 	public N_Task(Interpreter interpreter) : base("Task", true) {
-		Interpreter = interpreter;
+		var interpreter1 = interpreter;
 		
-		Members = new Dictionary<string, object?> {
+		env.Variables.Push(new Dictionary<string, object> {
 			//////////////////////////////////////////////////////////
 			// METHODS
 			//////////////////////////////////////////////////////////
@@ -41,16 +39,19 @@ public class N_Task : CNamespace {
 				})
 			}, {
 				"Spawn", new InternalFunction(args => {
-					if (args is not [FunctionNode func])
-						throw new RuntimeError("Spawn(fn) expects 1 function argument.");
+					if (args.Length < 1 || args[0] is not FunctionNode func)
+						throw new RuntimeError("Spawn(fn, ...) expects first argument as function.");
+					
+					var new_args = args.ToList();
+					new_args.RemoveAt(0);
 
-					var thread = new Thread(() => Interpreter.VisitFunctionCall(new FunctionCall("", []) {
+					var thread = new Thread(() => interpreter1.VisitFunctionCall(new FunctionCall("", new_args.ToArray()) {
 						Target = func
 					}));
 					thread.Start();
 					return new NullNode();
 				})
 			}
-		};
+		});
 	}
 }

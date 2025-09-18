@@ -1,4 +1,5 @@
-﻿using Cranberry.Errors;
+﻿using Cranberry.Builtin;
+using Cranberry.Errors;
 using Cranberry.Nodes;
 
 namespace Cranberry;
@@ -47,6 +48,14 @@ public class Parser(string[] Tokens) {
 		if (token == "using") {
 			return ParseUsingDirective();
 		}
+		
+		if (token == "include") {
+			return ParseInclude();
+		}
+
+		if (token == "namespace") {
+			return ParseNamespace();
+		}
 
 		if (token == "fn") {
 			return ParseFunctionDef();
@@ -86,6 +95,33 @@ public class Parser(string[] Tokens) {
 		}
 
 		return ParseExpression();
+	}
+
+	private IncludeDirective ParseInclude() {
+		Advance();
+		return new IncludeDirective(ParseExpression());
+	}
+
+	private NamespaceDirective ParseNamespace() {
+		Advance();
+
+		var spaces = new List<object>();
+		string first = Advance()!;
+		if (!IsIdentifier(first))
+			throw new ParseError("Namespace names must always be Identifiers.", Pos);
+		
+		spaces.Add(first);
+
+		while (Check("::")) {
+			Advance();
+			string name = Advance()!;
+			if (!IsIdentifier(name))
+				throw new ParseError("Namespace names must always be Identifiers.", Pos);
+			
+			spaces.Add(name);
+		}
+
+		return new NamespaceDirective(spaces.ToArray());
 	}
 
 	private UsingDirective ParseUsingDirective() {

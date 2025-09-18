@@ -8,7 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <None Update="Hello.cranberry">
+      <None Update="src\main.cb">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="src\Vehicle\Boat.cb">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="src\Vehicle\Car.cb">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>

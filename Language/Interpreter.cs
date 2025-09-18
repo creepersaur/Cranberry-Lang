@@ -10,8 +10,14 @@ using Cranberry.Types;
 namespace Cranberry;
 
 public class Interpreter : INodeVisitor<object> {
-	public readonly Env env = new();
+	public Env env = new();
+	private readonly Dictionary<string, CNamespace> Namespaces = new ();
+
 	private const double TOLERANCE = 1e-9;
+
+	public Interpreter() {
+		Namespaces.Add("Std", new StandardNamespace(this));
+	}
 
 	public object Evaluate(Node node) {
 		return node.Accept(this)!;
@@ -338,7 +344,10 @@ public class Interpreter : INodeVisitor<object> {
 	public object? VisitFunctionCall(FunctionCall node) {
 		// build arg list (evaluated)
 		var args = new List<object>(node.Args.Length);
-		args.AddRange(node.Args.Select(Evaluate));
+		args.AddRange(node.Args.Select(x => {
+			if (x is Node n) return Evaluate(n);
+			return x;
+		})!);
 
 		switch (node.Name) {
 			case "print": return BuiltinFunctions.Print(args);
@@ -435,25 +444,6 @@ public class Interpreter : INodeVisitor<object> {
 
 	public object? VisitFunctionDef(FunctionDef node) {
 		env.Define(node.Name, new FunctionNode(node.Args, node.Block));
-		return null;
-	}
-
-	public object? VisitUsingDirective(UsingDirective node) {
-		var names = node.Names.GetEnumerator();
-		names.MoveNext();
-
-		if ((string)names.Current! == "Std") {
-			names.MoveNext();
-
-			if (names.Current is string m) {
-				BuiltinNamespaces.Register(this, env, m);
-			} else {
-				foreach (string i in (string[])names.Current!) {
-					BuiltinNamespaces.Register(this, env, i);
-				}
-			}
-		}
-
 		return null;
 	}
 
@@ -626,6 +616,107 @@ public class Interpreter : INodeVisitor<object> {
 
 		env.Define(node.Name, class_value);
 		return class_value;
+	}
+
+	public object? VisitUsingDirective(UsingDirective node) {
+		var names = node.Names.GetEnumerator();
+		names.MoveNext();
+		
+		CNamespace? latest = null;
+		Env latest_env = env;
+		var std = Namespaces["Std"];
+		
+		if (Namespaces.TryGetValue((string)names.Current!, out var value)) {
+			latest = value;
+			latest_env = value.env;
+		}
+
+		bool list_of_spaces = false;
+		
+		while (names.MoveNext()) {
+			if (names.Current is string name) {
+				if (latest == std) {
+					latest.GetMember(name);
+					return null;
+				}
+				
+				if (latest_env.HasNamespace(name)) {
+					latest = latest_env.GetNamespace(name);
+					latest_env = latest.env;
+				} else {
+					if (latest != null) {
+						throw new RuntimeError($"Namespace `{name}` doesn't exist in `{latest.Name}`.");
+					}
+					throw new RuntimeError($"Namespace `{name}` doesn't exist.");
+				}
+			} else if (names.Current is string[] multiple) {
+				list_of_spaces = true;
+				
+				foreach (var m in multiple) {
+					if (latest == std) {
+						env.DefineNamespace((CNamespace)latest.GetMember(m));
+					} else if (latest_env.HasNamespace(m)) {
+						env.DefineNamespace(latest_env.GetNamespace(m));
+					} else {
+						throw new RuntimeError($"Namespace `{m}` doesn't exist in `{latest!.Name}`.");
+					}
+				}
+			}
+		}
+
+		if (!list_of_spaces && latest != null)
+			env.DefineNamespace(latest);
+
+		return null;
+	}
+
+	public object? VisitNamespaceDirective(NamespaceDirective node) {
+		var names = node.Names.GetEnumerator();
+		names.MoveNext();
+
+		if ((string)names.Current! == "Std")
+			throw new RuntimeError("Cannot override `Std` namespaces.");
+
+		var space_name = (string)names.Current!;
+		CNamespace? latest;
+
+		if (Namespaces.TryGetValue(space_name, out var value)) {
+			latest = value;
+		} else {
+			latest = new CNamespace(space_name);
+			Namespaces.Add(space_name, latest);
+		}
+		env = latest.env;
+		
+		while (names.MoveNext()) {
+			space_name = (string)names.Current!;
+			
+			var new_space = new CNamespace(space_name);
+			latest.env.Namespaces.Add(space_name, new_space);
+
+			latest = new_space;
+			env = latest.env;
+		}
+
+		return null;
+	}
+
+	public object VisitIncludeDirective(IncludeDirective node) {
+		var file_path = Evaluate(node.Paths);
+
+		if (file_path is CList Paths) {
+			foreach (var path in Paths.Items) {
+				if (path is string) continue;
+
+				throw new RuntimeError("`include` only takes string path or `{paths}`.");
+			}
+			
+			throw new IncludeFileException(Paths.Items);
+		}
+		if (file_path is string p)
+			throw new IncludeFileException(p);
+
+		throw new RuntimeError("`include` only takes string path or list of strings.");
 	}
 }
 

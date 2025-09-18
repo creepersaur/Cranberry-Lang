@@ -1,0 +1,5 @@
+﻿namespace Vehicle::Land;
+
+fn Car() {
+	println("Car just car'd")
+}
