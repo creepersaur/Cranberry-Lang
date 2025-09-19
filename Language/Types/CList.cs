@@ -33,7 +33,7 @@ public class CList : IMemberAccessible {
 	}
 	
 	
-	public CList(List<object?> items) {
+	public CList(List<object> items) {
 		Items = (items ?? throw new ArgumentNullException(nameof(items)))!;
 		
 		Functions = FuncGen.GenerateFunctions([

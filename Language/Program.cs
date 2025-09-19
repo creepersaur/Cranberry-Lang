@@ -9,13 +9,13 @@ public class Program {
 	public Program() {
 		original_env = interpreter.env;
 	}
-	
-	public void RunFile(string text) {
+
+	public void RunFile(string text, string path) {
 		interpreter.env = original_env;
-		
+
 		var tokens = new Lexer(text).GetTokens();
 		var parser = new Parser(tokens.ToArray());
-		
+
 		while (parser.PeekAhead() != null) {
 			try {
 				interpreter.Evaluate(parser.Parse());
@@ -27,10 +27,13 @@ public class Program {
 				throw new RuntimeError("`break` must only be used in loops.");
 			} catch (IncludeFileException include) {
 				if (include.Path is List<object> l) {
-					foreach (var p in l) {
-						var f = new FileInfo((string)p);
+					foreach (var f in l.Select(p => new FileInfo((string)p))) {
 						if (f.Exists) {
-							RunFile(File.ReadAllText(f.FullName));
+							if (f.FullName != path) {
+								RunFile(File.ReadAllText(f.FullName), f.FullName);
+							} else {
+								throw new RuntimeError($"Cyclic dependency on file self. Cannot `include` file of same path.");
+							}
 						} else {
 							throw new RuntimeError($"Failed to include file: `{f.FullName}`");
 						}
@@ -38,7 +41,11 @@ public class Program {
 				} else {
 					var f = new FileInfo((string)include.Path);
 					if (f.Exists) {
-						RunFile(File.ReadAllText(f.FullName));
+						if (f.FullName != path) {
+							RunFile(File.ReadAllText(f.FullName), f.FullName);
+						} else {
+							throw new RuntimeError($"Cyclic dependency on file self. Cannot `include` file of same path.");
+						}
 					} else {
 						throw new RuntimeError($"Failed to include file: `{f.FullName}`");
 					}
@@ -55,13 +62,14 @@ public class Program {
 		var dir = new DirectoryInfo("src");
 		var files = new List<string>();
 		string? entry = null;
-		
+
 		if (dir.Exists) {
 			foreach (var file in dir.GetFiles("*.cb", SearchOption.AllDirectories)) {
 				if (Path.GetFileNameWithoutExtension(file.Name) == "main") {
 					entry = file.FullName;
 					continue;
 				}
+
 				files.Add(file.FullName);
 			}
 		} else {
@@ -75,8 +83,9 @@ public class Program {
 
 	public void RunProgram(string entry, List<string> files) {
 		foreach (var path in files) {
-			RunFile(File.ReadAllText(path));
+			RunFile(File.ReadAllText(path), path);
 		}
-		RunFile(File.ReadAllText(entry));
+
+		RunFile(File.ReadAllText(entry), entry);
 	}
 }

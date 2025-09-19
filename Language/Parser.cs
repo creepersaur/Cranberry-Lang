@@ -1,5 +1,4 @@
-﻿using Cranberry.Builtin;
-using Cranberry.Errors;
+﻿using Cranberry.Errors;
 using Cranberry.Nodes;
 
 namespace Cranberry;
@@ -496,7 +495,7 @@ public class Parser(string[] Tokens) {
 	private Node ParseUnary() {
 		string? token = PeekAhead();
 
-		if (token is "-" or "+" or "!") {
+		if (token is "-" or "+" or "!" or "$") {
 			Advance();
 			return new UnaryOpNode(token, ParsePower());
 		}
@@ -528,7 +527,7 @@ public class Parser(string[] Tokens) {
 			if (Check("(")) {
 				Advance(); // consume '('
 
-				var args = new List<Node>();
+				var args = new List<object>();
 
 				// If next token is not ')', parse one or more arguments
 				if (!Check(")")) {
@@ -731,7 +730,7 @@ public class Parser(string[] Tokens) {
 					return new CastNode(token!, to_cast);
 				}
 
-				var args = new List<Node>();
+				var args = new List<object>();
 				while (!Check(")")) {
 					args.Add(ParseExpression());
 

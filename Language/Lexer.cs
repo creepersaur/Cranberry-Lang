@@ -26,10 +26,10 @@ public class Lexer {
 		}
 	}
 
-	bool IsPunctuation(char? c) => c.HasValue && PUNCTUATION.Contains(c.Value);
-	bool IsQuote(char? c) => c.HasValue && QUOTES.Contains(c.Value);
+	private static bool IsPunctuation(char? c) => c.HasValue && PUNCTUATION.Contains(c.Value);
+	private static bool IsQuote(char? c) => c.HasValue && QUOTES.Contains(c.Value);
 
-	bool IsSpace(char? c) => c.HasValue && SPACE.Contains(c.Value);
+	private static bool IsSpace(char? c) => c.HasValue && SPACE.Contains(c.Value);
 
 	private static string ProcessEscapeSequences(string str) {
 		return str.Replace("\\n", "\n")

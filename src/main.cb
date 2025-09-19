@@ -1,5 +1,3 @@
-using Vehicle
-using Vehicle::Water
+let x = 10;
 
-Vehicle.Land.Car()
-Water.Boat()
+print($"Hello: {x}")

@@ -1,4 +1,5 @@
-﻿using Cranberry.Builtin;
+﻿using System.Text.RegularExpressions;
+using Cranberry.Builtin;
 using Cranberry.Errors;
 using Cranberry.Namespaces;
 using Cranberry.Nodes;
@@ -9,9 +10,9 @@ using Cranberry.Types;
 
 namespace Cranberry;
 
-public class Interpreter : INodeVisitor<object> {
+public partial class Interpreter : INodeVisitor<object> {
 	public Env env = new();
-	private readonly Dictionary<string, CNamespace> Namespaces = new ();
+	private readonly Dictionary<string, CNamespace> Namespaces = new();
 
 	private const double TOLERANCE = 1e-9;
 
@@ -61,10 +62,10 @@ public class Interpreter : INodeVisitor<object> {
 
 	public CList VisitList(ListNode node) {
 		if (Evaluate(node.Items[0]) is List<object> l) {
-			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList()!);
+			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList());
 		}
 
-		return new CList(node.Items.Select(Evaluate).ToList()!);
+		return new CList(node.Items.Select(Evaluate).ToList());
 	}
 
 	public object VisitInternalFunction(InternalFunction node) => node;
@@ -156,7 +157,22 @@ public class Interpreter : INodeVisitor<object> {
 	}
 
 	public object VisitUnaryOp(UnaryOpNode node) {
-		var u_value = Convert.ToDouble(Evaluate(node.Value));
+		var value = Evaluate(node.Value);
+		if (node.Op == "$" && value is string template) {
+			string result = MyRegex().Replace(template, match => {
+				string key = match.Groups[1].Value;
+				return Evaluate(
+						new Parser(
+							new Lexer(key).GetTokens().ToArray()
+						).ParseExpression()
+					)
+					.ToString()!;
+			});
+
+			return result;
+		}
+
+		var u_value = Convert.ToDouble(value);
 
 		return node.Op switch {
 			"-" => -u_value,
@@ -203,7 +219,7 @@ public class Interpreter : INodeVisitor<object> {
 			case "list": {
 				if (value is CList) return value;
 				if (value is CDict dict) return dict.Items.Values;
-				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => x.ToString()).ToList()!);
+				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => x.ToString()).ToList());
 
 				break;
 			}
@@ -551,7 +567,7 @@ public class Interpreter : INodeVisitor<object> {
 
 			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
 		}
-		
+
 		if (iterable is string str) {
 			foreach (var i in str) {
 				env.Push();
@@ -621,25 +637,25 @@ public class Interpreter : INodeVisitor<object> {
 	public object? VisitUsingDirective(UsingDirective node) {
 		var names = node.Names.GetEnumerator();
 		names.MoveNext();
-		
+
 		CNamespace? latest = null;
 		Env latest_env = env;
 		var std = Namespaces["Std"];
-		
+
 		if (Namespaces.TryGetValue((string)names.Current!, out var value)) {
 			latest = value;
 			latest_env = value.env;
 		}
 
 		bool list_of_spaces = false;
-		
+
 		while (names.MoveNext()) {
 			if (names.Current is string name) {
 				if (latest == std) {
 					latest.GetMember(name);
 					return null;
 				}
-				
+
 				if (latest_env.HasNamespace(name)) {
 					latest = latest_env.GetNamespace(name);
 					latest_env = latest.env;
@@ -647,11 +663,12 @@ public class Interpreter : INodeVisitor<object> {
 					if (latest != null) {
 						throw new RuntimeError($"Namespace `{name}` doesn't exist in `{latest.Name}`.");
 					}
+
 					throw new RuntimeError($"Namespace `{name}` doesn't exist.");
 				}
 			} else if (names.Current is string[] multiple) {
 				list_of_spaces = true;
-				
+
 				foreach (var m in multiple) {
 					if (latest == std) {
 						env.DefineNamespace((CNamespace)latest.GetMember(m));
@@ -686,11 +703,12 @@ public class Interpreter : INodeVisitor<object> {
 			latest = new CNamespace(space_name);
 			Namespaces.Add(space_name, latest);
 		}
+
 		env = latest.env;
-		
+
 		while (names.MoveNext()) {
 			space_name = (string)names.Current!;
-			
+
 			var new_space = new CNamespace(space_name);
 			latest.env.Namespaces.Add(space_name, new_space);
 
@@ -710,14 +728,18 @@ public class Interpreter : INodeVisitor<object> {
 
 				throw new RuntimeError("`include` only takes string path or `{paths}`.");
 			}
-			
+
 			throw new IncludeFileException(Paths.Items);
 		}
+
 		if (file_path is string p)
 			throw new IncludeFileException(p);
 
 		throw new RuntimeError("`include` only takes string path or list of strings.");
 	}
+
+	[GeneratedRegex(@"\{(.*?)\}")]
+	private static partial Regex MyRegex();
 }
 
 public static class EnumerableExtensions {

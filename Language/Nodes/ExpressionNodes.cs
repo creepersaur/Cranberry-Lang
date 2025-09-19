@@ -56,7 +56,7 @@ public class BoolNode(bool value) : Node {
 public class FunctionNode(string[] args, BlockNode block) : Node {
 	public readonly string[] Args = args;
 	public readonly BlockNode Block = block;
-	public Dictionary<string, object> Env { get; set; }
+	public Dictionary<string, object>? Env { get; set; }
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFunction(this);
@@ -77,7 +77,7 @@ public class RangeNode(Node start, Node end, Node step, bool inclusive) : Node {
 public class ListNode(List<Node> items) : Node {
 	public readonly List<Node> Items = items;
 	
-	public override object? Accept<T>(INodeVisitor<T> visitor) {
+	public override object Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitList(this);
 	}
 
@@ -97,7 +97,7 @@ public class ListNode(List<Node> items) : Node {
 public class DictNode(Dictionary<Node, Node> items) : Node {
 	public readonly Dictionary<Node, Node> Items = items;
 	
-	public override object? Accept<T>(INodeVisitor<T> visitor) {
+	public override object Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitDict(this);
 	}
 }

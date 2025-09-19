@@ -5,56 +5,53 @@ using Cranberry.Nodes;
 namespace Cranberry.Types;
 
 public class CDict : IMemberAccessible {
-	public readonly Dictionary<object?, object> Items;
+	public readonly Dictionary<object, object> Items;
 	private static Dictionary<string, InternalFunction>? Functions;
 
-	public object? GetMember(object? member) {
+	public object GetMember(object? member) {
 		if (member is string name) {
-			switch (name) {
-				// FUNCTIONS
-
-				default:
-					if (Functions!.TryGetValue(name, out var value))
-						return value;
-					break;
-			}
+			if (Items.TryGetValue(name, out var item))
+				return item;
+			
+			if (Functions!.TryGetValue(name, out var func))
+				return func;
 		}
 
 		throw new RuntimeError($"Tried to get unknown member or value: `{member}` on `dict`. (Maybe try using `.GetOrElse(key, value)`)");
 	}
 
 	public void SetMember(object? member, object? value) {
-		Items[member] = value;
+		Items[member!] = value!;
 	}
 
 	public CDict(Dictionary<object, object> items) {
-		Items = (items ?? throw new ArgumentNullException(nameof(items)))!;
+		Items = (items ?? throw new ArgumentNullException(nameof(items)));
 
 		Functions = FuncGen.GenerateFunctions([
 			FuncGen.FuncInternal(
-				"Length", 
+				"Length",
 				args => {
 					if (args.Length > 0) throw new RuntimeError("`Length()` expects 0 arguments.");
 					return Items.Count;
 				}
 			),
-			
+
 			FuncGen.FuncInternal(
-				"Keys", 
+				"Keys",
 				args => {
 					if (args.Length != 1) throw new RuntimeError("`Keys()` expects 0 arguments.");
-					return  new CList(Items.Keys.ToList());
+					return new CList(Items.Keys.ToList());
 				}
 			),
-			
+
 			FuncGen.FuncInternal(
-				"Values", 
+				"Values",
 				args => {
 					if (args.Length != 1) throw new RuntimeError("`Values()` expects 0 arguments.");
-					return  new CList(Items.Values.ToList());
+					return new CList(Items.Values.ToList());
 				}
 			),
-			
+
 			FuncGen.FuncInternal(
 				"Set",
 				args => {
@@ -78,10 +75,7 @@ public class CDict : IMemberAccessible {
 				"GetOrElse",
 				args => {
 					if (args.Length != 2) throw new RuntimeError("`GetOrElse(key, value)` expects 2 arguments.");
-					if (Items.TryGetValue(args[0]!, out var value))
-						return value;
-
-					return args[1]!;
+					return Items.TryGetValue(args[0]!, out var value) ? value : args[1]!;
 				}
 			),
 

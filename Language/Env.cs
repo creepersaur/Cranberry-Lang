@@ -1,11 +1,10 @@
 ﻿using Cranberry.Errors;
-using Cranberry.Namespaces;
 using Cranberry.Types;
 
 namespace Cranberry;
 
 public class Env {
-	public Stack<Dictionary<string, object>> Variables;
+	public readonly Stack<Dictionary<string, object>> Variables;
 	public readonly Dictionary<string, CNamespace> Namespaces = new();
 
 	public Env() {
@@ -28,8 +27,8 @@ public class Env {
 		return Namespaces.ContainsKey(name);
 	}
 
-	public void Push(Dictionary<string, object?>? vars = null) {
-		Variables.Push((vars ?? new Dictionary<string, object>()!)!);
+	public void Push(Dictionary<string, object>? vars = null) {
+		Variables.Push((vars ?? new Dictionary<string, object>()));
 	}
 
 	public void Pop() {
