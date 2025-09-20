@@ -368,6 +368,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		switch (node.Name) {
 			case "print": return BuiltinFunctions.Print(args);
 			case "println": return BuiltinFunctions.Print(args, true);
+			case "format": return BuiltinFunctions.Format(args);
 		}
 
 		FunctionNode? func = null;
@@ -491,13 +492,15 @@ public partial class Interpreter : INodeVisitor<object> {
 		throw new ContinueException();
 	}
 
-	public object VisitWhile(WhileNode node) {
+	public object? VisitWhile(WhileNode node) {
 		var ReturnValues = new List<object>();
 
 		while (IsTruthy(Evaluate(node.Condition))) {
 			env.Push();
 			try {
 				Evaluate(node.Block);
+			} catch (BreakException be) {
+				return be.Value;
 			} catch (OutException be) {
 				if (be.Value != null)
 					ReturnValues.Add(be.Value);
@@ -652,8 +655,8 @@ public partial class Interpreter : INodeVisitor<object> {
 		while (names.MoveNext()) {
 			if (names.Current is string name) {
 				if (latest == std) {
-					latest.GetMember(name);
-					return null;
+					latest = (CNamespace)latest.GetMember(name);
+					break;
 				}
 
 				if (latest_env.HasNamespace(name)) {

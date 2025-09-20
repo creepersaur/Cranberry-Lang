@@ -1,4 +1,5 @@
 ﻿using Cranberry.Errors;
+using Cranberry.Nodes;
 
 namespace Cranberry;
 
@@ -11,35 +12,62 @@ public class Program {
 	}
 
 	public void RunFile(string text, string path) {
-		interpreter.env = original_env;
+		var previousEnv = interpreter.env;
 
-		var tokens = new Lexer(text).GetTokens();
-		var parser = new Parser(tokens.ToArray());
-
-		while (parser.PeekAhead() != null) {
-			try {
-				interpreter.Evaluate(parser.Parse());
-			} catch (ReturnException) {
-				throw new RuntimeError("Cannot `return` in main scope.");
-			} catch (OutException) {
-				throw new RuntimeError("Cannot `out` in main scope.");
-			} catch (BreakException) {
-				throw new RuntimeError("`break` must only be used in loops.");
-			} catch (IncludeFileException include) {
-				if (include.Path is List<object> l) {
-					foreach (var f in l.Select(p => new FileInfo((string)p))) {
-						if (f.Exists) {
-							if (f.FullName != path) {
-								RunFile(File.ReadAllText(f.FullName), f.FullName);
-							} else {
-								throw new RuntimeError($"Cyclic dependency on file self. Cannot `include` file of same path.");
-							}
-						} else {
-							throw new RuntimeError($"Failed to include file: `{f.FullName}`");
-						}
-					}
+		try {
+			interpreter.env = original_env;
+			
+			var tokens = new Lexer(text).GetTokens();
+			// Lexer.PrintTokens(tokens);
+			var ast = new List<Node>(Math.Max(16, tokens.Count / 4));
+			var important = new List<Node>(8);
+			
+			var parser = new Parser(tokens.ToArray());
+			
+			while (parser.PeekAhead() != null) {
+				if (parser.Check(";")) {
+					parser.Advance();
+					continue;
+				}
+				
+				var node = parser.Parse();
+				if (node is FunctionDef or ClassDef) {
+					important.Add(node);
 				} else {
-					var f = new FileInfo((string)include.Path);
+					ast.Add(node);
+				}
+
+				if (parser.Check(";")) {
+					parser.Advance();
+				}
+			}
+
+			foreach (var node in important) {
+				RunNode(node, path);
+			}
+			
+			foreach (var node in ast) {
+				RunNode(node, path);
+			}
+		}
+		finally
+		{
+			interpreter.env = previousEnv;
+		}
+	}
+
+	public void RunNode(Node node, string path) {
+		try {
+			interpreter.Evaluate(node);
+		} catch (ReturnException) {
+			throw new RuntimeError("Cannot `return` in main scope.");
+		} catch (OutException) {
+			throw new RuntimeError("Cannot `out` in main scope.");
+		} catch (BreakException) {
+			throw new RuntimeError("`break` must only be used in loops.");
+		} catch (IncludeFileException include) {
+			if (include.Path is List<object> l) {
+				foreach (var f in l.Select(p => new FileInfo((string)p))) {
 					if (f.Exists) {
 						if (f.FullName != path) {
 							RunFile(File.ReadAllText(f.FullName), f.FullName);
@@ -50,10 +78,17 @@ public class Program {
 						throw new RuntimeError($"Failed to include file: `{f.FullName}`");
 					}
 				}
-			}
-
-			if (parser.Check(";")) {
-				parser.Advance();
+			} else {
+				var f = new FileInfo((string)include.Path);
+				if (f.Exists) {
+					if (f.FullName != path) {
+						RunFile(File.ReadAllText(f.FullName), f.FullName);
+					} else {
+						throw new RuntimeError($"Cyclic dependency on file self. Cannot `include` file of same path.");
+					}
+				} else {
+					throw new RuntimeError($"Failed to include file: `{f.FullName}`");
+				}
 			}
 		}
 	}

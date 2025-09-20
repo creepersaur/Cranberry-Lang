@@ -38,4 +38,26 @@ public static class BuiltinFunctions {
 			throw new RuntimeError($"Cannot convert `{arg}` to a number");
 		}
 	}
+
+	public static string Format(List<object> args) {
+		var enumerator = args.GetEnumerator();
+		enumerator.MoveNext();
+
+		string template;
+		if (enumerator.Current is string t) {
+			template = t;
+		} else {
+			throw new RuntimeError("First argument of `format()` must be the template string.");
+		}
+
+		while (enumerator.MoveNext()) {
+			var id = template.IndexOf("{}", StringComparison.Ordinal);
+			if (id < 0) {
+				throw new RuntimeError("FormatException: Input string was not in a correct format (or expected less arguments).");
+			}
+			template = template[..id] + Misc.FormatValue(enumerator.Current) + template[(id + 2)..];
+		}
+
+		return template;
+	}
 }

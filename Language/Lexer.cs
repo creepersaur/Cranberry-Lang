@@ -70,6 +70,12 @@ public class Lexer {
 
 				in_comment = true;
 			} else if (IsPunctuation(CurChar) && !instr.HasValue) {
+				if (curToken.Length > 0 && curToken[^1] is 'e' or 'E' && float.TryParse(curToken[..^1], out float _) && CurChar is '+' or '-') {
+					curToken += CurChar;
+					Advance();
+					continue;
+				}
+
 				if (CurChar == '.' && int.TryParse(curToken, out int _) && Pos + 1 < Text.Length && int.TryParse(Text[Pos + 1].ToString(), out int _)) {
 					curToken += CurChar;
 				} else {

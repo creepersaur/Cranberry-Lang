@@ -1,4 +1,5 @@
-﻿using Cranberry.Builtin;
+﻿using System.Diagnostics;
+using Cranberry.Builtin;
 using Cranberry.Errors;
 using Cranberry.Nodes;
 using Cranberry.Types;
@@ -19,15 +20,58 @@ public class N_Task : CNamespace {
 					if (args.Length != 1 || !Misc.IsNumber(args[0]!))
 						throw new RuntimeError("Wait(seconds) expects 1 number argument.");
 
-					Thread.Sleep(Convert.ToInt32(Convert.ToDouble(args[0]!) * 1000));
+					double seconds = Convert.ToDouble(args[0]!);
+					if (seconds <= 0) return new NullNode();
+
+					// total requested milliseconds (keep as double)
+					double totalMs = seconds * 1000.0;
+
+					// Reserve a small amount for spinning (final fine-grained wait)
+					const int reserveMsForSpin = 3; // tune between 1..6 depending on your needs
+					int coarseMs = (int)Math.Floor(Math.Max(0.0, totalMs - reserveMsForSpin));
+
+					if (coarseMs > 0)
+						Thread.Sleep(coarseMs);
+
+					double remainingMs = totalMs - coarseMs;
+					if (remainingMs > 0)
+					{
+						var sw = Stopwatch.StartNew();
+						// Spin until the remaining time has elapsed.
+						// SpinWait iterations can be adjusted — using a tiny spin helps reduce busy-loop CPU
+						while (sw.Elapsed.TotalMilliseconds < remainingMs)
+						{
+							Thread.SpinWait(10);
+						}
+					}
+
 					return new NullNode();
 				})
-			}, {
+			},
+			{
 				"WaitMilliseconds", new InternalFunction(args => {
 					if (args.Length != 1 || !Misc.IsNumber(args[0]!))
-						throw new RuntimeError("Wait(seconds) expects 1 number argument.");
+						throw new RuntimeError("WaitMilliseconds(ms) expects 1 number argument.");
 
-					Thread.Sleep(Convert.ToInt32(args[0]!));
+					double ms = Convert.ToDouble(args[0]!);
+					if (ms <= 0) return new NullNode();
+
+					const int reserveMsForSpin = 2;
+					int coarseMs = (int)Math.Floor(Math.Max(0.0, ms - reserveMsForSpin));
+
+					if (coarseMs > 0)
+						Thread.Sleep(coarseMs);
+
+					double remainingMs = ms - coarseMs;
+					if (remainingMs > 0)
+					{
+						var sw = Stopwatch.StartNew();
+						while (sw.Elapsed.TotalMilliseconds < remainingMs)
+						{
+							Thread.SpinWait(10);
+						}
+					}
+
 					return new NullNode();
 				})
 			}, {
@@ -35,7 +79,7 @@ public class N_Task : CNamespace {
 					if (args.Length != 0)
 						throw new RuntimeError("Now() expects 0 arguments.");
 
-					return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+					return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 				})
 			}, {
 				"Spawn", new InternalFunction(args => {
@@ -50,6 +94,14 @@ public class N_Task : CNamespace {
 					}));
 					thread.Start();
 					return new NullNode();
+				})
+			},
+			{
+				"Stopwatch", new InternalFunction(args => {
+					if (args.Length != 0)
+						throw new RuntimeError("Stopwatch() expects 0 arguments.");
+					
+					return new CStopwatch(new Stopwatch());
 				})
 			}
 		});

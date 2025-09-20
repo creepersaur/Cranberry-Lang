@@ -1,5 +1,0 @@
-﻿namespace Vehicle::Water;
-
-fn Boat() {
-	println("Haha boat go vroom")
-}

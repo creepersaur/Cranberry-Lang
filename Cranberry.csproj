@@ -11,12 +11,10 @@
       <None Update="src\main.cb">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-      <None Update="src\Vehicle\Boat.cb">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="src\Vehicle\Car.cb">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="src\Vehicle\" />
     </ItemGroup>
 
 </Project>
