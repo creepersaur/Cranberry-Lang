@@ -9,27 +9,21 @@ public class CList : IMemberAccessible {
 	private static Dictionary<string, InternalFunction>? Functions;
 
 	public object GetMember(object? member) {
-		if (member is string name) {
-			switch (name) {
-				
-				// FUNCTIONS
-				
-				default:
-					if (Functions!.TryGetValue(name, out var value))
-						return value;
-					break;
-			}
-		}
-
-		if (member is double d) {
-			int index = Misc.DoubleToIndex(d, Items.Count, true);
-			if (index >= Items.Count)
-				throw new RuntimeError($"Tried to get item at index ({index}) but length of List is ({Items.Count})");
+		switch (member) {
+			case string name when Functions!.TryGetValue(name, out var value):
+				return value;
 			
-			return Items[index];
+			case double d: {
+				int index = Misc.DoubleToIndex(d, Items.Count, true);
+				if (index >= Items.Count)
+					throw new RuntimeError($"Tried to get item at index ({index}) but length of list is ({Items.Count})");
+			
+				return Items[index];
+			}
+			
+			default:
+				throw new RuntimeError($"Tried to get unknown member: `{member}` on `list`.");
 		}
-		
-		throw new RuntimeError($"Tried to get unknown member: `{member}` on `List`.");
 	}
 	
 	
@@ -86,7 +80,19 @@ public class CList : IMemberAccessible {
 					return new NullNode();
 				}
 			),
-			
+
+			FuncGen.FuncInternal(
+				"Find", 
+				args => {
+					if (args.Length != 1) throw new RuntimeError("`Remove(item)` expects 1 arguments.");
+
+					if (Items.Contains(args))
+						return Items.IndexOf(args[0]!);
+					
+					return new NullNode();
+				}
+			),
+
 			FuncGen.FuncInternal(
 				"Last", 
 				args => {

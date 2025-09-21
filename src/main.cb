@@ -1,5 +1,4 @@
-let x = 7.4e-5
+using Std::FS;
 
-print(
-	format("I added a format function: {}", x)
-)
+let f = FS.OpenFile("C:/Users/Admin/Desktop/Hello.txt")
+print(f.Length())

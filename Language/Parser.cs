@@ -5,7 +5,7 @@ namespace Cranberry;
 
 public class Parser(string[] Tokens) {
 	private int Pos = -1;
-	private static readonly string[] CASTABLE = ["string", "number", "bool", "list", "dict"];
+	private static readonly string[] CASTABLE = ["string", "number", "bool", "list", "dict", "char"];
 	private static readonly string[] SHORTHANDS = ["+=", "-=", "*=", "/=", "^=", "%=", "++", "--"];
 
 	// Get the token ahead (or by offset) as a string?

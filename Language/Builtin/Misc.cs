@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Cranberry.Errors;
+using Cranberry.Nodes;
 using Cranberry.Types;
 
 namespace Cranberry.Builtin;
@@ -48,7 +49,7 @@ public abstract class Misc {
 			switch (v) {
 				case Dictionary<object, object> _ when !seen.Add(v):
 					return "{...}"; // cycle guard
-				case Dictionary<object, object> id : {
+				case Dictionary<object, object> id: {
 					if (id.Count < 1) {
 						return "dict<Empty>";
 					}
@@ -58,11 +59,12 @@ public abstract class Misc {
 
 					string kname = keys_type.Name;
 					string kvalue = values_type.Name;
-					
+
 					foreach (var (key, value) in id) {
 						if (key.GetType() != keys_type) {
 							kname = "any";
 						}
+
 						if (value.GetType() != values_type) {
 							kvalue = "any";
 						}
@@ -105,5 +107,32 @@ public abstract class Misc {
 
 	public static bool IsNumber(object value) {
 		return value is sbyte or byte or short or ushort or int or uint or long or ulong or float or double or decimal;
+	}
+
+	public static bool TryGetInt(object? o, out int v) {
+		v = 0;
+		switch (o) {
+			case int i:
+				v = i;
+				return true;
+			case long l and >= int.MinValue and <= int.MaxValue:
+				v = (int)l;
+				return true;
+			case double d when d % 1 == 0 && d is >= int.MinValue and <= int.MaxValue:
+				v = (int)d;
+				return true;
+			default:
+				return int.TryParse(o?.ToString(), out v);
+		}
+	}
+	
+	public static bool IsTruthy(object? value) {
+		return value switch {
+			NullNode => false,
+			null => false,
+			bool b => b,
+			double d => d != 0.0, // 0 is false, everything else true
+			_ => true // everything else is true
+		};
 	}
 }

@@ -26,7 +26,12 @@ public static class BuiltinFunctions {
 			return Convert.ToDouble(arg);
 		} catch {
 			// ignored
-			throw new RuntimeError($"Cannot convert `{arg}` to a number");
+			try {
+				return Convert.ToDouble(Convert.ToInt32(arg));
+			} catch {
+				// ignored
+				throw new RuntimeError($"Cannot convert `{arg}` to a number");
+			}
 		}
 	}
 

@@ -1,0 +1,3 @@
+﻿namespace Wow;
+
+let x = 10;

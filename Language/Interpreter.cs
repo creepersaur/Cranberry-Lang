@@ -24,16 +24,6 @@ public partial class Interpreter : INodeVisitor<object> {
 		return node.Accept(this)!;
 	}
 
-	public static bool IsTruthy(object? value) {
-		return value switch {
-			NullNode => false,
-			null => false,
-			bool b => b,
-			double d => d != 0.0, // 0 is false, everything else true
-			_ => true // everything else is true
-		};
-	}
-
 	//////////////////////////////////////////
 	// TYPES
 	//////////////////////////////////////////
@@ -205,7 +195,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public object VisitFallback(FallbackNode node) {
 		var left = Evaluate(node.Left);
-		return IsTruthy(left) ? left : Evaluate(node.Right);
+		return Misc.IsTruthy(left) ? left : Evaluate(node.Right);
 	}
 
 	public object VisitCast(CastNode node) {
@@ -214,7 +204,18 @@ public partial class Interpreter : INodeVisitor<object> {
 		switch (node.Type) {
 			case "string": return BuiltinFunctions.ToString(value)!;
 			case "number": return BuiltinFunctions.ToNumber(value);
-			case "bool": return IsTruthy(value);
+			case "bool": return Misc.IsTruthy(value);
+			case "char": {
+				if (Misc.IsNumber(value))
+					return (char)Convert.ToByte(value);
+
+				try {
+					return (char)value;
+				} catch {
+					// ignored
+				}
+			}
+				break;
 
 			case "list": {
 				if (value is CList) return value;
@@ -300,7 +301,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public object? VisitIF(IFNode node) {
-		if (IsTruthy(Evaluate(node.Condition))) {
+		if (Misc.IsTruthy(Evaluate(node.Condition))) {
 			env.Push();
 			try {
 				return Evaluate(node.Then);
@@ -312,7 +313,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		for (int i = 0; i < node.Elif.Length; i++) {
-			if (IsTruthy(Evaluate(node.Elif[i].Item1))) {
+			if (Misc.IsTruthy(Evaluate(node.Elif[i].Item1))) {
 				env.Push();
 				try {
 					return Evaluate(node.Elif[i].Item2);
@@ -495,7 +496,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object? VisitWhile(WhileNode node) {
 		var ReturnValues = new List<object>();
 
-		while (IsTruthy(Evaluate(node.Condition))) {
+		while (Misc.IsTruthy(Evaluate(node.Condition))) {
 			env.Push();
 			try {
 				Evaluate(node.Block);
