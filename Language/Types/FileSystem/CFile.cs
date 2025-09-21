@@ -15,6 +15,15 @@ public class CFile(string path) : IMemberAccessible {
 		return member switch {
 			"Path" => Path,
 
+			"Create" => new InternalFunction(args => {
+				if (args.Length != 0)
+					throw new RuntimeError("`File.Create()` expects 0 arguments.");
+
+				File.Create(Path);
+				
+				return new NullNode();
+			}),
+			
 			"Read" => new InternalFunction(args => {
 				if (args.Length != 0)
 					throw new RuntimeError("`File.Read()` expects 0 arguments.");
@@ -172,7 +181,7 @@ public class CFile(string path) : IMemberAccessible {
 				try {
 					File.Move(Path, args[0]!.ToString()!, Misc.IsTruthy(args[1]));
 					Path = args[0]!.ToString()!;
-					Info = new FileInfo(path);
+					Info = new FileInfo(Path);
 				} catch {
 					throw new RuntimeError($"Could not move file: `{Path}`.");
 				}
