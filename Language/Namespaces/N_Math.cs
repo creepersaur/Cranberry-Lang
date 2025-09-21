@@ -159,6 +159,13 @@ public class N_Math : CNamespace {
 
 				return a + (b - a) / t;
 			}),
+			["Sqrt"] = new InternalFunction(args => {
+				if (args.Length != 1) throw new RuntimeError("Sqrt() expects 1 argument");
+				if (!Misc.IsNumber(args[0]!))
+					throw new RuntimeError("Sqrt() expects a number.");
+
+				return Math.Sqrt(Convert.ToDouble(args[0]));
+			}),
 		});
 	}
 }
