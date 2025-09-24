@@ -47,7 +47,7 @@ public class Parser(string[] Tokens) {
 		if (token == "using") {
 			return ParseUsingDirective();
 		}
-		
+
 		if (token == "include") {
 			return ParseInclude();
 		}
@@ -108,7 +108,7 @@ public class Parser(string[] Tokens) {
 		string first = Advance()!;
 		if (!IsIdentifier(first))
 			throw new ParseError("Namespace names must always be Identifiers.", Pos);
-		
+
 		spaces.Add(first);
 
 		while (Check("::")) {
@@ -116,7 +116,7 @@ public class Parser(string[] Tokens) {
 			string name = Advance()!;
 			if (!IsIdentifier(name))
 				throw new ParseError("Namespace names must always be Identifiers.", Pos);
-			
+
 			spaces.Add(name);
 		}
 
@@ -128,11 +128,11 @@ public class Parser(string[] Tokens) {
 
 		var aliases = new Dictionary<string, string>();
 		var spaces = new List<object>();
-		
+
 		string first = Advance()!;
 		if (!IsIdentifier(first))
 			throw new ParseError("Namespace names must always be Identifiers.", Pos);
-		
+
 		spaces.Add(first);
 
 		while (Check("::")) {
@@ -140,12 +140,12 @@ public class Parser(string[] Tokens) {
 			if (Check("{")) {
 				Advance();
 				var imports = new List<string>();
-				
+
 				while (!Check("}")) {
 					string multi_name = Advance()!;
 					if (!IsIdentifier(multi_name))
 						throw new ParseError("Namespace names must always be Identifiers.", Pos);
-					
+
 					imports.Add(multi_name);
 
 					if (Check("as")) {
@@ -159,26 +159,26 @@ public class Parser(string[] Tokens) {
 					}
 
 					if (Check(",")) Advance();
-					
+
 					else break;
 				}
-				
+
 				Expect("}");
 				Advance();
-				
+
 				spaces.Add(imports.ToArray());
 				break;
 			}
-			
+
 			string name = Advance()!;
 			if (!IsIdentifier(name))
 				throw new ParseError("Namespace names must always be Identifiers.", Pos);
-			
+
 			spaces.Add(name);
 
 			if (Check("as")) {
 				Advance();
-				
+
 				string alias = Advance()!;
 				if (!IsIdentifier(alias))
 					throw new ParseError("Namespace aliases must always be Identifiers.", Pos);
@@ -199,7 +199,7 @@ public class Parser(string[] Tokens) {
 			throw new ParseError($"Expected Identifier for class name. Got `{name}`", Pos);
 
 		FunctionNode? constructor = null;
-		
+
 		Expect("{");
 		Advance();
 
@@ -210,24 +210,24 @@ public class Parser(string[] Tokens) {
 					throw new ParseError("Only one constructor can be present per Class", Pos + 1);
 				constructor = ParseLambda();
 			}
-			
+
 			if (Check("fn")) {
 				funcs.Add(ParseFunctionDef());
 			}
 
 			if (Check(";")) Advance();
 		}
-		
+
 		Expect("}");
 		Advance();
 
 		return new ClassDef(name, funcs.ToArray(), constructor);
 	}
 
-	private WhileNode ParseWhile() {
+	private WhileNode ParseWhile(bool is_true = false) {
 		Advance();
 
-		return new WhileNode(ParseExpression(), ParseBlock());
+		return new WhileNode(is_true ? new BoolNode(true) : ParseExpression(), ParseBlock());
 	}
 
 	private ForNode ParseFOR() {
@@ -388,11 +388,11 @@ public class Parser(string[] Tokens) {
 			var new_cases = new List<Node>();
 			while (!Check(":")) {
 				new_cases.Add(ParseExpression());
-				
+
 				if (Check(",")) Advance();
 				else break;
 			}
-			
+
 			Expect(":");
 			Advance();
 
@@ -485,7 +485,7 @@ public class Parser(string[] Tokens) {
 		if (Check("??")) {
 			Advance();
 
-			return new FallbackNode(left,ParseExpression());
+			return new FallbackNode(left, ParseExpression());
 		}
 
 		return left;
@@ -585,7 +585,7 @@ public class Parser(string[] Tokens) {
 				if (!IsIdentifier(member)) {
 					throw new ParseError("Tried to get member using non-identifier.", Pos);
 				}
-				
+
 				if (Check("=")) {
 					Advance();
 					var value = ParseExpression();
@@ -593,9 +593,10 @@ public class Parser(string[] Tokens) {
 				} else {
 					node = new MemberAccessNode(node, new StringNode(member));
 				}
+
 				continue;
 			}
-			
+
 			if (Check("[")) {
 				Advance(); // consume '.'
 				var member = ParseExpression(); // implement or reuse method to get identifier token text
@@ -609,6 +610,7 @@ public class Parser(string[] Tokens) {
 				} else {
 					node = new MemberAccessNode(node, member);
 				}
+
 				continue;
 			}
 
@@ -622,7 +624,7 @@ public class Parser(string[] Tokens) {
 		Advance();
 
 		var items = new List<Node>();
-		
+
 		while (!Check("]")) {
 			items.Add(ParseExpression());
 			if (Check(",")) {
@@ -631,7 +633,7 @@ public class Parser(string[] Tokens) {
 				break;
 			}
 		}
-		
+
 		Expect("]");
 		Advance();
 
@@ -645,7 +647,7 @@ public class Parser(string[] Tokens) {
 
 		while (!Check("}")) {
 			Node key;
-			
+
 			string key_id = PeekAhead()!;
 			if (IsIdentifier(key_id)) {
 				key = new StringNode(key_id);
@@ -653,19 +655,19 @@ public class Parser(string[] Tokens) {
 			} else {
 				key = ParseExpression();
 			}
-			
+
 			Expect(":");
 			Advance();
 
 			Node value = ParseExpression();
-			
+
 			items.Add(key, value);
-			
+
 			if (Check(",")) {
 				Advance();
 			} else break;
 		}
-		
+
 		Expect("}");
 		Advance();
 
@@ -700,6 +702,14 @@ public class Parser(string[] Tokens) {
 
 		if (token == "while") {
 			return ParseWhile();
+		}
+
+		if (token == "loop") {
+			return ParseWhile(true);
+		}
+
+		if (token == "loop") {
+			return ParseWhile(true);
 		}
 
 		if (token == "for") {
@@ -745,7 +755,7 @@ public class Parser(string[] Tokens) {
 
 			if (Check("(")) {
 				Advance(); // Consume `(`
-				
+
 				if (CASTABLE.Contains(token)) {
 					var to_cast = ParseExpression();
 					Expect(")");
