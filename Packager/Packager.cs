@@ -50,9 +50,11 @@ public static class CrpkgZip {
 		Pack(entryPoint, inputFilePaths, config.Include);
 
 		var exe_path = Environment.ProcessPath ?? System.Reflection.Assembly.GetEntryAssembly()!.Location;
+		var exe_dir = Path.GetDirectoryName(exe_path);
+		
 		File.Copy(exe_path, $"{BuildDir}/{config.Name}.exe");
-		File.Copy("Cranberry.dll", $"{BuildDir}/Cranberry.dll");
-		File.Copy("Cranberry.runtimeconfig.json", $"{BuildDir}/Cranberry.runtimeconfig.json");
+		File.Copy($"{exe_dir}/Cranberry.dll", $"{BuildDir}/Cranberry.dll");
+		File.Copy($"{exe_dir}/Cranberry.runtimeconfig.json", $"{BuildDir}/Cranberry.runtimeconfig.json");
 	}
 
 	public static (string?, Dictionary<string, string>) ReadPackage(string crpkgPath, bool is_main = true) {

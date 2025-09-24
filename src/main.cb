@@ -1,3 +1,18 @@
-print("You ran Cranberry!")
+using Std::IO;
 
-loop {}
+fn GetUserInfo() {
+	let age = number( IO.ReadLine("Enter age: ") )
+    let name = IO.ReadLine("Enter name: ")
+    
+    return {
+        "age": age,
+        "name": name
+    }
+}
+
+let info = GetUserInfo()
+
+switch info.age > 18 {
+	true :=> println($"{info.name} is old enough to drink.")
+	_ :=> println($"{info.name} is NOT old enough to drink!")
+}

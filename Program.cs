@@ -1,10 +1,13 @@
 ﻿using Cranberry.Packager;
 
-if (File.Exists("source.crpkg")) {
+var exe_path = Environment.ProcessPath ?? System.Reflection.Assembly.GetEntryAssembly()!.Location;
+var exe_dir = Path.GetDirectoryName(exe_path);
+
+if (File.Exists($"{exe_dir}/source.crpkg")) {
 	var (entry, files) = CrpkgZip.ReadPackage("source.crpkg");
 	var program = new Cranberry.Program();
 
-	if (File.Exists("include.crpkg")) {
+	if (File.Exists($"{exe_dir}/include.crpkg")) {
 		var (_, includes) = CrpkgZip.ReadPackage("include.crpkg", false);
 		foreach (var (key, value) in includes) {
 			program.Includes[key] = value;
