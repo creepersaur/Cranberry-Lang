@@ -8,18 +8,34 @@ public class CFile(string path) : IMemberAccessible {
 	public string Path = path;
 	public FileInfo Info = new(path);
 
+	public override string ToString() => $"File({Path})";
+
 	public object GetMember(object? member) {
 		if (member is not string)
-			throw new RuntimeError("`File` only has string named members.");
+			throw new RuntimeError($"Tried to get member of unsupported datatype `{member}` on File.");
 
 		return member switch {
 			"Path" => Path,
+			"Name" => Info.Name,
+			"FullName" => Info.FullName,
+			"Extension" => Info.Extension[1..],
+			"Stem" => System.IO.Path.GetFileNameWithoutExtension(Info.Name),
+			"Parent" => new CDirectory(Info.DirectoryName!),
 
 			"Create" => new InternalFunction(args => {
 				if (args.Length != 0)
 					throw new RuntimeError("`File.Create()` expects 0 arguments.");
 
 				File.Create(Path);
+				
+				return new NullNode();
+			}),
+			
+			"Clear" => new InternalFunction(args => {
+				if (args.Length != 0)
+					throw new RuntimeError("`File.Create()` expects 0 arguments.");
+
+				File.WriteAllText(Path, "");
 				
 				return new NullNode();
 			}),
@@ -164,7 +180,7 @@ public class CFile(string path) : IMemberAccessible {
 
 			"Delete" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`File.Exists()` expects 0 arguments.");
+					throw new RuntimeError("`File.Delete()` expects 0 arguments.");
 
 				File.Delete(Path);
 
@@ -173,14 +189,17 @@ public class CFile(string path) : IMemberAccessible {
 
 			"MoveTo" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`File.MoveTo(path)` expects 1 arguments.");
+					throw new RuntimeError("`File.MoveTo(path, override?)` expects 1-2 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");
 
+				if (args[0] is not string new_path)
+					throw new RuntimeError("`File.MoveTo()` expects a `string` argument.");
+
 				try {
-					File.Move(Path, args[0]!.ToString()!, Misc.IsTruthy(args[1]));
-					Path = args[0]!.ToString()!;
+					File.Move(Path, new_path, Misc.IsTruthy(args[1]));
+					Path = new_path;
 					Info = new FileInfo(Path);
 				} catch {
 					throw new RuntimeError($"Could not move file: `{Path}`.");

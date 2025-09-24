@@ -126,7 +126,9 @@ public class Parser(string[] Tokens) {
 	private UsingDirective ParseUsingDirective() {
 		Advance();
 
+		var aliases = new Dictionary<string, string>();
 		var spaces = new List<object>();
+		
 		string first = Advance()!;
 		if (!IsIdentifier(first))
 			throw new ParseError("Namespace names must always be Identifiers.", Pos);
@@ -146,7 +148,18 @@ public class Parser(string[] Tokens) {
 					
 					imports.Add(multi_name);
 
+					if (Check("as")) {
+						Advance();
+						string alias = Advance()!;
+						if (!IsIdentifier(alias))
+							throw new ParseError("Namespace aliases must always be Identifiers.", Pos);
+
+						if (!aliases.TryAdd(multi_name, alias))
+							throw new ParseError("Cannot have duplicate namespace aliases.", Pos);
+					}
+
 					if (Check(",")) Advance();
+					
 					else break;
 				}
 				
@@ -162,9 +175,20 @@ public class Parser(string[] Tokens) {
 				throw new ParseError("Namespace names must always be Identifiers.", Pos);
 			
 			spaces.Add(name);
+
+			if (Check("as")) {
+				Advance();
+				
+				string alias = Advance()!;
+				if (!IsIdentifier(alias))
+					throw new ParseError("Namespace aliases must always be Identifiers.", Pos);
+
+				if (!aliases.TryAdd(name, alias))
+					throw new ParseError("Cannot have duplicate namespace aliases.", Pos);
+			}
 		}
 
-		return new UsingDirective(spaces.ToArray());
+		return new UsingDirective(spaces.ToArray(), aliases);
 	}
 
 	private ClassDef ParseClassDef() {
@@ -799,7 +823,7 @@ public class Parser(string[] Tokens) {
 	}
 
 	private static bool IsString(string? token) {
-		var Quotes = "'\"".ToCharArray();
+		var Quotes = Lexer.QUOTES;
 		return token != null && Quotes.Contains(token[0]) && Quotes.Contains(token[^1]);
 	}
 }

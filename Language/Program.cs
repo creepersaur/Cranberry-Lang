@@ -4,12 +4,8 @@ using Cranberry.Nodes;
 namespace Cranberry;
 
 public class Program {
-	public readonly Env original_env;
-	public readonly Interpreter interpreter = new();
-
-	public Program() {
-		original_env = interpreter.env;
-	}
+	public readonly Env original_env = interpreter.env;
+	public static readonly Interpreter interpreter = new();
 
 	public void RunFile(string text, string path) {
 		var previousEnv = interpreter.env;

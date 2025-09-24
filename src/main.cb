@@ -1,4 +1,4 @@
-using Std::FS;
-
-let f = FS.OpenFile("C:/Users/Admin/Desktop/Hello.txt")
-print(f.Length())
+let x = [1, 2, 3]
+print(
+	x.Map(fn(v) => 2 * v)
+)

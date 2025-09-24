@@ -28,7 +28,7 @@ public class CList : IMemberAccessible {
 	
 	
 	public CList(List<object> items) {
-		Items = (items ?? throw new ArgumentNullException(nameof(items)))!;
+		Items = (items ?? throw new ArgumentNullException(nameof(items)));
 		
 		Functions = FuncGen.GenerateFunctions([
 			FuncGen.FuncInternal(
@@ -134,12 +134,30 @@ public class CList : IMemberAccessible {
 					return new NullNode();
 				}
 			),
-
+			
 			FuncGen.FuncInternal(
 				"Clone", 
 				args => {
 					if (args.Length != 0) throw new RuntimeError("`Clone()` expects 0 arguments.");
-					return new CList(Items.Copy()!);
+					return new CList(Items.Copy());
+				}
+			),
+			
+			FuncGen.FuncInternal(
+				"Map", 
+				args => {
+					if (args.Length != 1) throw new RuntimeError("`Map( func(value) )` expects 1 argument.");
+					if (args[0] is not FunctionNode f)
+						throw new RuntimeError("`Map( func(value) )` expects 1 function argument.");
+					
+					var list = new List<object>();
+					foreach (var v in Items) {
+						list.Add(Program.interpreter.Evaluate(new FunctionCall("", [v]) {
+							Target = (Node)Program.interpreter.Evaluate(f)
+						}));
+					}
+					
+					return new CList(list);
 				}
 			),
 		]);

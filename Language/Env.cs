@@ -69,8 +69,8 @@ public class Env {
 		Variables.Peek()[name] = value;
 	}
 	
-	public void DefineNamespace(CNamespace value) {
-		if (!Namespaces.TryAdd(value.Name, value))
+	public void DefineNamespace(CNamespace value, string? alias = null) {
+		if (!Namespaces.TryAdd(alias ?? value.Name, value))
 			throw new RuntimeError($"Cannot define namespace with duplicate name `{value.Name}`");
 	}
 }

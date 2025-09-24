@@ -1,8 +1,8 @@
 ﻿namespace Cranberry;
 
 public class Lexer {
-	private static readonly char[] PUNCTUATION = "!@$%^&*()[]{},./:;\\-=+`~<>?".ToCharArray();
-	private static readonly char[] QUOTES = "\"\'".ToCharArray();
+	private static readonly char[] PUNCTUATION = "!@$%^&*()[]{},./:;\\-=+~<>?".ToCharArray();
+	public static readonly char[] QUOTES = "\"\'`".ToCharArray();
 	private static readonly char[] SPACE = " \n\t\r".ToCharArray();
 	private static readonly string[] DOUBLE_PUNCS = "+= -= *= /= ++ -- // .. == != >= <= => ?? ::".Split();
 
@@ -69,6 +69,7 @@ public class Lexer {
 				}
 
 				in_comment = true;
+				
 			} else if (IsPunctuation(CurChar) && !instr.HasValue) {
 				if (curToken.Length > 0 && curToken[^1] is 'e' or 'E' && float.TryParse(curToken[..^1], out float _) && CurChar is '+' or '-') {
 					curToken += CurChar;

@@ -675,9 +675,15 @@ public partial class Interpreter : INodeVisitor<object> {
 
 				foreach (var m in multiple) {
 					if (latest == std) {
-						env.DefineNamespace((CNamespace)latest.GetMember(m));
+						if (node.Aliases.TryGetValue(m, out var alias))
+							env.DefineNamespace((CNamespace)latest.GetMember(m), alias);
+						else
+							env.DefineNamespace((CNamespace)latest.GetMember(m));
 					} else if (latest_env.HasNamespace(m)) {
-						env.DefineNamespace(latest_env.GetNamespace(m));
+						if (node.Aliases.TryGetValue(m, out var alias))
+							env.DefineNamespace(latest_env.GetNamespace(m), alias);
+						else
+							env.DefineNamespace(latest_env.GetNamespace(m));
 					} else {
 						throw new RuntimeError($"Namespace `{m}` doesn't exist in `{latest!.Name}`.");
 					}
@@ -686,7 +692,10 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (!list_of_spaces && latest != null)
-			env.DefineNamespace(latest);
+			if (node.Aliases.TryGetValue(latest.Name, out var alias))
+				env.DefineNamespace(latest, alias);
+			else
+				env.DefineNamespace(latest);
 
 		return null;
 	}
