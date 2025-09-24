@@ -15,11 +15,17 @@ public class Parser(string[] Tokens) {
 	}
 
 	// Peek ahead and throw and error if token isn't expected
-	private void Expect(string token) {
+	private bool Expect(string token) {
 		string? ahead = PeekAhead();
 		if (ahead != token) {
-			throw new ParseError($"Expected '{token}', got '{ahead}'", Pos + 1);
+			throw new ParseError($"Expected '{token}', got '{ahead switch {
+				"\n" => "\\n",
+				null => "[EOF]",
+				_ => ahead
+			}}'", Pos + 1);
 		}
+
+		return true;
 	}
 
 	// Check if token is equal to ahead (no error)
@@ -38,6 +44,7 @@ public class Parser(string[] Tokens) {
 	// HANDLE STATEMENTS
 	////////////////////////////////////////////////////////////
 	public Node Parse() {
+		SkipNewlines();
 		string? token = PeekAhead();
 
 		if (token == "let") {
@@ -66,14 +73,14 @@ public class Parser(string[] Tokens) {
 
 		if (token == "return") {
 			Advance();
-			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
+			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else") || IsNewline())
 				return new ReturnNode(new NullNode());
 			return new ReturnNode(ParseExpression());
 		}
 
 		if (token == "break") {
 			Advance();
-			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
+			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else") || IsNewline())
 				return new BreakNode(new NullNode());
 			return new BreakNode(ParseExpression());
 		}
@@ -245,6 +252,7 @@ public class Parser(string[] Tokens) {
 	}
 
 	private BlockNode ParseBlock() {
+		SkipNewlines();
 		if (Check("=>")) {
 			Advance();
 			var node = Parse();
@@ -260,9 +268,11 @@ public class Parser(string[] Tokens) {
 
 		var statements = new List<Node>();
 		while (!Check("}")) {
+			SkipNewlines();
+			if (Check("}")) break;
+
 			statements.Add(Parse());
-			if (Check(";"))
-				Advance();
+			if (Check(";")) Advance();
 		}
 
 		Expect("}");
@@ -430,6 +440,7 @@ public class Parser(string[] Tokens) {
 	// HANDLE EXPRESSIONS
 	////////////////////////////////////////////////////////////
 	public Node ParseExpression() {
+		SkipNewlines();
 		return ParseComparison();
 	}
 
@@ -547,24 +558,25 @@ public class Parser(string[] Tokens) {
 
 		// Handle function calls (can be chained)
 		while (true) {
+			SkipNewlines();
+			
 			// IIFE
 			if (Check("(")) {
 				Advance(); // consume '('
-
+				SkipNewlines();
+				
 				var args = new List<object>();
 
 				// If next token is not ')', parse one or more arguments
-				if (!Check(")")) {
-					while (true) {
-						args.Add(ParseExpression());
-
-						if (Check(",")) {
-							Advance(); // consume comma and keep parsing args
-							// allow trailing comma before ')', so if next is ')' the loop will break
-							if (Check(")")) break;
-						} else {
-							break;
-						}
+				while (!Check(")")) {
+					args.Add(ParseExpression());
+					if (Check(",")) {
+						Advance();
+						SkipNewlines();
+						if (Check(")")) break;
+					} else {
+						SkipNewlines();
+						break;
 					}
 				}
 
@@ -718,6 +730,7 @@ public class Parser(string[] Tokens) {
 
 		if (token == "@") {
 			Advance();
+			SkipNewlines();
 			Expect("{");
 			return new ScopeNode(ParseBlock());
 		}
@@ -732,7 +745,7 @@ public class Parser(string[] Tokens) {
 
 		if (token == "out") {
 			Advance();
-			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else"))
+			if (Check(";") || Check("}") || Check(")") || PeekAhead() == null || Check("else") || IsNewline())
 				return new OutNode(new NullNode());
 			return new OutNode(ParseExpression());
 		}
@@ -741,7 +754,7 @@ public class Parser(string[] Tokens) {
 			return ParseSwitch();
 		}
 
-		if (token == "fn" && Check("(", 2)) {
+		if (token == "fn" && Advance() != null && SkipNewlines() && Expect("(")) {
 			return ParseLambda();
 		}
 
@@ -752,6 +765,8 @@ public class Parser(string[] Tokens) {
 		// variable (identifier)
 		if (IsIdentifier(token)) {
 			Advance();
+
+			SkipNewlines();
 
 			if (Check("(")) {
 				Advance(); // Consume `(`
@@ -767,9 +782,11 @@ public class Parser(string[] Tokens) {
 				var args = new List<object>();
 				while (!Check(")")) {
 					args.Add(ParseExpression());
+					SkipNewlines();
 
 					if (Check(",")) {
 						Advance();
+						SkipNewlines();
 					} else {
 						break;
 					}
@@ -795,26 +812,30 @@ public class Parser(string[] Tokens) {
 			return expr;
 		}
 
-		throw new ParseError($"Unexpected token '{token}'", Pos + 1);
+		throw new ParseError($"Unexpected token '{token switch {
+			"\n" => "\\n",
+			_ => token
+		}}'", Pos + 1);
 	}
 
 	private FunctionNode ParseLambda() {
-		Advance(); // consume 'fn'
-
 		Expect("(");
 		Advance();
 
 		var args = new List<string>();
 		while (!Check(")")) {
+			SkipNewlines();
 			string? arg = PeekAhead();
 			if (!IsIdentifier(arg)) {
 				throw new ParseError($"Expected parameter name, got '{arg}'", Pos);
 			}
 
 			args.Add(Advance()!);
+			SkipNewlines();
 
 			if (Check(",")) {
 				Advance();
+				SkipNewlines();
 			} else {
 				break;
 			}
@@ -825,6 +846,17 @@ public class Parser(string[] Tokens) {
 
 		return new FunctionNode(args.ToArray(), ParseBlock());
 	}
+
+	private bool IsNewline() => PeekAhead() == "\n";
+
+	private bool SkipNewlines() {
+		while (PeekAhead() != null && IsNewline()) {
+			Advance();
+		}
+
+		return true;
+	}
+
 
 	private static bool IsIdentifier(string? token) {
 		return token != null &&

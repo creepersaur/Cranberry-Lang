@@ -506,9 +506,9 @@ public partial class Interpreter : INodeVisitor<object> {
 				if (be.Value != null)
 					ReturnValues.Add(be.Value);
 			} catch (ContinueException) {
-			} finally {
-				env.Pop();
 			}
+			
+			env.Pop();
 		}
 
 		return ReturnValues.Count > 0 ? ReturnValues : new NullNode();

@@ -1,0 +1,4 @@
+﻿[package]
+name = "Hello"
+version = "1.0.0"
+include = ["C:\\Users\\Admin\\Desktop\\Hello.cb"]

@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "vjGOfFxZZ6c=",
+  "dgSpecHash": "WTkn5z4w5Ew=",
   "success": true,
   "projectFilePath": "D:\\Coding\\Rider\\Cranberry\\Cranberry.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\Admin\\.nuget\\packages\\tomlyn\\0.19.0\\tomlyn.0.19.0.nupkg.sha512"
+  ],
   "logs": []
 }

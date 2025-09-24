@@ -5,6 +5,7 @@ namespace Cranberry;
 
 public class Program {
 	public readonly Env original_env = interpreter.env;
+	public readonly Dictionary<string, string> Includes = new();
 	public static readonly Interpreter interpreter = new();
 
 	public void RunFile(string text, string path) {
@@ -12,20 +13,20 @@ public class Program {
 
 		try {
 			interpreter.env = original_env;
-			
+
 			var tokens = new Lexer(text).GetTokens();
 			// Lexer.PrintTokens(tokens);
 			var ast = new List<Node>(Math.Max(16, tokens.Count / 4));
 			var important = new List<Node>(8);
-			
+
 			var parser = new Parser(tokens.ToArray());
-			
+
 			while (parser.PeekAhead() != null) {
 				if (parser.Check(";")) {
 					parser.Advance();
 					continue;
 				}
-				
+
 				var node = parser.Parse();
 				if (node is FunctionDef or ClassDef) {
 					important.Add(node);
@@ -33,7 +34,7 @@ public class Program {
 					ast.Add(node);
 				}
 
-				if (parser.Check(";")) {
+				if (parser.Check(";") || parser.Check("\n")) {
 					parser.Advance();
 				}
 			}
@@ -41,13 +42,11 @@ public class Program {
 			foreach (var node in important) {
 				RunNode(node, path);
 			}
-			
+
 			foreach (var node in ast) {
 				RunNode(node, path);
 			}
-		}
-		finally
-		{
+		} finally {
 			interpreter.env = previousEnv;
 		}
 	}
@@ -56,25 +55,35 @@ public class Program {
 		try {
 			interpreter.Evaluate(node);
 		} catch (ReturnException) {
-			throw new RuntimeError("Cannot `return` in main scope.");
 		} catch (OutException) {
 			throw new RuntimeError("Cannot `out` in main scope.");
 		} catch (BreakException) {
 			throw new RuntimeError("`break` must only be used in loops.");
 		} catch (IncludeFileException include) {
 			if (include.Path is List<object> l) {
-				foreach (var f in l.Select(p => new FileInfo((string)p))) {
+				foreach (var p in l) {
+					if (Includes.TryGetValue((string)p, out var value)) {
+						RunFile(value, (string)p);
+						return;
+					}
+					
+					var f = new FileInfo((string)p);
 					if (f.Exists) {
 						if (f.FullName != path) {
 							RunFile(File.ReadAllText(f.FullName), f.FullName);
 						} else {
-							throw new RuntimeError($"Cyclic dependency on file self. Cannot `include` file of same path.");
+							throw new RuntimeError("Cyclic dependency on file self. Cannot `include` file of same path.");
 						}
 					} else {
 						throw new RuntimeError($"Failed to include file: `{f.FullName}`");
 					}
 				}
 			} else {
+				if (Includes.TryGetValue((string)include.Path, out var value)) {
+					RunFile(value, (string)include.Path);
+					return;
+				}
+
 				var f = new FileInfo((string)include.Path);
 				if (f.Exists) {
 					if (f.FullName != path) {
@@ -89,14 +98,14 @@ public class Program {
 		}
 	}
 
-	public (string, List<string>) CollectFiles() {
+	public (string, List<string>) CollectFiles(string entry_point) {
 		var dir = new DirectoryInfo("src");
 		var files = new List<string>();
 		string? entry = null;
 
 		if (dir.Exists) {
 			foreach (var file in dir.GetFiles("*.cb", SearchOption.AllDirectories)) {
-				if (Path.GetFileNameWithoutExtension(file.Name) == "main") {
+				if (file.Name == entry_point) {
 					entry = file.FullName;
 					continue;
 				}
@@ -104,7 +113,7 @@ public class Program {
 				files.Add(file.FullName);
 			}
 		} else {
-			var main = new FileInfo("main.cb");
+			var main = new FileInfo(entry_point);
 			if (main.Exists)
 				return (main.FullName, []);
 		}
@@ -112,11 +121,20 @@ public class Program {
 		return (entry!, files);
 	}
 
-	public void RunProgram(string entry, List<string> files) {
+	public void RunProgram(string entry, List<string> files, bool release = false) {
 		foreach (var path in files) {
 			RunFile(File.ReadAllText(path), path);
 		}
 
 		RunFile(File.ReadAllText(entry), entry);
+	}
+
+	public void RunBuild(string entry, Dictionary<string, string> files) {
+		foreach (var (name, data) in files) {
+			if (name != entry && name != ".srcConfig")
+				RunFile(data, name);
+		}
+
+		RunFile(files[entry], entry);
 	}
 }

@@ -1,11 +1,45 @@
 {
   "version": 3,
   "targets": {
-    "net8.0": {}
+    "net8.0": {
+      "Tomlyn/0.19.0": {
+        "type": "package",
+        "compile": {
+          "lib/net8.0/Tomlyn.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Tomlyn.dll": {
+            "related": ".xml"
+          }
+        }
+      }
+    }
   },
-  "libraries": {},
+  "libraries": {
+    "Tomlyn/0.19.0": {
+      "sha512": "GlI2o8R8jbZIaE+YX6uA/VoAOH7zIxYeqxDm7jHW2hqUhuB+q19oKold35FkMuv8IZDoCqsTMolaBv2eBLBmrQ==",
+      "type": "package",
+      "path": "tomlyn/0.19.0",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "lib/net8.0/Tomlyn.dll",
+        "lib/net8.0/Tomlyn.xml",
+        "lib/netstandard2.0/Tomlyn.dll",
+        "lib/netstandard2.0/Tomlyn.xml",
+        "logo.png",
+        "readme.md",
+        "tomlyn.0.19.0.nupkg.sha512",
+        "tomlyn.nuspec"
+      ]
+    }
+  },
   "projectFileDependencyGroups": {
-    "net8.0": []
+    "net8.0": [
+      "Tomlyn >= 0.19.0"
+    ]
   },
   "packageFolders": {
     "C:\\Users\\Admin\\.nuget\\packages\\": {},
@@ -53,6 +87,12 @@
     "frameworks": {
       "net8.0": {
         "targetAlias": "net8.0",
+        "dependencies": {
+          "Tomlyn": {
+            "target": "Package",
+            "version": "[0.19.0, )"
+          }
+        },
         "imports": [
           "net461",
           "net462",
