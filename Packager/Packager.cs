@@ -5,20 +5,26 @@ namespace Cranberry.Packager;
 
 public static class CrpkgZip {
 	private const string BuildDir = "build";
+	public static bool Release = false;
 
 	public static void Pack(string entryPoint, string[] inputFilePaths, string[] includeFilePaths) {
+		var compression = Release switch {
+			true => CompressionLevel.SmallestSize,
+			false => CompressionLevel.Fastest
+		};
+		
 		using var fs = new FileStream($"{BuildDir}/source.crpkg", FileMode.Create, FileAccess.Write);
 		using var archive = new ZipArchive(fs, ZipArchiveMode.Create);
 		
 		// Create a `cranberry.srcConfig`
-		var srcConfigEntry = archive.CreateEntry(".srcConfig", CompressionLevel.Optimal);
+		var srcConfigEntry = archive.CreateEntry(".srcConfig", compression);
 		var srcConfigStream = srcConfigEntry.Open();
 		srcConfigStream.Write(Encoding.ASCII.GetBytes(Path.GetFileName(entryPoint)));
 		srcConfigStream.Close();
 
 		// PACK MAIN PROGRAM
 		foreach (var path in inputFilePaths) {
-			var entry = archive.CreateEntry(Path.GetFullPath(path), CompressionLevel.Optimal);
+			var entry = archive.CreateEntry(Path.GetFullPath(path), compression);
 			using var entryStream = entry.Open();
 			using var inFile = File.OpenRead(path);
 			inFile.CopyTo(entryStream);
@@ -29,7 +35,7 @@ public static class CrpkgZip {
 		using var archive_include = new ZipArchive(fs_include, ZipArchiveMode.Create);
 		
 		foreach (var path in includeFilePaths) {
-			var entry = archive_include.CreateEntry(Path.GetFullPath(path), CompressionLevel.Optimal);
+			var entry = archive_include.CreateEntry(Path.GetFullPath(path), compression);
 			using var entryStream = entry.Open();
 			using var inFile = File.OpenRead(path);
 			inFile.CopyTo(entryStream);

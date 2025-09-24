@@ -25,11 +25,15 @@ if (args[0] == "run") {
 	var program = new Cranberry.Program();
 	var files = program.CollectFiles(args.Length > 1 ? args[1] : "main.cb");
 	program.RunProgram(files.Item1, files.Item2);
+	
 } else if (args[0] == "build") {
 	var program = new Cranberry.Program();
 	var (entry, files) = program.CollectFiles(args.Length > 1 ? args[1] : "main.cb");
 	files.Add(entry);
 
+	if (args.Contains("--release"))
+		CrpkgZip.Release = true;
+	
 	CrpkgZip.Build(entry, files.ToArray(), Config.GetConfig() ?? Config.Default());
 } else {
 	Console.WriteLine($"`{args[0]}` is not a valid cranberry command.");
