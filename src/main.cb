@@ -16,3 +16,5 @@ switch info.age > 18 {
 	true :=> println($"{info.name} is old enough to drink.")
 	_ :=> println($"{info.name} is NOT old enough to drink!")
 }
+
+print("Yes")
