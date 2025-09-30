@@ -25,7 +25,21 @@ public class CList : IMemberAccessible {
 				throw new RuntimeError($"Tried to get unknown member: `{member}` on `list`.");
 		}
 	}
-	
+
+	public void SetMember(object? member, object? value) {
+		Console.WriteLine(member!.GetType());
+		
+		if (member is double d) {
+			int index = Misc.DoubleToIndex(d, Items.Count, true);
+			if (index >= Items.Count)
+				throw new RuntimeError($"Tried to get item at index ({index}) but length of list is ({Items.Count})");
+
+			Items[index] = value!;
+			return;
+		}
+		
+		throw new RuntimeError($"Cannot set member `{member}` on list.");
+	}
 	
 	public CList(List<object> items) {
 		Items = (items ?? throw new ArgumentNullException(nameof(items)));

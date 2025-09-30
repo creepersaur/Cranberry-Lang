@@ -1,20 +1,7 @@
-using Std::IO;
-
-fn GetUserInfo() {
-	let age = number( IO.ReadLine("Enter age: ") )
-    let name = IO.ReadLine("Enter name: ")
-    
-    return {
-        "age": age,
-        "name": name
-    }
+let x = {
+	"hello": "world"
 }
 
-let info = GetUserInfo()
+x[123] = 567
 
-switch info.age > 18 {
-	true :=> println($"{info.name} is old enough to drink.")
-	_ :=> println($"{info.name} is NOT old enough to drink!")
-}
-
-print("Yes")
+print(x)

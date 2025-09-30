@@ -6,166 +6,128 @@ namespace Cranberry.Namespaces;
 
 public class N_Math : CNamespace {
 	public N_Math() : base("Math", true) {
-		env.Variables.Push(new Dictionary<string, object> {
-			["PI"] = Math.PI,
-			["E"] = Math.E,
-			["Tau"] = Math.Tau,
+		var table = new Dictionary<string, object>();
 
-			//////////////////////////////////////////////////////////
-			// METHODS
-			//////////////////////////////////////////////////////////
+		// helper conversions / validators
+		static double ToDouble(object? o) => Convert.ToDouble(o);
 
-			["Max"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Max() expects 2 arguments");
-				if (!Misc.IsNumber(args[0]!) || !Misc.IsNumber(args[1]!))
-					throw new RuntimeError("Max() expects a number.");
+		static void ExpectCount(string name, object?[] args, int expected) {
+			if (args.Length != expected)
+				throw new RuntimeError($"{name}() expects {expected} argument{(expected == 1 ? "" : "s")}, got {args.Length}");
+		}
 
-				return Math.Max(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]));
-			}),
-			["Min"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Min() expects 2 arguments");
-				if (!Misc.IsNumber(args[0]!) || !Misc.IsNumber(args[1]!))
-					throw new RuntimeError("Min() expects a number.");
+		static void ExpectMinCount(string name, object?[] args, int min) {
+			if (args.Length < min)
+				throw new RuntimeError($"{name}() expects at least {min} argument{(min == 1 ? "" : "s")}, got {args.Length}");
+		}
 
-				return Math.Min(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]));
-			}),
-			["Clamp"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Clamp() expects 3 arguments");
-				if (!Misc.IsNumber(args[0]!) || !Misc.IsNumber(args[1]!) || !Misc.IsNumber(args[2]!))
-					throw new RuntimeError("Clamp() expects 3 numbers.");
+		static void ExpectNumber(string name, object? obj, int index) {
+			if (!Misc.IsNumber(obj!))
+				throw new RuntimeError($"{name}() expects argument #{index + 1} to be a number.");
+		}
 
-				return Math.Clamp(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]), Convert.ToDouble(args[2]));
-			}),
-			["Sin"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Sin() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Sin() expects a number.");
+		// registration helpers
+		void AddConst(string name, object value) => table[name] = value;
 
-				return Math.Sin(Convert.ToDouble(args[0]));
-			}),
-			["Cos"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Cos() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Cos() expects a number.");
+		void AddUnary(string name, Func<double, object> impl) {
+			table[name] = new InternalFunction(args => {
+				ExpectCount(name, args, 1);
+				ExpectNumber(name, args[0], 0);
+				return impl(ToDouble(args[0]));
+			});
+		}
 
-				return Math.Cos(Convert.ToDouble(args[0]));
-			}),
-			["Tan"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Tan() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Tan() expects a number.");
+		void AddBinary(string name, Func<double, double, object> impl) {
+			table[name] = new InternalFunction(args => {
+				ExpectCount(name, args, 2);
+				ExpectNumber(name, args[0], 0);
+				ExpectNumber(name, args[1], 1);
+				return impl(ToDouble(args[0]), ToDouble(args[1]));
+			});
+		}
 
-				return Math.Tan(Convert.ToDouble(args[0]));
-			}),
-			["Asin"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Asin() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Asin() expects a number.");
+		void AddTernary(string name, Func<double, double, double, object> impl) {
+			table[name] = new InternalFunction(args => {
+				ExpectCount(name, args, 3);
+				ExpectNumber(name, args[0], 0);
+				ExpectNumber(name, args[1], 1);
+				ExpectNumber(name, args[2], 2);
+				return impl(ToDouble(args[0]), ToDouble(args[1]), ToDouble(args[2]));
+			});
+		}
 
-				return Math.Asin(Convert.ToDouble(args[0]));
-			}),
-			["Acos"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Acos() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Acos() expects a number.");
+		// varargs, returns double (or whatever)
+		void AddVarArgs(string name, Func<double[], object> impl) {
+			table[name] = new InternalFunction(args => {
+				ExpectMinCount(name, args, 1);
+				var arr = new double[args.Length];
+				for (int i = 0; i < args.Length; i++) {
+					ExpectNumber(name, args[i], i);
+					arr[i] = ToDouble(args[i]);
+				}
 
-				return Math.Acos(Convert.ToDouble(args[0]));
-			}),
-			["Atan"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Atan() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Atan() expects a number.");
+				return impl(arr);
+			});
+		}
 
-				return Math.Atan(Convert.ToDouble(args[0]));
-			}),
-			["Asinh"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Asinh() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Asinh() expects a number.");
+		// Add commonly used constants
+		AddConst("PI", Math.PI);
+		AddConst("E", Math.E);
+		AddConst("Tau", Math.PI * 2.0);
 
-				return Math.Asinh(Convert.ToDouble(args[0]));
-			}),
-			["Acosh"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Acosh() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Acosh() expects a number.");
+		// Simple unary/binary functions
+		AddBinary("Max", (a, b) => Math.Max(a, b));
+		AddBinary("Min", (a, b) => Math.Min(a, b));
+		AddTernary("Clamp", (v, lo, hi) => Math.Clamp(v, lo, hi));
 
-				return Math.Acosh(Convert.ToDouble(args[0]));
-			}),
-			["Atanh"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Atanh() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Atanh() expects a number.");
+		AddUnary("Sin", x => Math.Sin(x));
+		AddUnary("Cos", x => Math.Cos(x));
+		AddUnary("Tan", x => Math.Tan(x));
+		AddUnary("Asin", x => Math.Asin(x));
+		AddUnary("Acos", x => Math.Acos(x));
+		AddUnary("Atan", x => Math.Atan(x));
+		AddUnary("Asinh", x => Math.Asinh(x));
+		AddUnary("Acosh", x => Math.Acosh(x));
+		AddUnary("Atanh", x => Math.Atanh(x));
 
-				return Math.Atanh(Convert.ToDouble(args[0]));
-			}),
-			["Atan2"] = new InternalFunction(args => {
-				if (args.Length != 2) throw new RuntimeError("Atan2() expects 2 arguments");
-				if (!Misc.IsNumber(args[0]!) || !Misc.IsNumber(args[1]!))
-					throw new RuntimeError("Atan2() expects 2 numbers.");
+		AddBinary("Atan2", (y, x) => Math.Atan2(y, x));
+		AddUnary("Abs", x => Math.Abs(x));
+		AddUnary("Floor", x => Math.Floor(x));
+		AddUnary("Ceil", x => Math.Ceiling(x));
+		AddUnary("Round", x => Math.Round(x));
+		AddUnary("Exp", x => Math.Exp(x));
+		AddBinary("Pow", (a, b) => Math.Pow(a, b));
+		AddUnary("Sqrt", x => Math.Sqrt(x));
 
-				return Math.Atan2(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]));
-			}),
-			["Abs"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Abs() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Abs() expects a number.");
-
-				return Math.Abs(Convert.ToDouble(args[0]));
-			}),
-			["Floor"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Floor() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Floor() expects a number.");
-
-				return Math.Floor(Convert.ToDouble(args[0]));
-			}),
-			["Ceil"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Ceil() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Ceil() expects a number.");
-
-				return Math.Ceiling(Convert.ToDouble(args[0]));
-			}),
-			["Round"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Round() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Round() expects a number.");
-
-				return Math.Round(Convert.ToDouble(args[0]));
-			}),
-			["Exp"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Exp() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Exp() expects a number.");
-
-				return Math.Exp(Convert.ToDouble(args[0]));
-			}),
-			["Pow"] = new InternalFunction(args => {
-				if (args.Length != 2) throw new RuntimeError("Pow() expects 2 arguments");
-				if (!Misc.IsNumber(args[0]!) || !Misc.IsNumber(args[1]!))
-					throw new RuntimeError("Pow() expects 2 numbers.");
-
-				return Math.Pow(Convert.ToDouble(args[0]), Convert.ToDouble(args[1]));
-			}),
-			["Lerp"] = new InternalFunction(args => {
-				if (args.Length != 2) throw new RuntimeError("Lerp(a, b, t) expects 3 arguments");
-				if (!Misc.IsNumber(args[0]!) || !Misc.IsNumber(args[1]!) || !Misc.IsNumber(args[2]!))
-					throw new RuntimeError("Lerp(a, b, t) expects 3 numbers.");
-
-				var a = Convert.ToDouble(args[0]);
-				var b = Convert.ToDouble(args[1]);
-				var t = Convert.ToDouble(args[2]);
-
-				return a + (b - a) / t;
-			}),
-			["Sqrt"] = new InternalFunction(args => {
-				if (args.Length != 1) throw new RuntimeError("Sqrt() expects 1 argument");
-				if (!Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Sqrt() expects a number.");
-
-				return Math.Sqrt(Convert.ToDouble(args[0]));
-			}),
+		// Lerp: a + (b - a) * t
+		table["Lerp"] = new InternalFunction(args => {
+			ExpectCount("Lerp", args, 3);
+			ExpectNumber("Lerp", args[0], 0);
+			ExpectNumber("Lerp", args[1], 1);
+			ExpectNumber("Lerp", args[2], 2);
+			var a = ToDouble(args[0]);
+			var b = ToDouble(args[1]);
+			var t = ToDouble(args[2]);
+			return a + (b - a) * t;
 		});
+
+		// Example varargs overloads
+		AddVarArgs("MaxAll", arr => {
+			double m = arr[0];
+			for (int i = 1; i < arr.Length; i++)
+				if (arr[i] > m)
+					m = arr[i];
+			return m;
+		});
+		AddVarArgs("MinAll", arr => {
+			double m = arr[0];
+			for (int i = 1; i < arr.Length; i++)
+				if (arr[i] < m)
+					m = arr[i];
+			return m;
+		});
+
+		// push dictionary into the env
+		env.Variables.Push(table);
 	}
 }

@@ -11,8 +11,8 @@ public class N_FS : CNamespace {
 				if (args.Length != 1)
 					throw new RuntimeError("`GetFile(path)` expects 1 argument.");
 
-				if (args[0] is string path)
-					return new CFile(path);
+				if (args[0] is CString path)
+					return new CFile(path.Value);
 
 				throw new RuntimeError("`GetFile(path)` expects a `string` path.");
 			}),
@@ -21,8 +21,8 @@ public class N_FS : CNamespace {
 				if (args.Length != 1)
 					throw new RuntimeError("`GetDirectory(path)` expects 1 argument.");
 
-				if (args[0] is string path)
-					return new CDirectory(path);
+				if (args[0] is CString path)
+					return new CDirectory(path.Value);
 
 				throw new RuntimeError("`GetDirectory(path)` expects a `string` path.");
 			})

@@ -9,10 +9,10 @@ public class CDict : IMemberAccessible {
 	private static Dictionary<string, InternalFunction>? Functions;
 
 	public object GetMember(object? member) {
+		if (Items.TryGetValue(member!, out var item))
+			return item;
+		
 		if (member is string name) {
-			if (Items.TryGetValue(name, out var item))
-				return item;
-			
 			if (Functions!.TryGetValue(name, out var func))
 				return func;
 		}

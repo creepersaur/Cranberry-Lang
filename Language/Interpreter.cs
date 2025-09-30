@@ -31,7 +31,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object VisitNumber(NumberNode node) => node.Value;
 	public object VisitNull(NullNode node) => node;
 	public object VisitBool(BoolNode node) => node.Value;
-	public object VisitString(StringNode node) => node.Value;
+	public object VisitString(StringNode node) => new CString(node.Value);
 
 	public object VisitFunction(FunctionNode node) {
 		node.Env = env.Variables.Peek();
@@ -51,7 +51,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public CList VisitList(ListNode node) {
-		if (Evaluate(node.Items[0]) is List<object> l) {
+		if (node.Items.Count > 0 && Evaluate(node.Items[0]) is List<object> l) {
 			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList());
 		}
 
@@ -61,8 +61,13 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object VisitInternalFunction(InternalFunction node) => node;
 
 	public CDict VisitDict(DictNode node) {
-		return new CDict(node.Items.Select((item, _) => (Evaluate(item.Key), Evaluate(item.Value))
-		).ToDictionary());
+		return new CDict(node.Items.Select((item, _) => {
+			var key = Evaluate(item.Key);
+			if (key is CString c)
+				return (c.Value, Evaluate(item.Value));
+
+			return (key, Evaluate(item.Value));
+		}).ToDictionary());
 	}
 
 	//////////////////////////////////////////
@@ -176,7 +181,11 @@ public partial class Interpreter : INodeVisitor<object> {
 		var target = Evaluate(node.Target);
 
 		if (target is IMemberAccessible access) {
-			return access.GetMember(Evaluate(node.Member));
+			var member = Evaluate(node.Member);
+			if (member is CString str)
+				return access.GetMember(str.Value);
+
+			return access.GetMember(member);
 		}
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
@@ -202,25 +211,28 @@ public partial class Interpreter : INodeVisitor<object> {
 		var value = Evaluate(node.ToCast);
 
 		switch (node.Type) {
-			case "string": return BuiltinFunctions.ToString(value)!;
+			case "string": return new CString(BuiltinFunctions.ToString(value)!);
 			case "number": return BuiltinFunctions.ToNumber(value);
 			case "bool": return Misc.IsTruthy(value);
 			case "char": {
 				if (Misc.IsNumber(value))
 					return (char)Convert.ToByte(value);
+				
+				if (value is CString c)
+					return Convert.ToChar(c.Value);
 
 				try {
 					return (char)value;
 				} catch {
 					// ignored
 				}
-			}
 				break;
+			}
 
 			case "list": {
 				if (value is CList) return value;
 				if (value is CDict dict) return dict.Items.Values;
-				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => x.ToString()).ToList());
+				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
 
 				break;
 			}
@@ -370,6 +382,8 @@ public partial class Interpreter : INodeVisitor<object> {
 			case "print": return BuiltinFunctions.Print(args);
 			case "println": return BuiltinFunctions.Print(args, true);
 			case "format": return BuiltinFunctions.Format(args);
+			case "List": return new CList([]);
+			case "Dict": return new CDict(new Dictionary<object, object>());
 		}
 
 		FunctionNode? func = null;
@@ -507,7 +521,7 @@ public partial class Interpreter : INodeVisitor<object> {
 					ReturnValues.Add(be.Value);
 			} catch (ContinueException) {
 			}
-			
+
 			env.Pop();
 		}
 
@@ -737,12 +751,16 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		if (file_path is CList Paths) {
 			foreach (var path in Paths.Items) {
-				if (path is string) continue;
+				if (path is CString) continue;
 
 				throw new RuntimeError("`include` only takes string path or `{paths}`.");
 			}
 
-			throw new IncludeFileException(Paths.Items);
+			throw new IncludeFileException(Paths.Items.Select(object (x) => {
+				if (x is CString c)
+					return c.Value;
+				return x;
+			}));
 		}
 
 		if (file_path is string p)

@@ -4,6 +4,7 @@ using Tomlyn.Model;
 namespace Cranberry.Packager;
 
 public struct BuildConfig(TomlTable package) {
+	public readonly string Profile = (string)package["profile"];
 	public readonly string Name = (string)package["name"];
 	public readonly string Version = (string)package["version"];
 	public readonly string[] Include = ((TomlArray)package["include"]).Select(x => (string)x!).ToArray();
@@ -21,11 +22,12 @@ public abstract class Config {
 		return null;
 	}
 
-	public static BuildConfig Default() {
+	public static BuildConfig Default(bool is_release) {
 		return new BuildConfig(new TomlTable {
 			["name"] = "executable",
 			["version"] = "1.0.0",
-			["include"] = Array.Empty<string>(),
+			["profile"] = is_release ? "release" : "debug",
+			["include"] = new TomlArray(),
 		});
 	}
 }

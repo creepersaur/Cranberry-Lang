@@ -4,6 +4,8 @@
       <w>crpkg</w>
       <w>kname</w>
       <w>kvalue</w>
+      <w>newv</w>
+      <w>oldv</w>
       <w>puncs</w>
       <w>runtimeconfig</w>
     </words>

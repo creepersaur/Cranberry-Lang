@@ -311,17 +311,23 @@ public class Parser(string[] Tokens) {
 
 	private IFNode ParseIF() {
 		Advance();
+		SkipNewlines();
 		var condition = ParseExpression();
+		SkipNewlines();
 		var then = ParseBlock();
+		SkipNewlines();
 
 		var elif = new List<(Node, BlockNode)>();
 		BlockNode? else_statement = null;
 
 		while (Check("else")) {
 			Advance();
+			SkipNewlines();
 			if (Check("if")) {
 				Advance();
+				SkipNewlines();
 				var elif_condition = ParseExpression();
+				SkipNewlines();
 				elif.Add((elif_condition, ParseBlock()));
 			} else {
 				else_statement = ParseBlock();
@@ -658,18 +664,13 @@ public class Parser(string[] Tokens) {
 		var items = new Dictionary<Node, Node>();
 
 		while (!Check("}")) {
-			Node key;
+			SkipNewlines();
+			Node key = ParseExpression();
 
-			string key_id = PeekAhead()!;
-			if (IsIdentifier(key_id)) {
-				key = new StringNode(key_id);
-				Advance();
-			} else {
-				key = ParseExpression();
-			}
-
+			SkipNewlines();
 			Expect(":");
 			Advance();
+			SkipNewlines();
 
 			Node value = ParseExpression();
 
@@ -677,7 +678,7 @@ public class Parser(string[] Tokens) {
 
 			if (Check(",")) {
 				Advance();
-			} else break;
+			};
 		}
 
 		Expect("}");
