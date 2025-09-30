@@ -1,7 +1,3 @@
-let x = {
-	"hello": "world"
-}
-
-x[123] = 567
+let x = List("hello")
 
 print(x)

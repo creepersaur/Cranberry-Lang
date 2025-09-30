@@ -190,12 +190,70 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
 	}
-
+	
 	public object VisitMemberAssignment(MemberAssignmentNode node) {
 		var target = Evaluate(node.Target);
 
 		if (target is IMemberAccessible access) {
 			access.SetMember(Evaluate(node.Member), Evaluate(node.Value));
+			return new NullNode();
+		}
+
+		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
+	}
+	
+	public object VisitMemberShorthandAssignment(MemberShorthandAssignmentNode node) {
+		var target = Evaluate(node.Target);
+
+		if (target is IMemberAccessible access) {
+			var currentValue = Evaluate(node.Value);
+			var other = Evaluate(new MemberAccessNode(node.Target, node.Member));
+			object newValue;
+				
+			switch (node.Op) {
+				case "+=":
+					if (node.Value == null) throw new RuntimeError("'+=' requires a value");
+					newValue = HandleAddition(currentValue, other);
+					break;
+
+				case "-=":
+					if (node.Value == null) throw new RuntimeError("'-=' requires a value");
+					newValue = Convert.ToDouble(currentValue) - Convert.ToDouble(other);
+					break;
+
+				case "*=":
+					if (node.Value == null) throw new RuntimeError("'*=' requires a value");
+					newValue = HandleMultiplication(currentValue, other);
+					break;
+
+				case "/=":
+					if (node.Value == null) throw new RuntimeError("'/=' requires a value");
+					newValue = Convert.ToDouble(currentValue) / Convert.ToDouble(other);
+					break;
+
+				case "^=":
+					if (node.Value == null) throw new RuntimeError("'^=' requires a value");
+					newValue = Math.Pow(Convert.ToDouble(currentValue), Convert.ToDouble(other));
+					break;
+
+				case "%=":
+					if (node.Value == null) throw new RuntimeError("'%=' requires a value");
+					newValue = Convert.ToDouble(currentValue) % Convert.ToDouble(other);
+					break;
+
+				case "++":
+					newValue = Convert.ToDouble(currentValue) + 1;
+					break;
+
+				case "--":
+					newValue = Convert.ToDouble(currentValue) - 1;
+					break;
+
+				default:
+					throw new RuntimeError($"Unknown shorthand operator: {node.Op}");
+			}
+			
+			access.SetMember(Evaluate(node.Member), newValue);
 			return new NullNode();
 		}
 
@@ -208,8 +266,13 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public object VisitCast(CastNode node) {
-		var value = Evaluate(node.ToCast);
-
+		object value;
+		if (node.ToCast is Node n)
+			value = Evaluate(n);
+		else {
+			value = node.ToCast;
+		}
+		
 		switch (node.Type) {
 			case "string": return new CString(BuiltinFunctions.ToString(value)!);
 			case "number": return BuiltinFunctions.ToNumber(value);
@@ -295,7 +358,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				if (node.Value == null) throw new RuntimeError("'%=' requires a value");
 				newValue = Convert.ToDouble(currentValue) % Convert.ToDouble(Evaluate(node.Value));
 				break;
-
+			
 			case "++":
 				newValue = Convert.ToDouble(currentValue) + 1;
 				break;
@@ -382,7 +445,18 @@ public partial class Interpreter : INodeVisitor<object> {
 			case "print": return BuiltinFunctions.Print(args);
 			case "println": return BuiltinFunctions.Print(args, true);
 			case "format": return BuiltinFunctions.Format(args);
-			case "List": return new CList([]);
+			case "List": {
+				if (args.Count == 1) {
+					return new CList([args[0]]);
+				}
+				
+				if (args is [_, double d]) return new CList(new object[Convert.ToInt32(d)].Select(_ => args[0]).ToList());
+
+				if (args.Count == 0)
+					return new CList([]);
+
+				throw new RuntimeError("List() got invalid arguments. (It can take no arguments, a value, and optional size amount.)");
+			}
 			case "Dict": return new CDict(new Dictionary<object, object>());
 		}
 

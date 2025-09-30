@@ -565,12 +565,12 @@ public class Parser(string[] Tokens) {
 		// Handle function calls (can be chained)
 		while (true) {
 			SkipNewlines();
-			
+
 			// IIFE
 			if (Check("(")) {
 				Advance(); // consume '('
 				SkipNewlines();
-				
+
 				var args = new List<object>();
 
 				// If next token is not ')', parse one or more arguments
@@ -625,6 +625,10 @@ public class Parser(string[] Tokens) {
 					Advance();
 					var value = ParseExpression();
 					node = new MemberAssignmentNode(node, member, value);
+				} else if (Check("+=") || Check("-=") || Check("*=") || Check("/=") || Check("^=") || Check("%=")) {
+					var op = Advance()!;
+					var value = ParseExpression();
+					node = new MemberShorthandAssignmentNode(node, member, value, op);
 				} else {
 					node = new MemberAccessNode(node, member);
 				}
@@ -678,7 +682,9 @@ public class Parser(string[] Tokens) {
 
 			if (Check(",")) {
 				Advance();
-			};
+			}
+
+			;
 		}
 
 		Expect("}");

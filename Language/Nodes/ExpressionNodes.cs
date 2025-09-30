@@ -187,6 +187,19 @@ public class MemberAssignmentNode(Node target, Node member, Node value) : Node {
 	public override string ToString() => $"{Target}.{Member}";
 }
 
+public class MemberShorthandAssignmentNode(Node target, Node member, Node value, string op) : Node {
+	public readonly Node Target = target;
+	public readonly Node Member = member;
+	public readonly Node Value = value;
+	public readonly string Op = op;
+
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitMemberShorthandAssignment(this);
+	}
+
+	public override string ToString() => $"{Target} ()= {Member}";
+}
+
 public class FallbackNode(Node left, Node right) : Node {
 	public readonly Node Left = left;
 	public readonly Node Right = right;
@@ -196,9 +209,9 @@ public class FallbackNode(Node left, Node right) : Node {
 	}
 }
 
-public class CastNode(string type, Node to_cast) : Node {
+public class CastNode(string type, object to_cast) : Node {
 	public readonly string Type = type;
-	public readonly Node ToCast = to_cast;
+	public readonly object ToCast = to_cast;
 
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitCast(this);
