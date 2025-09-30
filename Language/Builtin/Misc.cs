@@ -10,11 +10,13 @@ public abstract class Misc {
 		switch (v) {
 			case null:
 				return "null";
-			case string s:
+			case CString s:
 				return show_quotes switch {
-					true => "\"" + s + "\"",
-					false => s
+					true => "\"" + s.Value + "\"",
+					false => s.Value
 				};
+			case string s:
+				return $"InternalString<{s}>";
 			case double d:
 				return d.ToString(CultureInfo.InvariantCulture);
 			case bool b:
