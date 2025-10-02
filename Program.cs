@@ -1,70 +1,40 @@
-﻿using System.Diagnostics;
-using Cranberry.Builtin;
-using Cranberry.Packager;
+﻿using Cranberry;
 
 var exe_path = Environment.ProcessPath ?? System.Reflection.Assembly.GetEntryAssembly()!.Location;
 var exe_dir = Path.GetDirectoryName(exe_path);
 
 if (File.Exists($"{exe_dir}/source.crpkg")) {
-	var (entry, files) = CrpkgZip.ReadPackage($"{exe_dir}/source.crpkg");
-	var program = new Cranberry.Program();
-
-	if (File.Exists($"{exe_dir}/include.crpkg")) {
-		var (_, includes) = CrpkgZip.ReadPackage($"{exe_dir}/include.crpkg", false);
-		foreach (var (key, value) in includes) {
-			program.Includes[key] = value;
-		}
-	}
-
-	program.RunBuild(entry!, files);
-
+	if (exe_dir != null) Commands.RunBuild(exe_dir);
 	return;
 }
 
-if (args.Length < 1) {
-	Console.WriteLine("Use `cranberry run` or `cranberry build`.");
+if (args.Length < 1 || args[0] == "help") {
+	Console.WriteLine("----------------------");
+	Console.WriteLine("|  Cranberry - Lang  |");
+	Console.WriteLine("----------------------");
+	Console.WriteLine("");
+	Console.WriteLine("COMMANDS:");
+	Console.WriteLine(" > init                 [Initialize a new project in the working directory]");
+	Console.WriteLine(" > new <name>           [Create a new project in a new directory]");
+	Console.WriteLine(" > run                  [Run the project]");
+	Console.WriteLine(" > build                [Build the project into a standalone package (in /build/debug)]");
+	Console.WriteLine(" > build --release      [Create a release build with a smaller file size (in /build/release)]");
+	Console.WriteLine(" > --analyze            [Analyze the project and return defined variables, functions, etc.]");
 	return;
 }
 
-if (args[0] == "run") {
-	var program = new Cranberry.Program();
-	var files = program.CollectFiles(args.Length > 1 ? args[1] : "main.cb");
-	program.RunProgram(files.Item1, files.Item2);
-} else if (args[0] == "build") {
-	var stopwatch = new Stopwatch();
-	stopwatch.Restart();
-	
-	Console.WriteLine("Trying to build cranberry project.");
+string cmd = args[0];
+var Args = args.ToList();
+Args.RemoveAt(0);
 
-	string entry_point = args.Length > 1 ? args[1] : "main.cb";
-	Console.WriteLine($"Entry Point: {entry_point}");
-	
-	var program = new Cranberry.Program();
-	var (entry, files) = program.CollectFiles(entry_point);
-	files.Add(entry);
-	
-	Console.WriteLine($"Collected files: {Misc.FormatValue(files, true)}");
-	
-	bool is_release = args.Contains("--release");
-	CrpkgZip.Build(entry, files.ToArray(), Config.GetConfig() ?? Config.Default(is_release));
-
-	Console.ForegroundColor = ConsoleColor.Green;
-	Console.Write("Successfully built the Cranberry project ");
-
-	if (!is_release) {
-		Console.ForegroundColor = ConsoleColor.Yellow;
-		Console.WriteLine("[ DEBUG ]");
-	} else {
-		Console.ForegroundColor = ConsoleColor.Magenta;
-		Console.WriteLine("[ RELEASE ]");
-	}
-	
-	stopwatch.Stop();
-	Console.BackgroundColor = ConsoleColor.Green;
-	Console.ForegroundColor = ConsoleColor.Black;
-
-	Console.WriteLine($"Build Completed Sucessfully in {stopwatch.Elapsed.TotalSeconds}s.");
-	Console.ResetColor();
+if (cmd == "run") {
+	Commands.RunProgram(Args);
+} else if (cmd == "build") {
+	Commands.Build(Args);
+} else if (cmd == "init") {
+	Commands.Init("");
+} else if (cmd == "new") {
+	Commands.New(Args);
 } else {
-	Console.WriteLine($"`{args[0]}` is not a valid cranberry command.");
+	Console.WriteLine($"`{cmd}` is not a valid cranberry command.");
 }

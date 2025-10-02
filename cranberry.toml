@@ -1,5 +1,14 @@
-﻿[package]
-name = "Hello"
+﻿#################################
+# Cranberry.toml
+##################################
+
+[package]
+name = "Program"        # build executable name
 version = "1.0.0"
-profile = "release"
-include = ["C:\\Users\\Admin\\Desktop\\Hello.cb"]
+profile = "debug"
+
+# What paths to include during the build
+# All files in /src are already included
+[include]
+files = []
+directories = []

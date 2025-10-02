@@ -57,9 +57,13 @@ public class CString(string value) : IMemberAccessible {
 					if (args.Length > 1)
 						throw new RuntimeError("`Split(separator)` expects 0-1 arguments.");
 
-					if (args[0] is string sep)
-						return new CList(Value.Split(sep).Select(object (x) => new CString(x)).ToList());
-
+					if (args.Length > 0)
+						if (args[0] is CString sep) {
+							return new CList(Value.Split(sep.Value).Select(object (x) => new CString(x)).ToList());
+						} else {
+							throw new RuntimeError("`Split(separator)` expects 0-1 string arguments.");
+						}
+					
 					return new CList(Value.Split(" ").Select(object (x) => new CString(x)).ToList());
 				}),
 				

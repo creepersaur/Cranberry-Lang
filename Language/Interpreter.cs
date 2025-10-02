@@ -311,7 +311,11 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object? VisitLet(LetNode node) {
 		foreach (var (index, name) in node.Names.WithIndex()) {
 			var value = Evaluate(node.Values[index]);
-			env.Define(name, value);
+			if (node.Constant) {
+				env.DefineConstant(name, value);
+			} else {
+				env.Define(name, value);
+			}
 		}
 
 		return null;

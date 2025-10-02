@@ -1,3 +1,3 @@
-let x = List("hello")
+let x = "Hello|World".Split("|")
 
 print(x)

@@ -6,7 +6,7 @@ namespace Cranberry.Packager;
 public static class CrpkgZip {
 	private static string BuildDir = "build/debug";
 
-	public static void Pack(string entryPoint, string[] inputFilePaths, string[] includeFilePaths, bool is_release) {
+	public static void Pack(string entryPoint, string[] inputFilePaths, bool is_release, string[] includeFilePaths, string[] includeDirs) {
 		var compression = is_release switch {
 			true => CompressionLevel.SmallestSize,
 			false => CompressionLevel.Fastest
@@ -33,6 +33,15 @@ public static class CrpkgZip {
 		using var fs_include = new FileStream($"{BuildDir}/include.crpkg", FileMode.Create, FileAccess.Write);
 		using var archive_include = new ZipArchive(fs_include, ZipArchiveMode.Create);
 
+		foreach (var path in includeDirs) {
+			foreach (var file in new DirectoryInfo(path).GetFiles()) {
+				var entry = archive_include.CreateEntry(Path.GetFullPath(file.FullName), compression);
+				using var entryStream = entry.Open();
+				using var inFile = File.OpenRead(path);
+				inFile.CopyTo(entryStream);
+			}
+		}
+		
 		foreach (var path in includeFilePaths) {
 			var entry = archive_include.CreateEntry(Path.GetFullPath(path), compression);
 			using var entryStream = entry.Open();
@@ -52,7 +61,7 @@ public static class CrpkgZip {
 			Directory.Delete(BuildDir, true);
 		Directory.CreateDirectory(BuildDir);
 
-		Pack(entryPoint, inputFilePaths, config.Include, is_release);
+		Pack(entryPoint, inputFilePaths, is_release, config.IncludeFiles, config.IncludeDir);
 
 		var exe_path = Environment.ProcessPath ?? System.Reflection.Assembly.GetEntryAssembly()!.Location;
 		var exe_dir = Path.GetDirectoryName(exe_path);

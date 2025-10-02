@@ -1,8 +1,9 @@
 ﻿namespace Cranberry.Nodes;
 
-public class LetNode(string[] names, Node[] values) : Node {
+public class LetNode(string[] names, Node[] values, bool constant) : Node {
 	public readonly string[] Names = names;
 	public readonly Node[] Values = values;
+	public readonly bool Constant = constant;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitLet(this);

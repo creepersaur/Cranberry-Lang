@@ -3,11 +3,12 @@ using Tomlyn.Model;
 
 namespace Cranberry.Packager;
 
-public struct BuildConfig(TomlTable package) {
+public struct BuildConfig(TomlTable package, TomlTable include) {
 	public readonly string Profile = (string)package["profile"];
 	public readonly string Name = (string)package["name"];
 	public readonly string Version = (string)package["version"];
-	public readonly string[] Include = ((TomlArray)package["include"]).Select(x => (string)x!).ToArray();
+	public readonly string[] IncludeFiles = ((TomlArray)include["files"]).Select(x => (string)x!).ToArray();
+	public readonly string[] IncludeDir = ((TomlArray)include["directories"]).Select(x => (string)x!).ToArray();
 }
 
 public abstract class Config {
@@ -16,7 +17,8 @@ public abstract class Config {
 			TomlTable model = Toml.Parse(File.ReadAllText("cranberry.toml")).ToModel();
 
 			var package = (TomlTable)model["package"];
-			return new BuildConfig(package);
+			var include = (TomlTable)model["include"];
+			return new BuildConfig(package, include);
 		}
 
 		return null;
@@ -27,7 +29,9 @@ public abstract class Config {
 			["name"] = "executable",
 			["version"] = "1.0.0",
 			["profile"] = is_release ? "release" : "debug",
-			["include"] = new TomlArray(),
+		}, new TomlTable {
+			["files"] = new TomlArray(),
+			["directories"] = new TomlArray()
 		});
 	}
 }

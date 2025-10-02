@@ -50,6 +50,10 @@ public class Parser(string[] Tokens) {
 		if (token == "let") {
 			return ParseLet();
 		}
+		
+		if (token == "const") {
+			return ParseLet(true);
+		}
 
 		if (token == "using") {
 			return ParseUsingDirective();
@@ -338,7 +342,7 @@ public class Parser(string[] Tokens) {
 		return new IFNode(condition, then, elif.ToArray(), else_statement);
 	}
 
-	private LetNode ParseLet() {
+	private LetNode ParseLet(bool constant = false) {
 		Advance();
 		var names = new List<string>();
 		var first_name = Advance();
@@ -374,10 +378,10 @@ public class Parser(string[] Tokens) {
 				throw new ParseError($"Number of expressions ({values.Count}) should match number of variables ({names.Count}).", Pos);
 			}
 
-			return new LetNode(names.ToArray(), values.ToArray());
+			return new LetNode(names.ToArray(), values.ToArray(), constant);
 		}
 
-		return new LetNode(names.ToArray(), Enumerable.Repeat(new NullNode(), names.Count).ToArray<Node>());
+		return new LetNode(names.ToArray(), Enumerable.Repeat(new NullNode(), names.Count).ToArray<Node>(), constant);
 	}
 
 	private SwitchNode ParseSwitch() {
