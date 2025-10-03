@@ -1,3 +1,9 @@
-let x = "Hello|World".Split("|")
+let x = 20
 
-print(x)
+switch x {
+	10 => {
+		print("yes")
+	}
+	
+	20 => print(133)
+}

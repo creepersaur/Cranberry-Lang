@@ -255,7 +255,7 @@ public class Parser(string[] Tokens) {
 		return new ForNode(var_name, ParseExpression(), ParseBlock());
 	}
 
-	private BlockNode ParseBlock() {
+	private BlockNode ParseBlock(bool is_arrow = false) {
 		SkipNewlines();
 		if (Check("=>")) {
 			Advance();
@@ -266,9 +266,19 @@ public class Parser(string[] Tokens) {
 
 			return new BlockNode([new OutNode(node)]);
 		}
+	
+		if (is_arrow && !Check("{")) {
+			var node = Parse();
+
+			if (Check(";"))
+				Advance();
+
+			return new BlockNode([new OutNode(node)]);
+		}
 
 		Expect("{");
 		Advance();
+		SkipNewlines();
 
 		var statements = new List<Node>();
 		while (!Check("}")) {
@@ -397,26 +407,30 @@ public class Parser(string[] Tokens) {
 		while (!Check("}")) {
 			if (default_case == null && Check("_")) {
 				Advance();
-				Expect(":");
+				Expect("=>");
 				Advance();
 
-				default_case = ParseBlock();
+				default_case = ParseBlock(true);
 			}
+
+			SkipNewlines();
 
 			if (Check("}")) break;
 
 			var new_cases = new List<Node>();
-			while (!Check(":")) {
+			while (!Check("=>")) {
 				new_cases.Add(ParseExpression());
 
 				if (Check(",")) Advance();
 				else break;
 			}
+			
+			SkipNewlines();
 
-			Expect(":");
+			Expect("=>");
 			Advance();
 
-			cases.Add((new_cases.ToArray(), ParseBlock()));
+			cases.Add((new_cases.ToArray(), ParseBlock(true)));
 		}
 
 		Expect("}");
@@ -633,6 +647,9 @@ public class Parser(string[] Tokens) {
 					var op = Advance()!;
 					var value = ParseExpression();
 					node = new MemberShorthandAssignmentNode(node, member, value, op);
+				} else if (Check("++") || Check("--")) {
+					var op = Advance()!;
+					node = new MemberShorthandAssignmentNode(node, member, new NullNode(), op);
 				} else {
 					node = new MemberAccessNode(node, member);
 				}
@@ -687,8 +704,6 @@ public class Parser(string[] Tokens) {
 			if (Check(",")) {
 				Advance();
 			}
-
-			;
 		}
 
 		Expect("}");

@@ -29,7 +29,7 @@ public class CString(string value) : IMemberAccessible {
 					if (args.Length != 0)
 						throw new RuntimeError("`Length()` expects 0 arguments.");
 
-					return new NumberNode(Value.Length);
+					return (double)Value.Length;
 				}),
 
 				"Chars" => new InternalFunction(args => {

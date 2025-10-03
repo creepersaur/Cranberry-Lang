@@ -27,8 +27,6 @@ public class CList : IMemberAccessible {
 	}
 
 	public void SetMember(object? member, object? value) {
-		Console.WriteLine(member!.GetType());
-		
 		if (member is double d) {
 			int index = Misc.DoubleToIndex(d, Items.Count, true);
 			if (index >= Items.Count)

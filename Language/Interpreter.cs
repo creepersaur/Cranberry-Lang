@@ -153,18 +153,18 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public object VisitUnaryOp(UnaryOpNode node) {
 		var value = Evaluate(node.Value);
-		if (node.Op == "$" && value is string template) {
-			string result = MyRegex().Replace(template, match => {
+		
+		if (node.Op == "$" && value is CString template) {
+			string result = MyRegex().Replace(template.Value, match => {
 				string key = match.Groups[1].Value;
-				return Evaluate(
-						new Parser(
-							new Lexer(key).GetTokens().ToArray()
-						).ParseExpression()
-					)
-					.ToString()!;
+				return Misc.FormatValue(Evaluate(
+					new Parser(
+						new Lexer(key).GetTokens().ToArray()
+					).ParseExpression()
+				))!;
 			});
 
-			return result;
+			return new CString(result);
 		}
 
 		var u_value = Convert.ToDouble(value);
@@ -213,40 +213,40 @@ public partial class Interpreter : INodeVisitor<object> {
 			switch (node.Op) {
 				case "+=":
 					if (node.Value == null) throw new RuntimeError("'+=' requires a value");
-					newValue = HandleAddition(currentValue, other);
+					newValue = HandleAddition(other, currentValue);
 					break;
 
 				case "-=":
 					if (node.Value == null) throw new RuntimeError("'-=' requires a value");
-					newValue = Convert.ToDouble(currentValue) - Convert.ToDouble(other);
+					newValue = Convert.ToDouble(other) - Convert.ToDouble(currentValue);
 					break;
 
 				case "*=":
 					if (node.Value == null) throw new RuntimeError("'*=' requires a value");
-					newValue = HandleMultiplication(currentValue, other);
+					newValue = HandleMultiplication(other, currentValue);
 					break;
 
 				case "/=":
 					if (node.Value == null) throw new RuntimeError("'/=' requires a value");
-					newValue = Convert.ToDouble(currentValue) / Convert.ToDouble(other);
+					newValue = Convert.ToDouble(other) / Convert.ToDouble(currentValue);
 					break;
 
 				case "^=":
 					if (node.Value == null) throw new RuntimeError("'^=' requires a value");
-					newValue = Math.Pow(Convert.ToDouble(currentValue), Convert.ToDouble(other));
+					newValue = Math.Pow(Convert.ToDouble(other), Convert.ToDouble(currentValue));
 					break;
 
 				case "%=":
 					if (node.Value == null) throw new RuntimeError("'%=' requires a value");
-					newValue = Convert.ToDouble(currentValue) % Convert.ToDouble(other);
+					newValue = Convert.ToDouble(other) % Convert.ToDouble(currentValue);
 					break;
 
 				case "++":
-					newValue = Convert.ToDouble(currentValue) + 1;
+					newValue = Convert.ToDouble(other) + 1;
 					break;
 
 				case "--":
-					newValue = Convert.ToDouble(currentValue) - 1;
+					newValue = Convert.ToDouble(other) - 1;
 					break;
 
 				default:
@@ -692,7 +692,9 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		foreach (var (cases, block) in node.Cases) {
 			foreach (var expr in cases) {
-				if (value.Equals(Evaluate(expr))) {
+				var cond = Evaluate(expr);
+				
+				if ((value is CString v && cond is CString c && v.Value == c.Value) || value.Equals(cond)) {
 					env.Push();
 					try {
 						return Evaluate(block);
