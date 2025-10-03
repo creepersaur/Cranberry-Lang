@@ -8,7 +8,7 @@ if (File.Exists($"{exe_dir}/source.crpkg")) {
 	return;
 }
 
-if (args.Length < 1 || args[0] == "help") {
+if (args.Length < 1 || args[0] == "help" || args[0] == "-h") {
 	Console.WriteLine("----------------------");
 	Console.WriteLine("|  Cranberry - Lang  |");
 	Console.WriteLine("----------------------");
@@ -16,10 +16,16 @@ if (args.Length < 1 || args[0] == "help") {
 	Console.WriteLine("COMMANDS:");
 	Console.WriteLine(" > init                 [Initialize a new project in the working directory]");
 	Console.WriteLine(" > new <name>           [Create a new project in a new directory]");
-	Console.WriteLine(" > run                  [Run the project]");
+	Console.WriteLine(" > <file> <args>               [Run the project]");
+	Console.WriteLine(" > run <args>           [Run the project]");
 	Console.WriteLine(" > build                [Build the project into a standalone package (in /build/debug)]");
 	Console.WriteLine(" > build --release      [Create a release build with a smaller file size (in /build/release)]");
-	Console.WriteLine(" > --analyze            [Analyze the project and return defined variables, functions, etc.]");
+	//Console.WriteLine(" > --analyze            [Analyze the project and return defined variables, functions, etc.]");
+	return;
+}
+
+if (args.Length > 0 && (args[0] == "--version" || args[0] == "-v")) {
+	Console.WriteLine("Version v0.2.0 (alpha)");
 	return;
 }
 
@@ -27,8 +33,10 @@ string cmd = args[0];
 var Args = args.ToList();
 Args.RemoveAt(0);
 
-if (cmd == "run") {
-	Commands.RunProgram(Args);
+if (File.Exists(cmd)) {
+	Commands.RunFile(cmd);
+} else if (cmd == "run") {
+	Commands.RunProgram();
 } else if (cmd == "build") {
 	Commands.Build(Args);
 } else if (cmd == "init") {

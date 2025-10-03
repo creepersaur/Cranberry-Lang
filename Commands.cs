@@ -7,7 +7,7 @@ namespace Cranberry;
 public static class Commands {
 	public static void RunBuild(string exe_dir) {
 		var (entry, files) = CrpkgZip.ReadPackage($"{exe_dir}/source.crpkg");
-		var program = new Program();
+		var program = new Program(true);
 
 		if (File.Exists($"{exe_dir}/include.crpkg")) {
 			var (_, includes) = CrpkgZip.ReadPackage($"{exe_dir}/include.crpkg", false);
@@ -19,9 +19,15 @@ public static class Commands {
 		program.RunBuild(entry!, files);
 	}
 
-	public static void RunProgram(List<string> args) {
-		var program = new Program();
-		var files = program.CollectFiles(args.Count > 0 ? args[0] : "main.cb");
+	public static void RunProgram() {
+		var program = new Program(false);
+		var files = program.CollectFiles("src/main.cb");
+		program.RunProgram(files.Item1, files.Item2);
+	}
+	
+	public static void RunFile(string path) {
+		var program = new Program(false);
+		var files = program.CollectFiles(path);
 		program.RunProgram(files.Item1, files.Item2);
 	}
 
@@ -34,7 +40,7 @@ public static class Commands {
 		string entry_point = args.Count > 0 ? args[0] : "main.cb";
 		Console.WriteLine($"Entry Point: {entry_point}");
 	
-		var program = new Program();
+		var program = new Program(true);
 		var (entry, files) = program.CollectFiles(entry_point);
 		files.Add(entry);
 	

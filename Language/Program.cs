@@ -4,12 +4,17 @@ using Cranberry.Nodes;
 namespace Cranberry;
 
 public class Program {
-	public readonly Env original_env = interpreter.env;
 	public readonly Dictionary<string, string> Includes = new();
-	public static readonly Interpreter interpreter = new();
+	public static Interpreter? interpreter;
+	public readonly Env original_env;
+
+	public Program(bool is_build) {
+		interpreter = new Interpreter(is_build);
+		original_env = interpreter.env;
+	}
 
 	public void RunFile(string text, string path) {
-		var previousEnv = interpreter.env;
+		var previousEnv = interpreter!.env;
 
 		try {
 			interpreter.env = original_env;
@@ -53,7 +58,7 @@ public class Program {
 
 	public void RunNode(Node node, string path) {
 		try {
-			interpreter.Evaluate(node);
+			interpreter!.Evaluate(node);
 		} catch (ReturnException) {
 		} catch (OutException) {
 			throw new RuntimeError("Cannot `out` in main scope.");
@@ -99,29 +104,23 @@ public class Program {
 	}
 
 	public (string, List<string>) CollectFiles(string entry_point) {
+		var main = new FileInfo(entry_point);
 		var dir = new DirectoryInfo("src");
 		var files = new List<string>();
-		string? entry = null;
+		string entry = main.FullName;
 
 		if (dir.Exists) {
 			foreach (var file in dir.GetFiles("*.cb", SearchOption.AllDirectories)) {
-				if (file.Name == entry_point) {
-					entry = file.FullName;
-					continue;
-				}
+				if (file.FullName == main.FullName) continue;
 
 				files.Add(file.FullName);
 			}
-		} else {
-			var main = new FileInfo(entry_point);
-			if (main.Exists)
-				return (main.FullName, []);
 		}
 
-		return (entry!, files);
+		return (entry, files);
 	}
 
-	public void RunProgram(string entry, List<string> files, bool release = false) {
+	public void RunProgram(string entry, List<string> files) {
 		foreach (var path in files) {
 			RunFile(File.ReadAllText(path), path);
 		}

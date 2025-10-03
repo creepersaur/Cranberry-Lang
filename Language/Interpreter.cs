@@ -12,11 +12,12 @@ namespace Cranberry;
 
 public partial class Interpreter : INodeVisitor<object> {
 	public Env env = new();
+	public readonly bool IsBuild;
 	private readonly Dictionary<string, CNamespace> Namespaces = new();
-
 	private const double TOLERANCE = 1e-9;
 
-	public Interpreter() {
+	public Interpreter(bool is_build) {
+		IsBuild = is_build;
 		Namespaces.Add("Std", new StandardNamespace(this));
 	}
 
@@ -172,6 +173,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		return node.Op switch {
 			"-" => -u_value,
 			"+" => u_value,
+			"!" => !Misc.IsTruthy(u_value),
 
 			_ => throw new RuntimeError($"Unknown unary expression: {node.Op}")
 		};
