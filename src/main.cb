@@ -1,9 +1,5 @@
-let x = 20
-
-switch x {
-	10 => {
-		print("yes")
-	}
-	
-	20 => print(133)
+let x = {
+	"hello" : "world"
 }
+
+print(x)

@@ -16,7 +16,10 @@ public abstract class Misc {
 					false => s.Value
 				};
 			case string s:
-				return $"InternalString<{s}>";
+				return show_quotes switch {
+					true => "\"" + s + "\"",
+					false => s
+				};
 			case double d:
 				return d.ToString(CultureInfo.InvariantCulture);
 			case bool b:

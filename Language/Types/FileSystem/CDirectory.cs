@@ -40,6 +40,17 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new CList(files.Select(object (x) => new CFile(x.FullName)).ToList());
 			}),
 			
+			"GetDirectories" => new InternalFunction(args => {
+				if (args.Length != 0)
+					throw new RuntimeError("`Directory.GetDirectories()` expects 0 arguments.");
+
+				if (!Info.Exists)
+					throw new RuntimeError($"Directory does not exist at path `{Path}`.");
+
+				var files = Info.GetDirectories();
+				return new CList(files.Select(object (x) => new CDirectory(x.FullName)).ToList());
+			}),
+			
 			"Clear" => new InternalFunction(args => {
 				if (args.Length != 0)
 					throw new RuntimeError("`Directory.Clear()` expects 0 arguments.");
