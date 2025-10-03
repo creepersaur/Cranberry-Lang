@@ -1,5 +1,6 @@
 ﻿using Cranberry.Errors;
 using Cranberry.Nodes;
+using Cranberry.Types;
 
 // ReSharper disable LoopCanBeConvertedToQuery
 namespace Cranberry.Builtin;
@@ -49,7 +50,9 @@ public static class BuiltinFunctions {
 		enumerator.MoveNext();
 
 		string template;
-		if (enumerator.Current is string t) {
+		if (enumerator.Current is CString c) {
+			template = c.Value;
+		} else if (enumerator.Current is string t) {
 			template = t;
 		} else {
 			throw new RuntimeError("First argument of `format()` must be the template string.");
