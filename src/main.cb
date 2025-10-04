@@ -1,7 +1,15 @@
 class Vec {
-	fn __Add__(self, other) {
-		return 5
+	constructor(self, x, y) {
+		self.x = x
+		self.y = y
 	}
+
+	fn __Call__(self, scalar)
+		=> Vec(self.x * scalar, self.y * scalar)
+
+	fn __ToString__(self)
+		=> $"({self.x}, {self.y})"
 }
 
-println(Vec() + 5)
+let v = Vec(3, 4)
+println(v(2))   # → (6, 8)

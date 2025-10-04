@@ -597,10 +597,10 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		FunctionNode? func = null;
-
+		
 		if (node.Target != null) {
-			var target = Evaluate(node.Target);
-
+			var target = Evaluate(node.Target!);
+			
 			// class called as target: MyModule.MyClass(...)
 			if (target is CClass cTarget) {
 				var create = cTarget.GetCreateFunction();
@@ -612,10 +612,18 @@ public partial class Interpreter : INodeVisitor<object> {
 					return re.Value;
 				}
 			}
+			
+			if (target is CObject co) {
+				if (co.Class.Functions.TryGetValue("__Call__", out var f)) {
+					return Evaluate(new FunctionCall("", [co, ..args]) {
+						Target = f
+					});
+				}
+			}
 
-			if (target is InternalFunction f) {
+			if (target is InternalFunction i) {
 				try {
-					return f.Call(args.ToArray());
+					return i.Call(args.ToArray());
 				} catch (ReturnException re) {
 					return re.Value;
 				} catch (OutException re) {
@@ -636,7 +644,6 @@ public partial class Interpreter : INodeVisitor<object> {
 				if (lookup is FunctionNode namedFunc) {
 					func = namedFunc;
 				} else if (lookup is CClass namedClass) {
-					// class called by name: MyClass(...)
 					var create = namedClass.GetCreateFunction();
 					try {
 						return create.Call(args.ToArray());
@@ -645,6 +652,13 @@ public partial class Interpreter : INodeVisitor<object> {
 					} catch (OutException re) {
 						return re.Value;
 					}
+				} else if (lookup is CObject co) {
+					if (co.Class.Functions.TryGetValue("__Call__", out var f)) {
+						return Evaluate(new FunctionCall("", [co, ..args]) {
+							Target = f
+						});
+					}
+					throw new RuntimeError($"Cannot call value `{Misc.FormatValue(co)}`");
 				} else if (lookup is InternalFunction internalF) {
 					try {
 						return internalF.Call(args.ToArray());
@@ -681,7 +695,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			}
 		}
 
-		return new NullNode();
+		throw new RuntimeError($"Cannot call value `{Misc.FormatValue(node.Target!)}`");
 	}
 
 	public object? VisitFunctionDef(FunctionDef node) {
