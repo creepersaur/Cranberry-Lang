@@ -2,7 +2,6 @@
 using Cranberry.Errors;
 using Cranberry.Types;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Cranberry.Namespaces;
 
@@ -14,11 +13,11 @@ public class N_JSON : CNamespace {
 					throw new RuntimeError("JSON.Stringify(value) expects 1 argument.");
 
 				try {
-					return JsonSerializer.Serialize(args[0]! switch {
+					return new CString(JsonSerializer.Serialize(args[0]! switch {
 						CList v => v.Items,
 						CDict v => v.Items,
 						_ => args[0]!
-					});
+					}));
 				} catch {
 					throw new RuntimeError($"Could not serialize `{args[0]}` to JSON string.");
 				}
@@ -27,8 +26,13 @@ public class N_JSON : CNamespace {
 			["Parse"] = new InternalFunction(args => {
 				if (args.Length != 1)
 					throw new RuntimeError("JSON.Parse(string) expects 1 argument.");
-
-				string json = (string)args[0]!;
+				
+				string json;
+				if (args[0] is CString c)
+					json = c.Value;
+				else {
+					json = (string)args[0]!;
+				}
 
 				try {
 					using var doc = JsonDocument.Parse(json);

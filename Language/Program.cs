@@ -45,11 +45,19 @@ public class Program {
 			}
 
 			foreach (var node in important) {
-				RunNode(node, path);
+				try {
+					RunNode(node, path);
+				} catch (ReturnException) {
+					return;
+				}
 			}
 
 			foreach (var node in ast) {
-				RunNode(node, path);
+				try {
+					RunNode(node, path);
+				} catch (ReturnException) {
+					return;
+				}
 			}
 		} finally {
 			interpreter.env = previousEnv;
@@ -59,7 +67,6 @@ public class Program {
 	public void RunNode(Node node, string path) {
 		try {
 			interpreter!.Evaluate(node);
-		} catch (ReturnException) {
 		} catch (OutException) {
 			throw new RuntimeError("Cannot `out` in main scope.");
 		} catch (BreakException) {

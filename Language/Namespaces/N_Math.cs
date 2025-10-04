@@ -98,6 +98,26 @@ public class N_Math : CNamespace {
 		AddUnary("Exp", x => Math.Exp(x));
 		AddBinary("Pow", (a, b) => Math.Pow(a, b));
 		AddUnary("Sqrt", x => Math.Sqrt(x));
+		
+		// Wrapped Add/Sub
+		AddTernary("WrappedAdd", (value, addAmount, wrapAt) => {
+			var result = (value + addAmount) % wrapAt;
+        
+			// Handle negative results
+			if (result < 0)
+				result += wrapAt;
+        
+			return result;
+		});
+		AddTernary("WrappedSub", (value, addAmount, wrapAt) => {
+			var result = (value - addAmount) % wrapAt;
+        
+			// Handle negative results
+			if (result < 0)
+				result += wrapAt;
+        
+			return result;
+		});
 
 		// Lerp: a + (b - a) * t
 		table["Lerp"] = new InternalFunction(args => {

@@ -18,7 +18,7 @@ public class N_IO : CNamespace {
 					Console.Write(prompt[..^1]);
 				}
 
-				return Console.ReadLine();
+				return new CString(Console.ReadLine()!);
 			}),
 			
 			["Read"] = new InternalFunction(args => {
@@ -31,7 +31,7 @@ public class N_IO : CNamespace {
 					Console.Write(prompt[..^1]);
 				}
 
-				return Console.Read();
+				return (double)Console.Read();
 			}),
 			
 			["ReadKey"] = new InternalFunction(args => {
@@ -49,7 +49,7 @@ public class N_IO : CNamespace {
 					return keyInfo.Key.ToString();
 				}
 
-				return keyInfo.KeyChar.ToString();
+				return new CString(keyInfo.KeyChar.ToString());
 			}),
 			
 			["Clear"] = new InternalFunction(args => {

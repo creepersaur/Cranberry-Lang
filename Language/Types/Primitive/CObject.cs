@@ -17,6 +17,11 @@ public class CObject(CClass from_class) : IMemberAccessible {
 	}
 
 	public void SetMember(object? member, object? value) {
+		if (member is CString c) {
+			Properties[c.Value] = value;
+			return;
+		}
+
 		if (member is string m) {
 			Properties[m] = value;
 			return;
@@ -25,7 +30,21 @@ public class CObject(CClass from_class) : IMemberAccessible {
 		throw new RuntimeError("Can only set string members on a ClassObject");
 	}
 
-	public override string ToString() => $"Object:{Class.Name}";
+	public override string ToString() {
+		if (Class.Functions.TryGetValue("__ToString__", out var f)) {
+			var string_func = new ObjectMethod(this, f);
+			var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target]) {
+				Target = string_func.Func
+			});
+
+			if (value == null)
+				throw new RuntimeError("`__ToString__()` expects a return value.");
+
+			return value.ToString()!;
+		}
+
+		return $"Object:{Class.Name}";
+	}
 }
 
 public class ObjectMethod(CObject target, FunctionNode func) {

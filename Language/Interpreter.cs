@@ -107,8 +107,8 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	private static object HandleAddition(object left, object right) {
 		// String concatenation
-		if (left is string && right is string) {
-			return $"{left}{right}";
+		if (left is CString l && right is CString r) {
+			return $"{l.Value}{r.Value}";
 		}
 
 		// Number addition
@@ -120,8 +120,8 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	private static object HandleMultiplication(object? left, object? right) {
 		// String multiplication
-		if (left is string && right is double) {
-			return string.Concat(Enumerable.Repeat(left, Convert.ToInt32(right)));
+		if (left is CString l && right is double) {
+			return string.Concat(Enumerable.Repeat(l.Value, Convert.ToInt32(right)));
 		}
 
 		// Number addition

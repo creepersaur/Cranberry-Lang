@@ -14,6 +14,8 @@ if (args.Length < 1 || args[0] == "help" || args[0] == "-h") {
 	Console.WriteLine("----------------------");
 	Console.WriteLine("");
 	Console.WriteLine("COMMANDS:");
+	Console.WriteLine(" > help | -h            [Get all* commands in Cranberry]");
+	Console.WriteLine(" > --version | -v       [Get the current version*.]");
 	Console.WriteLine(" > init                 [Initialize a new project in the working directory]");
 	Console.WriteLine(" > new <name>           [Create a new project in a new directory]");
 	Console.WriteLine(" > <file> <args>               [Run the project]");
@@ -21,6 +23,7 @@ if (args.Length < 1 || args[0] == "help" || args[0] == "-h") {
 	Console.WriteLine(" > build                [Build the project into a standalone package (in /build/debug)]");
 	Console.WriteLine(" > build --release      [Create a release build with a smaller file size (in /build/release)]");
 	//Console.WriteLine(" > --analyze            [Analyze the project and return defined variables, functions, etc.]");
+	Console.WriteLine("\n(Anything with an asterisk * may be subject to change or may not work.");
 	return;
 }
 

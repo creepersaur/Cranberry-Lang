@@ -1,3 +1,16 @@
-using Std::Env;
+class Vehicle {
+	constructor(self, brand)
+		=> self.brand = brand
 
-print(Env.Args)
+	fn __ToString__(self)
+		=> $"Vehicle<{self.brand}>"
+}
+
+let x = Vehicle("hello")
+println(x)
+
+x.brand = "sigma"
+
+println(x)
+
+println("Hello" * 5)

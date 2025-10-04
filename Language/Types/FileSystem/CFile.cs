@@ -47,7 +47,7 @@ public class CFile(string path) : IMemberAccessible {
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");
 
-				return File.ReadAllText(Path);
+				return new CString(File.ReadAllText(Path));
 			}),
 
 			"ReadBytes" => new InternalFunction(args => {
@@ -89,6 +89,9 @@ public class CFile(string path) : IMemberAccessible {
 				if (args.Length != 1)
 					throw new RuntimeError("`File.Write(text)` expects 1 argument.");
 
+				if (args[0] is CString c)
+					return File.WriteAllTextAsync(Path, c.Value);
+					
 				return File.WriteAllTextAsync(Path, Misc.FormatValue(args[0]!));
 			}),
 
@@ -96,6 +99,9 @@ public class CFile(string path) : IMemberAccessible {
 				if (args.Length != 1)
 					throw new RuntimeError("`File.Append(text)` expects 1 argument.");
 
+				if (args[0] is CString c)
+					return File.AppendAllTextAsync(Path, c.Value);
+					
 				return File.AppendAllTextAsync(Path, Misc.FormatValue(args[0]!));
 			}),
 

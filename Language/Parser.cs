@@ -216,9 +216,12 @@ public class Parser(string[] Tokens) {
 
 		var funcs = new List<FunctionDef>();
 		while (!Check("}")) {
+			SkipNewlines();
 			if (Check("constructor")) {
 				if (constructor != null)
 					throw new ParseError("Only one constructor can be present per Class", Pos + 1);
+				
+				Advance();
 				constructor = ParseLambda();
 			}
 
