@@ -1,16 +1,7 @@
-class Vehicle {
-	constructor(self, brand)
-		=> self.brand = brand
-
-	fn __ToString__(self)
-		=> $"Vehicle<{self.brand}>"
+class Vec {
+	fn __Add__(self, other) {
+		return 5
+	}
 }
 
-let x = Vehicle("hello")
-println(x)
-
-x.brand = "sigma"
-
-println(x)
-
-println("Hello" * 5)
+println(Vec() + 5)

@@ -84,11 +84,9 @@ public partial class Interpreter : INodeVisitor<object> {
 		return node.Op switch {
 			// Addition - handle string concatenation
 			"+" => HandleAddition(leftVal, rightVal),
-
-			// Arithmetic (numbers only)
-			"-" => Convert.ToDouble(leftVal) - Convert.ToDouble(rightVal),
-			"/" => Convert.ToDouble(leftVal) / Convert.ToDouble(rightVal),
+			"-" => HandleSubtraction(leftVal, rightVal),
 			"*" => HandleMultiplication(leftVal, rightVal),
+			"/" => HandleDivision(leftVal, rightVal),
 			"^" => Math.Pow(Convert.ToDouble(leftVal), Convert.ToDouble(rightVal)),
 			"%" => Convert.ToDouble(leftVal) % Convert.ToDouble(rightVal),
 			"//" => Math.Floor(Convert.ToDouble(leftVal) / Convert.ToDouble(rightVal)),
@@ -111,6 +109,28 @@ public partial class Interpreter : INodeVisitor<object> {
 			return $"{l.Value}{r.Value}";
 		}
 
+		if (left is CObject cl) {
+			if (cl.Class.Functions.TryGetValue("__Add__", out var f)) {
+				var string_func = new ObjectMethod(cl, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+					Target = string_func.Func
+				});
+
+				return value;
+			}
+		}
+
+		if (right is CObject cr) {
+			if (cr.Class.Functions.TryGetValue("__Add__", out var f)) {
+				var string_func = new ObjectMethod(cr, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+					Target = string_func.Func
+				});
+
+				return value;
+			}
+		}
+
 		// Number addition
 		if (Misc.IsNumber(left) && Misc.IsNumber(right))
 			return Convert.ToDouble(left) + Convert.ToDouble(right);
@@ -118,14 +138,101 @@ public partial class Interpreter : INodeVisitor<object> {
 		throw new RuntimeError($"Cannot add {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
 	}
 
-	private static object HandleMultiplication(object? left, object? right) {
+	private static object HandleSubtraction(object left, object right) {
+		if (left is CObject cl) {
+			if (cl.Class.Functions.TryGetValue("__Sub__", out var f)) {
+				var string_func = new ObjectMethod(cl, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+					Target = string_func.Func
+				});
+
+				return value;
+			}
+		}
+
+		if (right is CObject cr) {
+			if (cr.Class.Functions.TryGetValue("__Sub__", out var f)) {
+				var string_func = new ObjectMethod(cr, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+					Target = string_func.Func
+				});
+
+				return value;
+			}
+		}
+
+		// Number addition
+		if (Misc.IsNumber(left) && Misc.IsNumber(right))
+			return Convert.ToDouble(left) - Convert.ToDouble(right);
+
+		throw new RuntimeError($"Cannot subtract {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
+	}
+
+	private static object HandleMultiplication(object left, object right) {
 		// String multiplication
 		if (left is CString l && right is double) {
 			return string.Concat(Enumerable.Repeat(l.Value, Convert.ToInt32(right)));
 		}
 
+		if (left is CObject cl) {
+			if (cl.Class.Functions.TryGetValue("__Mul__", out var f)) {
+				var string_func = new ObjectMethod(cl, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+					Target = string_func.Func
+				});
+
+				return value;
+			}
+		}
+
+		if (right is CObject cr) {
+			if (cr.Class.Functions.TryGetValue("__Mul__", out var f)) {
+				var string_func = new ObjectMethod(cr, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+					Target = string_func.Func
+				});
+
+				return value;
+			}
+		}
+
 		// Number addition
-		return Convert.ToDouble(left) * Convert.ToDouble(right);
+		if (Misc.IsNumber(left) && Misc.IsNumber(right))
+			return Convert.ToDouble(left) * Convert.ToDouble(right);
+
+		throw new RuntimeError($"Cannot multiply {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
+	}
+	private static object HandleDivision(object left, object right) {
+		if (left is CObject cl) {
+			if (cl.Class.Functions.TryGetValue("__Div__", out var f)) {
+				var string_func = new ObjectMethod(cl, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+					Target = string_func.Func
+				});
+
+				return value;
+			}
+		}
+
+		if (right is CObject cr) {
+			if (cr.Class.Functions.TryGetValue("__Div__", out var f)) {
+				var string_func = new ObjectMethod(cr, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+					Target = string_func.Func
+				});
+
+				return value;
+			}
+		}
+
+		// Number addition
+		if (Misc.IsNumber(left) && Misc.IsNumber(right)) {
+			if ((double)right == 0)
+				throw new DivideByZeroException("Cannot divide by zero.");
+			return Convert.ToDouble(left) * Convert.ToDouble(right);
+		}
+		
+		throw new RuntimeError($"Cannot divide {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
 	}
 
 	private static bool AreEqual(object? left, object? right) {
@@ -137,6 +244,28 @@ public partial class Interpreter : INodeVisitor<object> {
 			return Math.Abs(leftDouble - rightDouble) < TOLERANCE;
 		}
 
+		if (left is CObject cl) {
+			if (cl.Class.Functions.TryGetValue("__Eq__", out var f)) {
+				var string_func = new ObjectMethod(cl, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+					Target = string_func.Func
+				});
+
+				return Misc.IsTruthy(value);
+			}
+		}
+
+		if (right is CObject cr) {
+			if (cr.Class.Functions.TryGetValue("__Eq__", out var f)) {
+				var string_func = new ObjectMethod(cr, f);
+				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+					Target = string_func.Func
+				});
+
+				return Misc.IsTruthy(value);
+			}
+		}
+		
 		return left.Equals(right);
 	}
 
@@ -154,7 +283,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public object VisitUnaryOp(UnaryOpNode node) {
 		var value = Evaluate(node.Value);
-		
+
 		if (node.Op == "$" && value is CString template) {
 			string result = MyRegex().Replace(template.Value, match => {
 				string key = match.Groups[1].Value;
@@ -192,7 +321,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
 	}
-	
+
 	public object VisitMemberAssignment(MemberAssignmentNode node) {
 		var target = Evaluate(node.Target);
 
@@ -203,7 +332,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
 	}
-	
+
 	public object VisitMemberShorthandAssignment(MemberShorthandAssignmentNode node) {
 		var target = Evaluate(node.Target);
 
@@ -211,7 +340,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			var currentValue = Evaluate(node.Value);
 			var other = Evaluate(new MemberAccessNode(node.Target, node.Member));
 			object newValue;
-				
+
 			switch (node.Op) {
 				case "+=":
 					if (node.Value == null) throw new RuntimeError("'+=' requires a value");
@@ -254,7 +383,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				default:
 					throw new RuntimeError($"Unknown shorthand operator: {node.Op}");
 			}
-			
+
 			access.SetMember(Evaluate(node.Member), newValue);
 			return new NullNode();
 		}
@@ -274,7 +403,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		else {
 			value = node.ToCast;
 		}
-		
+
 		switch (node.Type) {
 			case "string": return new CString(BuiltinFunctions.ToString(value)!);
 			case "number": return BuiltinFunctions.ToNumber(value);
@@ -282,7 +411,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			case "char": {
 				if (Misc.IsNumber(value))
 					return (char)Convert.ToByte(value);
-				
+
 				if (value is CString c)
 					return Convert.ToChar(c.Value);
 
@@ -291,6 +420,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				} catch {
 					// ignored
 				}
+
 				break;
 			}
 
@@ -364,7 +494,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				if (node.Value == null) throw new RuntimeError("'%=' requires a value");
 				newValue = Convert.ToDouble(currentValue) % Convert.ToDouble(Evaluate(node.Value));
 				break;
-			
+
 			case "++":
 				newValue = Convert.ToDouble(currentValue) + 1;
 				break;
@@ -455,7 +585,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				if (args.Count == 1) {
 					return new CList([args[0]]);
 				}
-				
+
 				if (args is [_, double d]) return new CList(new object[Convert.ToInt32(d)].Select(_ => args[0]).ToList());
 
 				if (args.Count == 0)
@@ -695,7 +825,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		foreach (var (cases, block) in node.Cases) {
 			foreach (var expr in cases) {
 				var cond = Evaluate(expr);
-				
+
 				if ((value is CString v && cond is CString c && v.Value == c.Value) || value.Equals(cond)) {
 					env.Push();
 					try {
