@@ -14,8 +14,8 @@ D:\Coding\Rider\Cranberry\obj\Release\net8.0\Cranberry.pdb
 D:\Coding\Rider\Cranberry\obj\Release\net8.0\Cranberry.genruntimeconfig.cache
 D:\Coding\Rider\Cranberry\obj\Release\net8.0\ref\Cranberry.dll
 D:\Coding\Rider\Cranberry\obj\Release\net8.0\Cranberry.sourcelink.json
-D:\Coding\Rider\Cranberry\bin\Release\net8.0\src\wow.cb
 D:\Coding\Rider\Cranberry\bin\Release\net8.0\cranberry.toml
 D:\Coding\Rider\Cranberry\bin\Release\net8.0\Tomlyn.dll
 D:\Coding\Rider\Cranberry\obj\Release\net8.0\Cranberry.csproj.AssemblyReference.cache
 D:\Coding\Rider\Cranberry\obj\Release\net8.0\Cranberry.csproj.Up2Date
+D:\Coding\Rider\Cranberry\bin\Release\net8.0\src\raylib.cb

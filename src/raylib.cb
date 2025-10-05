@@ -1,0 +1,3 @@
+﻿namespace Raylib;
+
+@extern_all("D:/Coding/Cranberry/SomeLib/MyLib/bin/Release/net8.0/Raylib-cs.dll")

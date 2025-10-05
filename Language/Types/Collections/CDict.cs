@@ -25,7 +25,7 @@ public class CDict : IMemberAccessible {
 	}
 
 	public CDict(Dictionary<object, object> items) {
-		Items = (items ?? throw new ArgumentNullException(nameof(items)));
+		Items = items ?? throw new ArgumentNullException(nameof(items));
 
 		Functions = FuncGen.GenerateFunctions([
 			FuncGen.FuncInternal(

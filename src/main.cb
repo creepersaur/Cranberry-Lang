@@ -1,15 +1,11 @@
-class Vec {
-	constructor(self, x, y) {
-		self.x = x
-		self.y = y
-	}
+using Raylib;
 
-	fn __Call__(self, scalar)
-		=> Vec(self.x * scalar, self.y * scalar)
+Raylib.InitWindow(600, 600, "Hello")
 
-	fn __ToString__(self)
-		=> $"({self.x}, {self.y})"
+while !Raylib.WindowShouldClose() {
+	Raylib.BeginDrawing()
+	
+	Raylib.EndDrawing()
 }
 
-let v = Vec(3, 4)
-println(v(2))   # → (6, 8)
+Raylib.CloseWindow();

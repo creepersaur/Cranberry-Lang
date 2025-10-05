@@ -29,10 +29,10 @@ public class IFNode(Node condition, BlockNode then, (Node, BlockNode)[] elif, Bl
 	}
 }
 
-public class FunctionDef(string name, string[] args, BlockNode block) : Node {
+public class FunctionDef(string name, string[] args, BlockNode? block) : Node {
 	public readonly string Name = name;
 	public readonly string[] Args = args;
-	public readonly BlockNode Block = block;
+	public readonly BlockNode? Block = block;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitFunctionDef(this);
@@ -130,5 +130,15 @@ public class IncludeDirective(Node paths) : Node {
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitIncludeDirective(this);
+	}
+}
+
+public class DecoratorNode(string name, Node[] args, FunctionDef? func = null) : Node {
+	public readonly string Name = name;
+	public readonly Node[] Args = args;
+	public readonly FunctionDef? Func = func;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitDecorator(this);
 	}
 }

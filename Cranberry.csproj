@@ -11,7 +11,7 @@
       <None Update="src\main.cb">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-      <None Update="src\wow.cb">
+      <None Update="src\raylib.cb">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="cranberry.toml">

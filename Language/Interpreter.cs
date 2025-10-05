@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using Cranberry.Builtin;
 using Cranberry.Errors;
+using Cranberry.External;
 using Cranberry.Namespaces;
 using Cranberry.Nodes;
 using Cranberry.Types;
@@ -202,6 +203,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		throw new RuntimeError($"Cannot multiply {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
 	}
+
 	private static object HandleDivision(object left, object right) {
 		if (left is CObject cl) {
 			if (cl.Class.Functions.TryGetValue("__Div__", out var f)) {
@@ -231,7 +233,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				throw new DivideByZeroException("Cannot divide by zero.");
 			return Convert.ToDouble(left) * Convert.ToDouble(right);
 		}
-		
+
 		throw new RuntimeError($"Cannot divide {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
 	}
 
@@ -265,7 +267,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				return Misc.IsTruthy(value);
 			}
 		}
-		
+
 		return left.Equals(right);
 	}
 
@@ -597,10 +599,10 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		FunctionNode? func = null;
-		
+
 		if (node.Target != null) {
 			var target = Evaluate(node.Target!);
-			
+
 			// class called as target: MyModule.MyClass(...)
 			if (target is CClass cTarget) {
 				var create = cTarget.GetCreateFunction();
@@ -612,7 +614,7 @@ public partial class Interpreter : INodeVisitor<object> {
 					return re.Value;
 				}
 			}
-			
+
 			if (target is CObject co) {
 				if (co.Class.Functions.TryGetValue("__Call__", out var f)) {
 					return Evaluate(new FunctionCall("", [co, ..args]) {
@@ -637,6 +639,14 @@ public partial class Interpreter : INodeVisitor<object> {
 			} else if (target is FunctionNode targetFunc) {
 				func = targetFunc;
 			}
+
+			if (target is ExternFunction ef) {
+				// convert Cranberry runtime values into plain CLR values expected by wrapper
+				var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
+				var resultClr = ef.Invoke(clrArgs);
+				// convert back into Cranberry runtime type
+				return ConvertCLR.ToCranberry(resultClr!);
+			}
 		} else {
 			// No target: could be named function OR a bare class call: MyClass(...)
 			if (!string.IsNullOrEmpty(node.Name)) {
@@ -658,6 +668,7 @@ public partial class Interpreter : INodeVisitor<object> {
 							Target = f
 						});
 					}
+
 					throw new RuntimeError($"Cannot call value `{Misc.FormatValue(co)}`");
 				} else if (lookup is InternalFunction internalF) {
 					try {
@@ -667,6 +678,12 @@ public partial class Interpreter : INodeVisitor<object> {
 					} catch (OutException re) {
 						return re.Value;
 					}
+				} else if (lookup is ExternFunction ef) {
+					// convert Cranberry runtime values into plain CLR values expected by wrapper
+					var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
+					var resultClr = ef.Invoke(clrArgs);
+					// convert back into Cranberry runtime type
+					return ConvertCLR.ToCranberry(resultClr!);
 				}
 			}
 		}
@@ -699,7 +716,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public object? VisitFunctionDef(FunctionDef node) {
-		env.Define(node.Name, new FunctionNode(node.Args, node.Block));
+		env.Define(node.Name, new FunctionNode(node.Args, node.Block!));
 		return null;
 	}
 
@@ -871,7 +888,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		var class_value = new CClass(node.Name, node.Constructor, this);
 
 		foreach (var f in node.Functions) {
-			class_value.Functions.Add(f.Name, new FunctionNode(f.Args, f.Block));
+			class_value.Functions.Add(f.Name, new FunctionNode(f.Args, f.Block!));
 		}
 
 		env.Define(node.Name, class_value);
@@ -995,8 +1012,109 @@ public partial class Interpreter : INodeVisitor<object> {
 		throw new RuntimeError("`include` only takes string path or list of strings.");
 	}
 
+	public object? VisitDecorator(DecoratorNode node) {
+		if (string.Equals(node.Name, "extern_all", StringComparison.OrdinalIgnoreCase)) {
+			if (node.Args.Length < 1)
+				throw new RuntimeError("@extern_all(path) expects a path to the `.dll`.");
+
+			ImportAssemblyFunctions(Evaluate(node.Args[0]).ToString()!, useNamespace:false);
+			
+			return null;
+		}
+		
+		// Expect decorator name "extern"
+		if (!string.Equals(node.Name, "extern", StringComparison.OrdinalIgnoreCase)) {
+			throw new RuntimeError("Unknown decorator. Only @extern is known as of now.");
+		}
+
+		// Evaluate decorator args to get module path (assume first arg is DLL path string)
+		if (node.Args.Length < 1)
+			throw new RuntimeError("extern decorator expects at least one argument: the path to the DLL.");
+
+		// Evaluate the first arg expression to runtime value (string).
+		// We call Accept(this) to evaluate the Node — your interpreter probably has a VisitStringLiteral that returns string.
+		var moduleVal = Evaluate(node.Args[0]);
+		if (!(moduleVal is CString modulePath))
+			throw new RuntimeError("extern decorator's first argument must be a string literal path to the DLL.");
+
+		// Optional: second argument can be explicit function name inside the DLL (otherwise use the Cranberry function name)
+		string? explicitSymbol = null;
+		if (node.Args.Length >= 2) {
+			var symVal = Evaluate(node.Args[1]);
+			if (symVal is string s) explicitSymbol = s;
+			else throw new Exception("extern decorator's second argument (symbol name) must be a string.");
+		}
+
+		var funcName = node.Func!.Name; // the Cranberry function name
+
+		var symbolToFind = explicitSymbol ?? funcName;
+
+		// Attempt to register the method (this will throw with helpful messages if it fails)
+		ExternalManager.RegisterManagedFunctionFromAssembly(modulePath.Value, symbolToFind);
+
+		// After registration, resolve wrapper and get MethodInfo parameter count to set arity.
+		if (!ExternalManager.TryResolve(modulePath.Value, symbolToFind, out var wrapper))
+			throw new Exception($"Failed to register external function {symbolToFind} from {modulePath.Value}");
+
+		// Determine arity: we can try inspect the method signature via reflection again, but we didn't expose MethodInfo.
+		// For simplicity: derive arity from the FunctionDef signature node.Func.Args
+		var arity = node.Func.Args.Length;
+
+		var extFunc = new ExternFunction(modulePath.Value, symbolToFind, wrapper!, arity);
+
+		// Define in the environment under the original function name
+		env.Define(funcName, extFunc);
+
+		return null;
+	}
+
+
 	[GeneratedRegex(@"\{(.*?)\}")]
 	private static partial Regex MyRegex();
+
+	public void ImportAssemblyFunctions(string modulePath, bool useNamespace = true, string? namespaceName = null) {
+		if (!File.Exists(modulePath))
+			throw new FileNotFoundException($"DLL not found: {modulePath}");
+
+		// Use ExternalManager to register wrappers and get the list
+		var wrappers = ExternalManager.RegisterAllManagedFunctionsFromAssembly(modulePath);
+
+		// If no namespace requested, put functions directly into current env
+		if (!useNamespace) {
+			foreach (var kv in wrappers) {
+				var methodName = kv.Key;
+				var wrapper = kv.Value;
+
+				// arity unknown (because of overloads) - use -1 or max overload param count if you prefer
+				int arity = -1;
+				var ef = new ExternFunction(modulePath, methodName, wrapper, arity);
+				env.Define(methodName, ef);
+			}
+
+			return;
+		}
+
+		// Create a namespace (default name: file name or provided)
+		var nsName = namespaceName ?? Path.GetFileNameWithoutExtension(modulePath);
+		var ns = new CNamespace(nsName);
+
+		// namespace has an env property; register the functions inside it
+		foreach (var kv in wrappers) {
+			var methodName = kv.Key;
+			var wrapper = kv.Value;
+			var ef = new ExternFunction(modulePath, methodName, wrapper, -1);
+			ns.env.Define(methodName, ef);
+		}
+
+		// Export the namespace into the current environment
+		// env.DefineNamespace(CNamespace ns) exists in your code used earlier; if not, fall back to env.Define(nsName, ns)
+		try {
+			env.DefineNamespace(ns);
+		} catch {
+			// fallback if DefineNamespace signature differs
+			env.Define(nsName, ns);
+		}
+	}
 }
 
 public static class EnumerableExtensions {

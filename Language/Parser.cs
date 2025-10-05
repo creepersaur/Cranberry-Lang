@@ -298,7 +298,7 @@ public class Parser(string[] Tokens) {
 		return new BlockNode(statements.ToArray());
 	}
 
-	private FunctionDef ParseFunctionDef() {
+	private FunctionDef ParseFunctionDef(bool requires_block = true) {
 		Advance();
 
 		var func_name = Advance();
@@ -323,7 +323,11 @@ public class Parser(string[] Tokens) {
 		Expect(")");
 		Advance();
 
-		return new FunctionDef(func_name!, args.ToArray(), ParseBlock());
+		BlockNode? block = null;
+		if (requires_block)
+			block = ParseBlock();
+		
+		return new FunctionDef(func_name!, args.ToArray(), block);
 	}
 
 	private IFNode ParseIF() {
@@ -666,6 +670,35 @@ public class Parser(string[] Tokens) {
 		return node;
 	}
 
+	private DecoratorNode ParseDecorator() {
+		string name = Advance()!;
+
+		var args = new List<Node>();
+		if (Check("(")) {
+			Advance();
+			SkipNewlines();
+			while (!Check(")")) {
+				SkipNewlines();
+				args.Add(ParseExpression());
+
+				if (Check(",")) Advance();
+				else break;
+			}
+
+			Expect(")");
+			Advance();
+		}
+
+		SkipNewlines();
+		if (Check("fn")) {
+			Expect("fn");
+			var func = ParseFunctionDef(false);
+			return new DecoratorNode(name, args.ToArray(), func);
+		}
+
+		return new DecoratorNode(name, args.ToArray());
+	}
+
 	private ListNode ParseList() {
 		Advance();
 
@@ -759,6 +792,9 @@ public class Parser(string[] Tokens) {
 
 		if (token == "@") {
 			Advance();
+			if (IsIdentifier(PeekAhead()))
+				return ParseDecorator();
+			
 			SkipNewlines();
 			Expect("{");
 			return new ScopeNode(ParseBlock());
