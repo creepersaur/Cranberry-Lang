@@ -671,7 +671,7 @@ public partial class Interpreter : INodeVisitor<object> {
 						});
 					}
 
-					throw new RuntimeError($"Cannot call value `{Misc.FormatValue(co)}`");
+					throw new RuntimeError($"Cannot call value: `{Misc.FormatValue(co)}`");
 				} else if (lookup is InternalFunction internalF) {
 					try {
 						return internalF.Call(args.ToArray());
@@ -968,6 +968,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		var space_name = (string)names.Current!;
 		CNamespace? latest;
+		Env original = env;
 
 		if (Namespaces.TryGetValue(space_name, out var value)) {
 			latest = value;
@@ -986,6 +987,13 @@ public partial class Interpreter : INodeVisitor<object> {
 
 			latest = new_space;
 			env = latest.env;
+		}
+
+		if (node.Block is { } b) {
+			Evaluate(b);
+			env = original;
+
+			Evaluate(new UsingDirective(node.Names, new Dictionary<string, string>()));
 		}
 
 		return null;

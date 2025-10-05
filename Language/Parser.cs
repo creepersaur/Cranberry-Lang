@@ -131,6 +131,10 @@ public class Parser(string[] Tokens) {
 			spaces.Add(name);
 		}
 
+		if (Check("{")) {
+			return new NamespaceDirective(spaces.ToArray(), ParseBlock());
+		}
+
 		return new NamespaceDirective(spaces.ToArray());
 	}
 

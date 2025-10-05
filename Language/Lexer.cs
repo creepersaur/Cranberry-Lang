@@ -46,6 +46,7 @@ public class Lexer {
 		var curToken = "";
 		char? instr = null;
 		bool in_comment = false;
+		bool escaped = false;
 
 		while (CurChar.HasValue) {
 			if (in_comment) {
@@ -53,6 +54,22 @@ public class Lexer {
 					in_comment = false;
 				}
 
+				Advance();
+				continue;
+			}
+
+			// Handle escape sequences inside strings
+			if (instr.HasValue && escaped) {
+				curToken += CurChar;
+				escaped = false;
+				Advance();
+				continue;
+			}
+
+			// Check for backslash (escape character) inside strings
+			if (instr.HasValue && CurChar == '\\') {
+				curToken += CurChar;
+				escaped = true;
 				Advance();
 				continue;
 			}
@@ -69,7 +86,6 @@ public class Lexer {
 				}
 
 				in_comment = true;
-				
 			} else if (IsPunctuation(CurChar) && !instr.HasValue) {
 				if (curToken.Length > 0 && curToken[^1] is 'e' or 'E' && float.TryParse(curToken[..^1], out float _) && CurChar is '+' or '-') {
 					curToken += CurChar;

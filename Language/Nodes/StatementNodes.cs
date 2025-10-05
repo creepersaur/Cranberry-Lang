@@ -117,8 +117,9 @@ public class UsingDirective(object[] names, Dictionary<string, string> aliases) 
 	}
 }
 
-public class NamespaceDirective(object[] names) : Node {
+public class NamespaceDirective(object[] names, BlockNode? block = null) : Node {
 	public readonly object[] Names = names;
+	public readonly BlockNode? Block = block;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitNamespaceDirective(this);

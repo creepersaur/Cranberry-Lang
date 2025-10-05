@@ -1,6 +1,10 @@
-using Raylib as RB;
+using Std::IO;
+namespace RB {
+	@extern_all("D:/Coding/Cranberry/SomeLib/MyLib/bin/Release/net8.0/Raylib-cs.dll")
+}
 
 RB.InitWindow(600, 600, "Hello")
+IO.Clear()
 
 while !RB.WindowShouldClose() {
 	RB.BeginDrawing()
