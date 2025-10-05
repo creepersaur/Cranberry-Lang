@@ -68,4 +68,32 @@ public static class BuiltinFunctions {
 
 		return template;
 	}
+
+	public static CString Typeof(List<object> args) {
+		return new CString(args[0] switch {
+			CString => "string",
+			double => "number",
+			int => "number",
+			long => "number",
+			byte => "number",
+			sbyte => "number",
+			char => "char",
+			bool => "bool",
+			null => "null",
+			NullNode => "null",
+			CClass => "class",
+			CObject c => c.Class.Name,
+			FunctionNode => "function",
+			InternalFunction => "function",
+			ObjectMethod => "function",
+			CNamespace => "namespace",
+			CList => "list",
+			CDict => "dict",
+			CStopwatch => "stopwatch",
+			CFile => "file",
+			CDirectory => "directory",
+			
+			_ => args[0].GetType().Name
+		});
+	}
 }

@@ -1,11 +1,15 @@
-using Raylib;
+using Raylib as RB;
 
-Raylib.InitWindow(600, 600, "Hello")
+RB.InitWindow(600, 600, "Hello")
 
-while !Raylib.WindowShouldClose() {
-	Raylib.BeginDrawing()
-	
-	Raylib.EndDrawing()
+while !RB.WindowShouldClose() {
+	RB.BeginDrawing()
+	RB.ClearBackground(RB.Color.Black)
+
+	let mx, my = RB.GetMouseX(), RB.GetMouseY()
+	RB.DrawCircle(mx, my, 50, RB.Color.Red)
+
+	RB.EndDrawing()
 }
 
-Raylib.CloseWindow();
+RB.CloseWindow();

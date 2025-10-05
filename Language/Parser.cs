@@ -146,47 +146,60 @@ public class Parser(string[] Tokens) {
 
 		spaces.Add(first);
 
-		while (Check("::")) {
-			Advance();
-			if (Check("{")) {
+		if (Check("::")) {
+			while (Check("::")) {
 				Advance();
-				var imports = new List<string>();
+				if (Check("{")) {
+					Advance();
+					var imports = new List<string>();
 
-				while (!Check("}")) {
-					string multi_name = Advance()!;
-					if (!IsIdentifier(multi_name))
-						throw new ParseError("Namespace names must always be Identifiers.", Pos);
+					while (!Check("}")) {
+						string multi_name = Advance()!;
+						if (!IsIdentifier(multi_name))
+							throw new ParseError("Namespace names must always be Identifiers.", Pos);
 
-					imports.Add(multi_name);
+						imports.Add(multi_name);
 
-					if (Check("as")) {
-						Advance();
-						string alias = Advance()!;
-						if (!IsIdentifier(alias))
-							throw new ParseError("Namespace aliases must always be Identifiers.", Pos);
+						if (Check("as")) {
+							Advance();
+							string alias = Advance()!;
+							if (!IsIdentifier(alias))
+								throw new ParseError("Namespace aliases must always be Identifiers.", Pos);
 
-						if (!aliases.TryAdd(multi_name, alias))
-							throw new ParseError("Cannot have duplicate namespace aliases.", Pos);
+							if (!aliases.TryAdd(multi_name, alias))
+								throw new ParseError("Cannot have duplicate namespace aliases.", Pos);
+						}
+
+						if (Check(",")) Advance();
+
+						else break;
 					}
 
-					if (Check(",")) Advance();
+					Expect("}");
+					Advance();
 
-					else break;
+					spaces.Add(imports.ToArray());
+					break;
 				}
 
-				Expect("}");
-				Advance();
+				string name = Advance()!;
+				if (!IsIdentifier(name))
+					throw new ParseError("Namespace names must always be Identifiers.", Pos);
 
-				spaces.Add(imports.ToArray());
-				break;
+				spaces.Add(name);
+
+				if (Check("as")) {
+					Advance();
+
+					string alias = Advance()!;
+					if (!IsIdentifier(alias))
+						throw new ParseError("Namespace aliases must always be Identifiers.", Pos);
+
+					if (!aliases.TryAdd(name, alias))
+						throw new ParseError("Cannot have duplicate namespace aliases.", Pos);
+				}
 			}
-
-			string name = Advance()!;
-			if (!IsIdentifier(name))
-				throw new ParseError("Namespace names must always be Identifiers.", Pos);
-
-			spaces.Add(name);
-
+		} else {
 			if (Check("as")) {
 				Advance();
 
@@ -194,7 +207,7 @@ public class Parser(string[] Tokens) {
 				if (!IsIdentifier(alias))
 					throw new ParseError("Namespace aliases must always be Identifiers.", Pos);
 
-				if (!aliases.TryAdd(name, alias))
+				if (!aliases.TryAdd(first, alias))
 					throw new ParseError("Cannot have duplicate namespace aliases.", Pos);
 			}
 		}

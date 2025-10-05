@@ -79,9 +79,19 @@ public static class ExternalManager {
 		=> $"{modulePath}::{functionName}";
 
 	// VERY naive conversions - adapt to your runtime types
-	private static object? ConvertToClr(object? cranVal, Type targetType) {
+	public static object? ConvertToClr(object? cranVal, Type targetType) {
 		if (cranVal == null) return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
 
+		if (cranVal is CClrObject clrObj) {
+			// Check if the wrapped type matches or is assignable to target
+			if (targetType.IsAssignableFrom(clrObj.Type)) {
+				return clrObj.Instance;  // Return the actual CLR object
+			}
+        
+			// Try to convert the wrapped instance
+			return Convert.ChangeType(clrObj.Instance, targetType);
+		}
+		
 		// If already compatible:
 		if (targetType.IsInstanceOfType(cranVal)) return cranVal;
 

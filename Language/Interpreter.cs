@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Reflection;
+using System.Text.RegularExpressions;
 using Cranberry.Builtin;
 using Cranberry.Errors;
 using Cranberry.External;
@@ -583,6 +584,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			case "print": return BuiltinFunctions.Print(args);
 			case "println": return BuiltinFunctions.Print(args, true);
 			case "format": return BuiltinFunctions.Format(args);
+			case "typeof":  return BuiltinFunctions.Typeof(args);
 			case "List": {
 				if (args.Count == 1) {
 					return new CList([args[0]]);
@@ -1017,11 +1019,12 @@ public partial class Interpreter : INodeVisitor<object> {
 			if (node.Args.Length < 1)
 				throw new RuntimeError("@extern_all(path) expects a path to the `.dll`.");
 
-			ImportAssemblyFunctions(Evaluate(node.Args[0]).ToString()!, useNamespace:false);
-			
+			ImportAssemblyFunctions(Evaluate(node.Args[0]).ToString()!);
+			ImportAssemblyClasses(Evaluate(node.Args[0]).ToString()!);
+
 			return null;
 		}
-		
+
 		// Expect decorator name "extern"
 		if (!string.Equals(node.Name, "extern", StringComparison.OrdinalIgnoreCase)) {
 			throw new RuntimeError("Unknown decorator. Only @extern is known as of now.");
@@ -1072,47 +1075,89 @@ public partial class Interpreter : INodeVisitor<object> {
 	[GeneratedRegex(@"\{(.*?)\}")]
 	private static partial Regex MyRegex();
 
-	public void ImportAssemblyFunctions(string modulePath, bool useNamespace = true, string? namespaceName = null) {
+	public void ImportAssemblyFunctions(string modulePath) {
 		if (!File.Exists(modulePath))
 			throw new FileNotFoundException($"DLL not found: {modulePath}");
 
 		// Use ExternalManager to register wrappers and get the list
 		var wrappers = ExternalManager.RegisterAllManagedFunctionsFromAssembly(modulePath);
 
-		// If no namespace requested, put functions directly into current env
-		if (!useNamespace) {
-			foreach (var kv in wrappers) {
-				var methodName = kv.Key;
-				var wrapper = kv.Value;
-
-				// arity unknown (because of overloads) - use -1 or max overload param count if you prefer
-				int arity = -1;
-				var ef = new ExternFunction(modulePath, methodName, wrapper, arity);
-				env.Define(methodName, ef);
-			}
-
-			return;
-		}
-
-		// Create a namespace (default name: file name or provided)
-		var nsName = namespaceName ?? Path.GetFileNameWithoutExtension(modulePath);
-		var ns = new CNamespace(nsName);
-
-		// namespace has an env property; register the functions inside it
 		foreach (var kv in wrappers) {
 			var methodName = kv.Key;
 			var wrapper = kv.Value;
-			var ef = new ExternFunction(modulePath, methodName, wrapper, -1);
-			ns.env.Define(methodName, ef);
-		}
 
-		// Export the namespace into the current environment
-		// env.DefineNamespace(CNamespace ns) exists in your code used earlier; if not, fall back to env.Define(nsName, ns)
-		try {
-			env.DefineNamespace(ns);
-		} catch {
-			// fallback if DefineNamespace signature differs
-			env.Define(nsName, ns);
+			// arity unknown (because of overloads) - use -1 or max overload param count if you prefer
+			int arity = -1;
+			var ef = new ExternFunction(modulePath, methodName, wrapper, arity);
+			env.Define(methodName, ef);
+		}
+	}
+
+	public void ImportAssemblyClasses(string modulePath, bool intoNamespace = true, string? namespaceName = null) {
+		if (!File.Exists(modulePath)) throw new FileNotFoundException(modulePath);
+		var asm = Assembly.LoadFrom(modulePath);
+
+		foreach (var t in asm.GetExportedTypes()) {
+			if (!t.IsPublic) continue;
+
+			// factory for instance creation
+			object? Factory(object?[] callArgs) {
+				var ctors = t.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+					.OrderByDescending(c => c.GetParameters().Length)
+					.ToArray();
+
+				var errors = new System.Text.StringBuilder();
+				foreach (var ctor in ctors) {
+					var pars = ctor.GetParameters();
+					if (pars.Length != (callArgs?.Length ?? 0)) {
+						errors.AppendLine($"skip ctor {ctor}: expects {pars.Length}");
+						continue;
+					}
+
+					var invokeArgs = new object[pars.Length];
+					var ok = true;
+					for (int i = 0; i < pars.Length; i++) {
+						try {
+							invokeArgs[i] = ExternalManager.ConvertToClr(callArgs![i], pars[i].ParameterType)!;
+						} catch (Exception ex) {
+							ok = false;
+							errors.AppendLine(ex.Message);
+							break;
+						}
+					}
+
+					if (!ok) continue;
+
+					try {
+						var inst = ctor.Invoke(invokeArgs);
+						return new CClrObject(inst);
+					} catch (TargetInvocationException tie) {
+						throw tie.InnerException ?? tie;
+					} catch (Exception ex) {
+						errors.AppendLine(ex.Message);
+					}
+				}
+
+				throw new RuntimeError($"No matching constructor for {t.FullName} with {(callArgs?.Length ?? 0)} args.\n{errors}");
+			}
+
+			var clrTypeObj = new CClrType(t, Factory);
+
+			// define type itself
+			env.Define(t.Name, clrTypeObj);
+
+			// --- expose static fields without converting to dictionaries ---
+			foreach (var f in t.GetFields(BindingFlags.Public | BindingFlags.Static)) {
+				var val = f.GetValue(null);
+				env.Define(f.Name, new CClrObject(val!)); // wrap struct/class
+			}
+
+			foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Static)) {
+				if (p.GetMethod != null) {
+					var val = p.GetValue(null);
+					env.Define(p.Name, new CClrObject(val!)); // wrap struct/class
+				}
+			}
 		}
 	}
 }

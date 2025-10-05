@@ -15,7 +15,7 @@ public static class ConvertCLR {
 			CList l => l.Items.Select(ToClr).ToArray(),
 			CDict D => D.Items.Select(object (x) => new KeyValuePair<object, object>(ToClr(x.Key), ToClr(x.Value))).ToArray(),
 			_ => obj
-		};
+		}; 
 	}
 
 	public static object? ToCranberry(object? obj) {
