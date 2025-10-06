@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Cranberry.Builtin;
@@ -119,20 +120,44 @@ public class N_Http : CNamespace {
 						};
 						var req = new CDict(reqDict.Select(pair => new KeyValuePair<object, object>(pair.Key, pair.Value)).ToDictionary());
 
-						switch (args[1]) {
-							case InternalFunction i:
-								i.Call(req);
-								break;
+						var resultObj = args[1] switch {
+							InternalFunction i => i.Call(req),
+							FunctionNode i => interpreter.Evaluate(new FunctionCall("", [req]) {
+								Target = i
+							}),
+							_ => null
+						};
 
-							case FunctionNode i:
-								interpreter.Evaluate(new FunctionCall("", [req]) {
-									Target = i
-								});
-								break;
+						// Default response values
+						int status = 200;
+						Dictionary<string, string> headers = new();
+						string body = "OK";
+
+						// If callback returned a dictionary, use it
+						if (resultObj is CDict dict) {
+							if (dict.Items.TryGetValue("status", out var s)) status = Convert.ToInt32(s);
+							if (dict.Items.TryGetValue("body", out var b)) body = b.ToString() ?? "OK";
+							if (dict.Items.TryGetValue("headers", out var h) && h is CDict hdrs) {
+								foreach (var kv in hdrs.Items) {
+									headers[kv.Key.ToString()!] = kv.Value.ToString()!;
+								}
+							}
+						} else if (resultObj is CString c) {
+							body = c.Value;
+						} else if (resultObj is string str) {
+							body = str;
+						} else if (resultObj is double d) {
+							body = d.ToString(CultureInfo.InvariantCulture);
+						} else if (resultObj is CList list) {
+							body = JsonSerializer.Serialize(list.Items);
 						}
+						
+						// Apply headers
+						foreach (var kv in headers)
+							response.Headers[kv.Key] = kv.Value;
 
-						// Default response
-						byte[] buffer = "OK"u8.ToArray();
+						response.StatusCode = status;
+						byte[] buffer = Encoding.UTF8.GetBytes(body);
 						response.ContentLength64 = buffer.Length;
 						response.OutputStream.Write(buffer, 0, buffer.Length);
 						response.OutputStream.Close();

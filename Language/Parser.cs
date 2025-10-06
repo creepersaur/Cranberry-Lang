@@ -965,9 +965,9 @@ public class Parser(string[] Tokens) {
 
 
 	private static bool IsIdentifier(string? token) {
-		return token != null &&
-			char.IsLetter(token[0]) || token![0] == '_' &&
-			token.All(c => char.IsLetterOrDigit(c) || c == '_');
+		return token != null && 
+		       (char.IsLetter(token[0]) || token[0] == '_') &&
+		       token.All(c => char.IsLetterOrDigit(c) || c == '_');
 	}
 
 	private static bool IsString(string? token) {

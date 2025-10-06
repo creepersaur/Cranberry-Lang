@@ -21,7 +21,11 @@ public class CDict : IMemberAccessible {
 	}
 
 	public void SetMember(object? member, object? value) {
-		Items[member!] = value!;
+		if (member is CString c)
+			Items[c.Value] = value!;
+		else {
+			Items[member!] = value!;
+		}
 	}
 
 	public CDict(Dictionary<object, object> items) {
@@ -118,6 +122,27 @@ public class CDict : IMemberAccessible {
 				args => {
 					if (args.Length != 0) throw new RuntimeError("`Clone()` expects 0 arguments.");
 					return new CDict(Items.Copy());
+				}
+			),
+
+			FuncGen.FuncInternal(
+				"Has",
+				args => {
+					if (args.Length != 1) throw new RuntimeError("`Has(obj)` expects 1 argument.");
+					return Items.ContainsValue(args[0]!);
+				}
+			),
+
+			FuncGen.FuncInternal(
+				"HasKey",
+				args => {
+					if (args.Length != 1) throw new RuntimeError("`HasKey(obj)` expects 1 argument.");
+					Console.WriteLine("Something: {0} | {1}", args[0], args[0]!.GetType());
+
+					if (args[0] is CString c)
+						return Items.ContainsKey(c.Value) || Items.ContainsKey(args[0]!);
+					
+					return Items.ContainsKey(args[0]!);
 				}
 			),
 		]);
