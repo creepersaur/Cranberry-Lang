@@ -96,7 +96,8 @@ public class Env {
 	}
 	
 	public void DefineNamespace(CNamespace value, string? alias = null) {
-		if (!Namespaces.TryAdd(alias ?? value.Name, value))
-			throw new RuntimeError($"Cannot define namespace with duplicate name `{value.Name}`");
+		Namespaces.TryAdd(alias ?? value.Name, value);
+		// if (!)
+		// 	throw new RuntimeError($"Cannot define namespace with duplicate name `{value.Name}`");
 	}
 }

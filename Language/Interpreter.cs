@@ -945,8 +945,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		bool list_of_spaces = false;
 
 		while (names.MoveNext()) {
-			if (names.Current is CString cname) {
-				string name = cname.Value;
+			if (names.Current is string name) {
 				if (latest == std) {
 					latest = (CNamespace)latest.GetMember(name);
 					break;
@@ -962,11 +961,10 @@ public partial class Interpreter : INodeVisitor<object> {
 
 					throw new RuntimeError($"Namespace `{name}` doesn't exist.");
 				}
-			} else if (names.Current is CString[] multiple) {
+			} else if (names.Current is string[] multiple) {
 				list_of_spaces = true;
 
-				foreach (var v in multiple) {
-					string m = v.Value;
+				foreach (var m in multiple) {
 					if (latest == std) {
 						if (node.Aliases.TryGetValue(m, out var alias))
 							env.DefineNamespace((CNamespace)latest.GetMember(m), alias);

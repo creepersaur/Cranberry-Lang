@@ -7,6 +7,7 @@ public class Parser(string[] Tokens) {
 	private int Pos = -1;
 	private static readonly string[] CASTABLE = ["string", "number", "bool", "list", "dict", "char"];
 	private static readonly string[] SHORTHANDS = ["+=", "-=", "*=", "/=", "^=", "%=", "++", "--"];
+	private static readonly string[] FN_DECORATORS = ["extern"];
 
 	// Get the token ahead (or by offset) as a string?
 	public string? PeekAhead(int offset = 1) {
@@ -50,7 +51,7 @@ public class Parser(string[] Tokens) {
 		if (token == "let") {
 			return ParseLet();
 		}
-		
+
 		if (token == "const") {
 			return ParseLet(true);
 		}
@@ -237,7 +238,7 @@ public class Parser(string[] Tokens) {
 			if (Check("constructor")) {
 				if (constructor != null)
 					throw new ParseError("Only one constructor can be present per Class", Pos + 1);
-				
+
 				Advance();
 				constructor = ParseLambda();
 			}
@@ -286,7 +287,7 @@ public class Parser(string[] Tokens) {
 
 			return new BlockNode([new OutNode(node)]);
 		}
-	
+
 		if (is_arrow && !Check("{")) {
 			var node = Parse();
 
@@ -343,7 +344,7 @@ public class Parser(string[] Tokens) {
 		BlockNode? block = null;
 		if (requires_block)
 			block = ParseBlock();
-		
+
 		return new FunctionDef(func_name!, args.ToArray(), block);
 	}
 
@@ -448,7 +449,7 @@ public class Parser(string[] Tokens) {
 				if (Check(",")) Advance();
 				else break;
 			}
-			
+
 			SkipNewlines();
 
 			Expect("=>");
@@ -491,7 +492,7 @@ public class Parser(string[] Tokens) {
 		SkipNewlines();
 		return ParseLogical();
 	}
-	
+
 	// Handles logical operators with lower precedence than comparisons
 	public Node ParseLogical() {
 		Node left = ParseComparison();
@@ -666,6 +667,13 @@ public class Parser(string[] Tokens) {
 					Advance();
 					var value = ParseExpression();
 					node = new MemberAssignmentNode(node, new StringNode(member), value);
+				} else if (Check("+=") || Check("-=") || Check("*=") || Check("/=") || Check("^=") || Check("%=")) {
+					var op = Advance()!;
+					var value = ParseExpression();
+					node = new MemberShorthandAssignmentNode(node, new StringNode(member), value, op);
+				} else if (Check("++") || Check("--")) {
+					var op = Advance()!;
+					node = new MemberShorthandAssignmentNode(node, new StringNode(member), new NullNode(), op);
 				} else {
 					node = new MemberAccessNode(node, new StringNode(member));
 				}
@@ -723,7 +731,7 @@ public class Parser(string[] Tokens) {
 		}
 
 		SkipNewlines();
-		if (Check("fn")) {
+		if (Check("fn") && FN_DECORATORS.Contains(name)) {
 			Expect("fn");
 			var func = ParseFunctionDef(false);
 			return new DecoratorNode(name, args.ToArray(), func);
@@ -827,7 +835,7 @@ public class Parser(string[] Tokens) {
 			Advance();
 			if (IsIdentifier(PeekAhead()))
 				return ParseDecorator();
-			
+
 			SkipNewlines();
 			Expect("{");
 			return new ScopeNode(ParseBlock());
