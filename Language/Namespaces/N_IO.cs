@@ -20,7 +20,7 @@ public class N_IO : CNamespace {
 
 				return new CString(Console.ReadLine()!);
 			}),
-			
+
 			["Read"] = new InternalFunction(args => {
 				if (args.Length > 0) {
 					string prompt = "";
@@ -33,7 +33,7 @@ public class N_IO : CNamespace {
 
 				return (double)Console.Read();
 			}),
-			
+
 			["ReadKey"] = new InternalFunction(args => {
 				if (args.Length > 1)
 					throw new RuntimeError("ReadKey(intercept?) takes in 1 argument.");
@@ -51,7 +51,7 @@ public class N_IO : CNamespace {
 
 				return new CString(keyInfo.KeyChar.ToString());
 			}),
-			
+
 			["Clear"] = new InternalFunction(args => {
 				if (args.Length != 0)
 					throw new RuntimeError("Clear() takes 0 arguments.");
@@ -59,7 +59,7 @@ public class N_IO : CNamespace {
 				Console.Clear();
 				return new NullNode();
 			}),
-			
+
 			["Beep"] = new InternalFunction(args => {
 				if (args.Length == 1 || args.Length > 2)
 					throw new RuntimeError("Beep(frequency, duration) takes 0 or 2 arguments.");
@@ -77,7 +77,7 @@ public class N_IO : CNamespace {
 
 				return new NullNode();
 			}),
-			
+
 			["Write"] = new InternalFunction(args => {
 				if (args.Length > 0) {
 					string prompt = "";
@@ -90,7 +90,7 @@ public class N_IO : CNamespace {
 
 				return new NullNode();
 			}),
-			
+
 			["WriteLine"] = new InternalFunction(args => {
 				if (args.Length > 0) {
 					string prompt = "";
@@ -102,7 +102,24 @@ public class N_IO : CNamespace {
 				}
 
 				return new NullNode();
-			})
+			}),
+
+			["SetForeground"] = new InternalFunction(args => {
+				if (args.Length != 1) throw new RuntimeError("`SetForeground(color)` expects 1 argument.");
+
+				if (args[0] is double colorValue) {
+					Console.ForegroundColor = (ConsoleColor)(int)colorValue;
+				} else if (args[0] is string colorName) {
+					Console.ForegroundColor = Enum.Parse<ConsoleColor>(colorName, true);
+				}
+
+				return new NullNode();
+			}),
+
+			["ResetColor"] = new InternalFunction(_ => {
+				Console.ResetColor();
+				return new NullNode();
+			}),
 		});
 	}
 }
