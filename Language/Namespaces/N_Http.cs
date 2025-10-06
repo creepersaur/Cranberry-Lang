@@ -100,7 +100,6 @@ public class N_Http : CNamespace {
 				var listener = new HttpListener();
 				listener.Prefixes.Add($"http://localhost:{port}/");
 				listener.Start();
-				Console.WriteLine($"[Cranberry] Listening on port {port}...");
 
 				if (args[1] is not InternalFunction && args[1] is not FunctionNode)
 					throw new RuntimeError($"Listen: callback must be a function. Got `{args[1]}`");
