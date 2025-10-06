@@ -104,6 +104,9 @@ public partial class Interpreter : INodeVisitor<object> {
 			">" => CompareValues(leftVal, rightVal) > 0,
 			"<=" => CompareValues(leftVal, rightVal) <= 0,
 			">=" => CompareValues(leftVal, rightVal) >= 0,
+			
+			"&&" => Misc.IsTruthy(leftVal) && Misc.IsTruthy(rightVal),
+			"||" => Misc.IsTruthy(leftVal) || Misc.IsTruthy(rightVal),
 
 			_ => throw new RuntimeError($"Unknown binary expression: {node.Op}")
 		};
@@ -236,7 +239,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (Misc.IsNumber(left) && Misc.IsNumber(right)) {
 			if ((double)right == 0)
 				throw new DivideByZeroException("Cannot divide by zero.");
-			return Convert.ToDouble(left) * Convert.ToDouble(right);
+			return Convert.ToDouble(left) / Convert.ToDouble(right);
 		}
 
 		throw new RuntimeError($"Cannot divide {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
