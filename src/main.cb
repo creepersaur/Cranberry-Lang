@@ -1,19 +1,5 @@
-using Std::IO;
-namespace RB {
-	@extern_all("D:/Coding/Cranberry/SomeLib/MyLib/bin/Release/net8.0/Raylib-cs.dll")
-}
+using Std::{Http, JSON};
 
-RB.InitWindow(600, 600, "Hello")
-IO.Clear()
-
-while !RB.WindowShouldClose() {
-	RB.BeginDrawing()
-	RB.ClearBackground(RB.Color.Black)
-
-	let mx, my = RB.GetMouseX(), RB.GetMouseY()
-	RB.DrawCircle(mx, my, 50, RB.Color.Red)
-
-	RB.EndDrawing()
-}
-
-RB.CloseWindow();
+Http.Listen(1200, fn(res) {
+	print(res)
+})
