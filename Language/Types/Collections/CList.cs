@@ -6,7 +6,7 @@ namespace Cranberry.Types;
 
 public class CList : IMemberAccessible {
 	public List<object> Items;
-	private static Dictionary<string, InternalFunction>? Functions;
+	private readonly Dictionary<string, InternalFunction>? Functions;
 
 	public object GetMember(object? member) {
 		switch (member) {

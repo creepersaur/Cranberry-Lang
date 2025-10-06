@@ -6,7 +6,7 @@ namespace Cranberry.Types;
 
 public class CDict : IMemberAccessible {
 	public readonly Dictionary<object, object> Items;
-	private static Dictionary<string, InternalFunction>? Functions;
+	private readonly Dictionary<string, InternalFunction>? Functions;
 
 	public object GetMember(object? member) {
 		if (Items.TryGetValue(member!, out var item))
@@ -43,7 +43,7 @@ public class CDict : IMemberAccessible {
 			FuncGen.FuncInternal(
 				"Keys",
 				args => {
-					if (args.Length != 1) throw new RuntimeError("`Keys()` expects 0 arguments.");
+					if (args.Length != 0) throw new RuntimeError("`Keys()` expects 0 arguments.");
 					return new CList(Items.Keys.ToList());
 				}
 			),
@@ -51,7 +51,7 @@ public class CDict : IMemberAccessible {
 			FuncGen.FuncInternal(
 				"Values",
 				args => {
-					if (args.Length != 1) throw new RuntimeError("`Values()` expects 0 arguments.");
+					if (args.Length != 0) throw new RuntimeError("`Values()` expects 0 arguments.");
 					return new CList(Items.Values.ToList());
 				}
 			),
@@ -137,8 +137,7 @@ public class CDict : IMemberAccessible {
 				"HasKey",
 				args => {
 					if (args.Length != 1) throw new RuntimeError("`HasKey(obj)` expects 1 argument.");
-					Console.WriteLine("Something: {0} | {1}", args[0], args[0]!.GetType());
-
+					
 					if (args[0] is CString c)
 						return Items.ContainsKey(c.Value) || Items.ContainsKey(args[0]!);
 					
