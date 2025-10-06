@@ -106,13 +106,18 @@ public class N_IO : CNamespace {
 
 			["SetForeground"] = new InternalFunction(args => {
 				if (args.Length != 1) throw new RuntimeError("`SetForeground(color)` expects 1 argument.");
-
-				if (args[0] is double colorValue) {
+      
+				if (args[0] is CString colorName) {
+					try {
+						Console.ForegroundColor = Enum.Parse<ConsoleColor>(colorName.Value, ignoreCase: true);
+					} catch (ArgumentException) {
+						throw new RuntimeError($"Invalid color name: '{colorName.Value}'. Valid colors are: {string.Join(", ", Enum.GetNames<ConsoleColor>())}");
+					}
+				} else if (args[0] is double colorValue) {
 					Console.ForegroundColor = (ConsoleColor)(int)colorValue;
-				} else if (args[0] is string colorName) {
-					Console.ForegroundColor = Enum.Parse<ConsoleColor>(colorName, true);
+				} else {
+					throw new RuntimeError("`SetForeground` expects a string color name or number.");
 				}
-
 				return new NullNode();
 			}),
 
