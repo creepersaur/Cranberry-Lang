@@ -489,7 +489,23 @@ public class Parser(string[] Tokens) {
 	////////////////////////////////////////////////////////////
 	public Node ParseExpression() {
 		SkipNewlines();
-		return ParseComparison();
+		return ParseLogical();
+	}
+	
+	// Handles logical operators with lower precedence than comparisons
+	public Node ParseLogical() {
+		Node left = ParseComparison();
+
+		while (Pos < Tokens.Length) {
+			string? op = PeekAhead();
+			if (op != "&&" && op != "||") break;
+
+			Advance();
+			Node right = ParseComparison(); // comparisons are next-highest precedence
+			left = new BinaryOpNode(left, op, right);
+		}
+
+		return left;
 	}
 
 	public Node ParseComparison() {

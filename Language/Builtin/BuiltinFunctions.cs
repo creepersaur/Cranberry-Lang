@@ -24,6 +24,9 @@ public static class BuiltinFunctions {
 
 	public static double ToNumber(object? arg) {
 		try {
+			if (arg is CString c)
+				return Convert.ToDouble(c.Value);
+			
 			return Convert.ToDouble(arg);
 		} catch {
 			// ignored

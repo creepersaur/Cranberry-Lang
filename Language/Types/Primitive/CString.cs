@@ -20,7 +20,16 @@ public class CString(string value) : IMemberAccessible {
 		}
 
 		if (member is CRange range) {
-			return new CString(Value[Misc.DoubleToIndex(range.Start, Value.Length, true)..Misc.DoubleToIndex(range.End, Value.Length, true)]);
+			if (range.Inclusive)
+				return new CString(Value[
+					Misc.DoubleToIndex(range.Start, Value.Length + 1, true)
+						..Misc.DoubleToIndex(range.End, Value.Length + 1, true)
+				]);
+			
+			return new CString(Value[
+				Misc.DoubleToIndex(range.Start, Value.Length, true)
+					..Misc.DoubleToIndex(range.End, Value.Length, true)
+			]);
 		}
 
 		if (member is string name)

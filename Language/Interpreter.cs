@@ -37,7 +37,11 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object VisitString(StringNode node) => new CString(node.Value);
 
 	public object VisitFunction(FunctionNode node) {
-		node.Env = env.Variables.Peek();
+		// Capture the closure only once (when the function is defined),
+		// don't overwrite it every time the node is evaluated.
+		if (node.Env == null) {
+			node.Env = env.Variables.Peek();
+		}
 		return node;
 	}
 
@@ -277,6 +281,10 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (left is string leftStr && right is string rightStr) {
 			return string.CompareOrdinal(leftStr, rightStr);
 		}
+		
+		if (left is CString cleftStr && right is CString crightStr) {
+			return string.CompareOrdinal(cleftStr.Value, crightStr.Value);
+		}
 
 		// Number comparison
 		double leftNum = Convert.ToDouble(left);
@@ -430,6 +438,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			case "list": {
 				if (value is CList) return value;
 				if (value is CDict dict) return dict.Items.Values;
+				if (value is CString c) return new CList(c.Value.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
 				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
 
 				break;
@@ -584,7 +593,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			case "print": return BuiltinFunctions.Print(args);
 			case "println": return BuiltinFunctions.Print(args, true);
 			case "format": return BuiltinFunctions.Format(args);
-			case "typeof":  return BuiltinFunctions.Typeof(args);
+			case "typeof": return BuiltinFunctions.Typeof(args);
 			case "List": {
 				if (args.Count == 1) {
 					return new CList([args[0]]);
@@ -694,23 +703,26 @@ public partial class Interpreter : INodeVisitor<object> {
 			env.Push();
 			try {
 				env.Push(func.Env!);
-
-				// safe binding of args -> default to NullNode when missing
-				for (int i = 0; i < func.Args.Length; i++) {
-					object val = i < args.Count ? args[i] : new NullNode();
-					env.Define(func.Args[i], val);
-				}
-
 				try {
-					var rv = Evaluate(func.Block);
-					return rv;
-				} catch (ReturnException re) {
-					return re.Value;
-				} catch (OutException re) {
-					return re.Value;
+					// safe binding of args -> default to NullNode when missing
+					for (int i = 0; i < func.Args.Length; i++) {
+						object val = i < args.Count ? args[i] : new NullNode();
+						env.Define(func.Args[i], val);
+					}
+
+					try {
+						var rv = Evaluate(func.Block);
+						return rv;
+					} catch (ReturnException re) {
+						return re.Value;
+					} catch (OutException re) {
+						return re.Value;
+					}
+				} finally {
+					env.Pop(); // pop func.Env!
 				}
 			} finally {
-				env.Pop();
+				env.Pop(); // pop the initial push()
 			}
 		}
 
@@ -829,6 +841,26 @@ public partial class Interpreter : INodeVisitor<object> {
 			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
 		}
 
+		if (iterable is CString c) {
+			foreach (var i in c.Value) {
+				env.Push();
+				try {
+					env.Define(node.VarName, i.ToString());
+					Evaluate(node.Block);
+				} catch (BreakException be) {
+					return be.Value;
+				} catch (OutException be) {
+					if (be.Value != null)
+						ReturnValues.Add(be.Value);
+				} catch (ContinueException) {
+				} finally {
+					env.Pop();
+				}
+			}
+
+			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+		}
+		
 		if (iterable is string str) {
 			foreach (var i in str) {
 				env.Push();
@@ -913,7 +945,8 @@ public partial class Interpreter : INodeVisitor<object> {
 		bool list_of_spaces = false;
 
 		while (names.MoveNext()) {
-			if (names.Current is string name) {
+			if (names.Current is CString cname) {
+				string name = cname.Value;
 				if (latest == std) {
 					latest = (CNamespace)latest.GetMember(name);
 					break;
@@ -929,10 +962,11 @@ public partial class Interpreter : INodeVisitor<object> {
 
 					throw new RuntimeError($"Namespace `{name}` doesn't exist.");
 				}
-			} else if (names.Current is string[] multiple) {
+			} else if (names.Current is CString[] multiple) {
 				list_of_spaces = true;
 
-				foreach (var m in multiple) {
+				foreach (var v in multiple) {
+					string m = v.Value;
 					if (latest == std) {
 						if (node.Aliases.TryGetValue(m, out var alias))
 							env.DefineNamespace((CNamespace)latest.GetMember(m), alias);
@@ -1010,14 +1044,17 @@ public partial class Interpreter : INodeVisitor<object> {
 			}
 
 			throw new IncludeFileException(Paths.Items.Select(object (x) => {
-				if (x is CString c)
-					return c.Value;
+				if (x is CString cs)
+					return cs.Value;
 				return x;
 			}));
 		}
 
 		if (file_path is string p)
 			throw new IncludeFileException(p);
+
+		if (file_path is CString c)
+			throw new IncludeFileException(c.Value);
 
 		throw new RuntimeError("`include` only takes string path or list of strings.");
 	}
