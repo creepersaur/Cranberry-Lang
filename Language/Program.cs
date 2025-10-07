@@ -49,7 +49,7 @@ public class Program {
 					RunNode(node, path);
 				} catch (ReturnException) {
 					return;
-				}
+				} catch (OutException) {}
 			}
 
 			foreach (var node in ast) {
@@ -57,7 +57,7 @@ public class Program {
 					RunNode(node, path);
 				} catch (ReturnException) {
 					return;
-				}
+				} catch (OutException) {}
 			}
 		} finally {
 			interpreter.env = previousEnv;
@@ -67,8 +67,6 @@ public class Program {
 	public void RunNode(Node node, string path) {
 		try {
 			interpreter!.Evaluate(node);
-		} catch (OutException) {
-			throw new RuntimeError("Cannot `out` in main scope.");
 		} catch (BreakException) {
 			throw new RuntimeError("`break` must only be used in loops.");
 		} catch (IncludeFileException include) {

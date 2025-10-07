@@ -49,10 +49,10 @@ public class Lexer {
 		bool escaped = false;
 
 		while (CurChar.HasValue) {
-			if (CurChar == '\n' && curToken.Length == 0) {
-				Advance();
-				continue;
-			}
+			// if (CurChar == '\n' && curToken.Length == 0) {
+			// 	Advance();
+			// 	continue;
+			// }
 			
 			if (in_comment) {
 				if (CurChar == '\n') {

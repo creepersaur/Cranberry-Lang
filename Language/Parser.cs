@@ -48,6 +48,9 @@ public class Parser(string[] Tokens) {
 		SkipNewlines();
 		string? token = PeekAhead();
 
+		if (token == null)
+			return new NullNode();
+		
 		if (token == "let") {
 			return ParseLet();
 		}
@@ -132,8 +135,8 @@ public class Parser(string[] Tokens) {
 			spaces.Add(name);
 		}
 
-		if (Check("{")) {
-			return new NamespaceDirective(spaces.ToArray(), ParseBlock());
+		if (Check("{") || Check("=>")) {
+			return new NamespaceDirective(spaces.ToArray(), ParseBlock(should_out:false));
 		}
 
 		return new NamespaceDirective(spaces.ToArray());
@@ -276,7 +279,7 @@ public class Parser(string[] Tokens) {
 		return new ForNode(var_name, ParseExpression(), ParseBlock());
 	}
 
-	private BlockNode ParseBlock(bool is_arrow = false) {
+	private BlockNode ParseBlock(bool is_arrow = false, bool should_out = true) {
 		SkipNewlines();
 		if (Check("=>")) {
 			Advance();
@@ -285,6 +288,9 @@ public class Parser(string[] Tokens) {
 			if (Check(";"))
 				Advance();
 
+			if (!should_out)
+				return new BlockNode([node]);
+				
 			return new BlockNode([new OutNode(node)]);
 		}
 
@@ -790,6 +796,7 @@ public class Parser(string[] Tokens) {
 	}
 
 	private Node ParsePrimary() {
+		SkipNewlines();
 		string? token = PeekAhead();
 
 		// number literal
@@ -918,10 +925,13 @@ public class Parser(string[] Tokens) {
 			return expr;
 		}
 
+		if (token == null)
+			return new NullNode();
+
 		throw new ParseError($"Unexpected token '{token switch {
 			"\n" => "\\n",
 			_ => token
-		}}'", Pos + 1);
+		}}' after `{PeekAhead(0)}`", Pos + 1);
 	}
 
 	private FunctionNode ParseLambda() {

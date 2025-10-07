@@ -1139,7 +1139,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 	}
 
-	public void ImportAssemblyClasses(string modulePath, bool intoNamespace = true, string? namespaceName = null) {
+	public void ImportAssemblyClasses(string modulePath) {
 		if (!File.Exists(modulePath)) throw new FileNotFoundException(modulePath);
 		var asm = Assembly.LoadFrom(modulePath);
 
@@ -1176,7 +1176,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 					try {
 						var inst = ctor.Invoke(invokeArgs);
-						return new CClrObject(inst);
+						return (inst != null!) ? new CClrObject(inst) : null;
 					} catch (TargetInvocationException tie) {
 						throw tie.InnerException ?? tie;
 					} catch (Exception ex) {
@@ -1195,13 +1195,15 @@ public partial class Interpreter : INodeVisitor<object> {
 			// --- expose static fields without converting to dictionaries ---
 			foreach (var f in t.GetFields(BindingFlags.Public | BindingFlags.Static)) {
 				var val = f.GetValue(null);
-				env.Define(f.Name, new CClrObject(val!)); // wrap struct/class
+				if (val != null)
+					env.Define(f.Name, new CClrObject(val)); // wrap struct/class
 			}
 
 			foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Static)) {
 				if (p.GetMethod != null) {
 					var val = p.GetValue(null);
-					env.Define(p.Name, new CClrObject(val!)); // wrap struct/class
+					if (val != null)
+						env.Define(p.Name, new CClrObject(val)); // wrap struct/class
 				}
 			}
 		}
