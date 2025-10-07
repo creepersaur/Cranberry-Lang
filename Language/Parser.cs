@@ -50,7 +50,7 @@ public class Parser(string[] Tokens) {
 
 		if (token == null)
 			return new NullNode();
-		
+
 		if (token == "let") {
 			return ParseLet();
 		}
@@ -100,7 +100,7 @@ public class Parser(string[] Tokens) {
 
 		var is_identifier = IsIdentifier(token);
 
-		if (is_identifier && Check("=", 2)) {
+		if (is_identifier && (Check("=", 2) || Check(",", 2))) {
 			return ParseAssignment();
 		}
 
@@ -136,7 +136,7 @@ public class Parser(string[] Tokens) {
 		}
 
 		if (Check("{") || Check("=>")) {
-			return new NamespaceDirective(spaces.ToArray(), ParseBlock(should_out:false));
+			return new NamespaceDirective(spaces.ToArray(), ParseBlock(should_out: false));
 		}
 
 		return new NamespaceDirective(spaces.ToArray());
@@ -290,7 +290,7 @@ public class Parser(string[] Tokens) {
 
 			if (!should_out)
 				return new BlockNode([node]);
-				
+
 			return new BlockNode([new OutNode(node)]);
 		}
 
@@ -436,20 +436,25 @@ public class Parser(string[] Tokens) {
 		Advance();
 
 		while (!Check("}")) {
-			if (default_case == null && Check("_")) {
+			SkipNewlines();
+
+			if (Check("_")) {
+				if (default_case != null)
+					throw new RuntimeError("`switch` statements can have only 1 default case.");
+
 				Advance();
 				Expect("=>");
 				Advance();
 
 				default_case = ParseBlock(true);
+				continue;
 			}
-
-			SkipNewlines();
 
 			if (Check("}")) break;
 
 			var new_cases = new List<Node>();
 			while (!Check("=>")) {
+				Console.WriteLine("Got a case");
 				new_cases.Add(ParseExpression());
 
 				if (Check(",")) Advance();
@@ -471,11 +476,29 @@ public class Parser(string[] Tokens) {
 	}
 
 	private AssignmentNode ParseAssignment() {
-		string varName = Advance()!;
+		var names = new List<string>();
+		while (!Check("=")) {
+			names.Add(Advance()!);
+
+			if (Check(",")) Advance();
+			else break;
+		}
+		
+		Expect("=");
 		Advance(); // consume `=`
 
-		Node value = ParseExpression(); // right side
-		return new AssignmentNode(varName, value);
+		var values = new List<Node>();
+		values.Add(ParseExpression());
+
+		while (Check(",")) {
+			Advance();
+			values.Add(ParseExpression());
+		}
+
+		if (names.Count != values.Count)
+			throw new ParseError($"Number of variables being assigned ({names.Count}) is not equal to number of values ({values.Count}).", Pos);
+		
+		return new AssignmentNode(names.ToArray(), values.ToArray());
 	}
 
 	private ShorthandAssignmentNode ParseShorthandAssignment() {
@@ -931,7 +954,10 @@ public class Parser(string[] Tokens) {
 		throw new ParseError($"Unexpected token '{token switch {
 			"\n" => "\\n",
 			_ => token
-		}}' after `{PeekAhead(0)}`", Pos + 1);
+		}}' after `{PeekAhead(0) switch {
+		"\n" => "\\n",
+			_ => PeekAhead(0)
+		}}`", Pos + 1);
 	}
 
 	private FunctionNode ParseLambda() {
@@ -975,7 +1001,7 @@ public class Parser(string[] Tokens) {
 
 
 	private static bool IsIdentifier(string? token) {
-		return token != null && 
+		return token != null &&
 		       (char.IsLetter(token[0]) || token[0] == '_') &&
 		       token.All(c => char.IsLetterOrDigit(c) || c == '_');
 	}

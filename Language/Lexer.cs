@@ -34,6 +34,7 @@ public class Lexer {
 	private static string ProcessEscapeSequences(string str) {
 		return str.Replace("\\n", "\n")
 			.Replace("\\t", "\t")
+			.Replace("\\#", "#")
 			.Replace("\\r", "\r")
 			.Replace(@"\\", "\\")
 			.Replace("\\\"", "\"")

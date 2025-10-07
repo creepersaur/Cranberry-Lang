@@ -45,10 +45,6 @@ public class N_IO : CNamespace {
 					keyInfo = Console.ReadKey();
 				}
 
-				if (char.IsControl(keyInfo.KeyChar) || keyInfo.Key != ConsoleKey.None) {
-					return keyInfo.Key.ToString();
-				}
-
 				return new CString(keyInfo.KeyChar.ToString());
 			}),
 

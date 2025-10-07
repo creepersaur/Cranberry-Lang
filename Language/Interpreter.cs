@@ -314,12 +314,10 @@ public partial class Interpreter : INodeVisitor<object> {
 			return new CString(result);
 		}
 
-		var u_value = Convert.ToDouble(value);
-
 		return node.Op switch {
-			"-" => -u_value,
-			"+" => u_value,
-			"!" => !Misc.IsTruthy(u_value),
+			"-" => -Convert.ToDouble(value),
+			"+" => Convert.ToDouble(value),
+			"!" => !Misc.IsTruthy(value),
 
 			_ => throw new RuntimeError($"Unknown unary expression: {node.Op}")
 		};
@@ -472,10 +470,15 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public object VisitAssignment(AssignmentNode node) {
-		var value = Evaluate(node.Value);
-		env.Set(node.Name, value);
+		var values = new object[node.Values.Length];
+		for (int i = 0; i < values.Length; i++) {
+			values[i] = Evaluate(node.Values[i]);
+		}
+		
+		for (int i = 0; i < node.Names.Length; i++)
+			env.Set(node.Names[i], values[i]);
 
-		return value;
+		return node.Values[0];
 	}
 
 	public object VisitShorthandAssignment(ShorthandAssignmentNode node) {
@@ -831,7 +834,10 @@ public partial class Interpreter : INodeVisitor<object> {
 			foreach (var i in list.Items) {
 				env.Push();
 				try {
-					env.Define(node.VarName, i is Node a ? Evaluate(a) : i);
+					var value = i is Node a ? Evaluate(a) : i;
+					if (value is string s) value = new CString(s);
+					
+					env.Define(node.VarName, value);
 					Evaluate(node.Block);
 				} catch (BreakException be) {
 					return be.Value;
@@ -991,8 +997,9 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (!list_of_spaces && latest != null)
 			if (node.Aliases.TryGetValue(latest.Name, out var alias))
 				env.DefineNamespace(latest, alias);
-			else
+			else {
 				env.DefineNamespace(latest);
+			}
 
 		return null;
 	}

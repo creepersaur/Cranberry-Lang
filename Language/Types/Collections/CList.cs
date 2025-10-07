@@ -17,7 +17,10 @@ public class CList : IMemberAccessible {
 				int index = Misc.DoubleToIndex(d, Items.Count, true);
 				if (index >= Items.Count)
 					throw new RuntimeError($"Tried to get item at index ({index}) but length of list is ({Items.Count})");
-			
+
+				if (Items[index] is string s)
+					return new CString(s);
+				
 				return Items[index];
 			}
 			
@@ -32,6 +35,8 @@ public class CList : IMemberAccessible {
 			if (index >= Items.Count)
 				throw new RuntimeError($"Tried to get item at index ({index}) but length of list is ({Items.Count})");
 
+			if (value is CString c) value = c.Value;
+			
 			Items[index] = value!;
 			return;
 		}
@@ -57,7 +62,7 @@ public class CList : IMemberAccessible {
 					if (args.Length != 1) throw new RuntimeError("`Push(item)` expects 1 argument.");
 					
 					if (args[0] is CString c)
-						Items.Add(new CString(c.Value));
+						Items.Add(c.Value);
 					else
 						Items.Add(args[0]!);
 					

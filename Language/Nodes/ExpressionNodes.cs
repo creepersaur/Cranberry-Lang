@@ -135,9 +135,9 @@ public class VariableNode(string name) : Node {
 	}
 }
 
-public class AssignmentNode(string name, Node value) : Node {
-	public readonly string Name = name;
-	public readonly Node Value = value;
+public class AssignmentNode(string[] names, Node[] values) : Node {
+	public readonly string[] Names = names;
+	public readonly Node[] Values = values;
     
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitAssignment(this);

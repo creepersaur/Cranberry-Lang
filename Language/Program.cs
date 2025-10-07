@@ -20,11 +20,10 @@ public class Program {
 			interpreter.env = original_env;
 
 			var tokens = new Lexer(text).GetTokens();
-			// Lexer.PrintTokens(tokens);
+			var parser = new Parser(tokens.ToArray());
+			
 			var ast = new List<Node>(Math.Max(16, tokens.Count / 4));
 			var important = new List<Node>(8);
-
-			var parser = new Parser(tokens.ToArray());
 
 			while (parser.PeekAhead() != null) {
 				if (parser.Check(";")) {

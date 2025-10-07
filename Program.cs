@@ -28,7 +28,7 @@ if (args.Length < 1 || args[0] == "help" || args[0] == "-h") {
 }
 
 if (args.Length > 0 && (args[0] == "--version" || args[0] == "-v")) {
-	Console.WriteLine("Version v0.3.0 (alpha)");
+	Console.WriteLine("Version v0.5.0 (alpha)");
 	return;
 }
 
