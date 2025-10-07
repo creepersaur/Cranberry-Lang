@@ -55,7 +55,12 @@ public class CList : IMemberAccessible {
 				"Push", 
 				args => {
 					if (args.Length != 1) throw new RuntimeError("`Push(item)` expects 1 argument.");
-					Items.Add(args[0]!);
+					
+					if (args[0] is CString c)
+						Items.Add(new CString(c.Value));
+					else
+						Items.Add(args[0]!);
+					
 					return new NullNode();
 				}
 			),
@@ -153,7 +158,18 @@ public class CList : IMemberAccessible {
 					if (args.Length != 0) throw new RuntimeError("`Clone()` expects 0 arguments.");
 					return new CList(Items.Copy());
 				}
-			)
+			),
+			
+			FuncGen.FuncInternal(
+				"Has",
+				args => {
+					if (args.Length != 1) throw new RuntimeError("`Has(obj)` expects 1 argument.");
+					if (args[0] is CString c)
+						return Items.Contains(c.Value) || Items.Contains(args[0]!);
+					
+					return Items.Contains(args[0]!);
+				}
+			),
 		]);
 		
 		Functions["Map"] = new InternalFunction(args => {

@@ -21,11 +21,10 @@ public class CDict : IMemberAccessible {
 	}
 
 	public void SetMember(object? member, object? value) {
-		if (member is CString c)
-			Items[c.Value] = value!;
-		else {
-			Items[member!] = value!;
-		}
+		if (member is CString c) member = c.Value;
+		if (value is CString v) value = v.Value;
+		
+		Items[member!] = value!;
 	}
 
 	public CDict(Dictionary<object, object> items) {
@@ -60,7 +59,15 @@ public class CDict : IMemberAccessible {
 				"Set",
 				args => {
 					if (args.Length != 2) throw new RuntimeError("`Set(key, value)` expects 2 arguments.");
-					Items[args[0]!] = args[1]!;
+
+					var member = args[0];
+					var value = args[1];
+					
+					if (member is CString c) member = c.Value;
+					if (value is CString d) value = d.Value;
+					
+					Items[member!] = value!;
+					
 					return new NullNode();
 				}
 			),
@@ -69,9 +76,14 @@ public class CDict : IMemberAccessible {
 				"Get",
 				args => {
 					if (args.Length != 1) throw new RuntimeError("`Get(key)` expects 1 argument.");
+					
 					if (Items.TryGetValue(args[0]!, out var value))
 						return value;
-					throw new RuntimeError("Tried getting a value that isn't in the dict.");
+					
+					if (args[0] is CString c && Items.TryGetValue(c.Value, out var v))
+						return v;
+					
+					throw new RuntimeError("Tried getting a value that isn't in the dict. (Maybe try `GetOrElse(key, value)`)");
 				}
 			),
 
@@ -79,7 +91,13 @@ public class CDict : IMemberAccessible {
 				"GetOrElse",
 				args => {
 					if (args.Length != 2) throw new RuntimeError("`GetOrElse(key, value)` expects 2 arguments.");
-					return Items.TryGetValue(args[0]!, out var value) ? value : args[1]!;
+					if (Items.TryGetValue(args[0]!, out var value))
+						return value;
+					
+					if (args[0] is CString c && Items.TryGetValue(c.Value, out var v))
+						return v;
+
+					return args[1];
 				}
 			),
 
@@ -129,6 +147,9 @@ public class CDict : IMemberAccessible {
 				"Has",
 				args => {
 					if (args.Length != 1) throw new RuntimeError("`Has(obj)` expects 1 argument.");
+					if (args[0] is CString c)
+						return Items.ContainsValue(c.Value) || Items.ContainsValue(args[0]!);
+					
 					return Items.ContainsValue(args[0]!);
 				}
 			),

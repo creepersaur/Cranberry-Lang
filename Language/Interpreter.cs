@@ -115,7 +115,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	private static object HandleAddition(object left, object right) {
 		// String concatenation
 		if (left is CString l && right is CString r) {
-			return $"{l.Value}{r.Value}";
+			return new CString(l.Value + r.Value);
 		}
 
 		if (left is CObject cl) {
@@ -144,7 +144,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (Misc.IsNumber(left) && Misc.IsNumber(right))
 			return Convert.ToDouble(left) + Convert.ToDouble(right);
 
-		throw new RuntimeError($"Cannot add {Misc.FormatValue(left, true)} and {Misc.FormatValue(right)}.");
+		throw new RuntimeError($"Cannot add {Misc.FormatValue(left, true)} and {Misc.FormatValue(right, true)}.");
 	}
 
 	private static object HandleSubtraction(object left, object right) {
@@ -253,6 +253,9 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (left is double leftDouble && right is double rightDouble) {
 			return Math.Abs(leftDouble - rightDouble) < TOLERANCE;
 		}
+
+		if (left is CString csl) left = csl.Value;
+		if (right is CString csr) right = csr.Value;
 
 		if (left is CObject cl) {
 			if (cl.Class.Functions.TryGetValue("__Eq__", out var f)) {

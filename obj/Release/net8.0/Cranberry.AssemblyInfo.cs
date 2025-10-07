@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cranberry")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b258db285e261942c3cd08af0f1f1242b781e6aa")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d1b93b58193727eeead4301a9ceb07a4496f9d3c")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cranberry")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cranberry")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

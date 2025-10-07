@@ -73,6 +73,9 @@ public static class BuiltinFunctions {
 	}
 
 	public static CString Typeof(List<object> args) {
+		if (Misc.IsTruthy(args[1]))
+			return new CString(args[0].GetType().ToString());
+		
 		return new CString(args[0] switch {
 			CString => "string",
 			double => "number",
