@@ -4,7 +4,7 @@ namespace Cranberry.Types;
 
 public class CNamespace(string name, bool Constant = false) : IMemberAccessible {
 	public readonly string Name = name;
-	public readonly Env env = new();
+	public Env env {get; set;} = new();
 
 	public override string ToString() => $"Namespace:{Name}";
 

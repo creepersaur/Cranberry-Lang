@@ -4,7 +4,7 @@ using Cranberry.Types;
 namespace Cranberry.Namespaces;
 
 public class StandardNamespace(Interpreter interpreter) : CNamespace("Std", true) {
-	private readonly string[] Spaces = ["Math", "IO", "Task", "FS", "JSON", "Random", "Env", "Http"];
+	private readonly string[] Spaces = ["Math", "IO", "Task", "FS", "JSON", "Random", "Env", "Http", "Numerics"];
 
 	public CNamespace Register(string space) {
 		if (space == "Math") {
@@ -40,6 +40,12 @@ public class StandardNamespace(Interpreter interpreter) : CNamespace("Std", true
 		if (space == "Random") {
 			var x = new N_Random();
 			env.Namespaces.TryAdd("Random", x);
+			return x;
+		}
+
+		if (space == "Numerics") {
+			var x = new N_Numerics();
+			env.Namespaces.TryAdd("Numerics", x);
 			return x;
 		}
 

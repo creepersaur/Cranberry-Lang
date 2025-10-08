@@ -6,12 +6,12 @@ using Cranberry.Errors;
 namespace Cranberry.Types {
 	// A CLR-backed object visible to Cranberry. Implements IMemberAccessible so '.' works.
 	public class CClrObject : IMemberAccessible {
-		public readonly object Instance;
+		public readonly object? Instance; // null for static types
 		public readonly Type Type;
 
-		public CClrObject(object instance) {
-			Instance = instance ?? throw new ArgumentNullException(nameof(instance));
-			Type = instance.GetType();
+		public CClrObject(object? instance, Type? type = null) {
+			Instance = instance;
+			Type = type ?? instance?.GetType() ?? throw new ArgumentNullException(nameof(type));
 		}
 
 		private static object WrapClr(object? val) {

@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.Loader;
 using System.Text.RegularExpressions;
 using Cranberry.Builtin;
 using Cranberry.Errors;
@@ -17,6 +18,9 @@ public partial class Interpreter : INodeVisitor<object> {
 	public readonly bool IsBuild;
 	private readonly Dictionary<string, CNamespace> Namespaces = new();
 	private const double TOLERANCE = 1e-9;
+
+	// --- assembly loading helpers ---
+	private readonly Dictionary<string, Assembly> _loadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
 
 	public Interpreter(bool is_build) {
 		IsBuild = is_build;
@@ -42,6 +46,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (node.Env == null) {
 			node.Env = env.Variables.Peek();
 		}
+
 		return node;
 	}
 
@@ -104,7 +109,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			">" => CompareValues(leftVal, rightVal) > 0,
 			"<=" => CompareValues(leftVal, rightVal) <= 0,
 			">=" => CompareValues(leftVal, rightVal) >= 0,
-			
+
 			"&&" => Misc.IsTruthy(leftVal) && Misc.IsTruthy(rightVal),
 			"||" => Misc.IsTruthy(leftVal) || Misc.IsTruthy(rightVal),
 
@@ -287,7 +292,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (left is string leftStr && right is string rightStr) {
 			return string.CompareOrdinal(leftStr, rightStr);
 		}
-		
+
 		if (left is CString cleftStr && right is CString crightStr) {
 			return string.CompareOrdinal(cleftStr.Value, crightStr.Value);
 		}
@@ -474,7 +479,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		for (int i = 0; i < values.Length; i++) {
 			values[i] = Evaluate(node.Values[i]);
 		}
-		
+
 		for (int i = 0; i < node.Names.Length; i++)
 			env.Set(node.Names[i], values[i]);
 
@@ -836,7 +841,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				try {
 					var value = i is Node a ? Evaluate(a) : i;
 					if (value is string s) value = new CString(s);
-					
+
 					env.Define(node.VarName, value);
 					Evaluate(node.Block);
 				} catch (BreakException be) {
@@ -872,7 +877,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
 		}
-		
+
 		if (iterable is string str) {
 			foreach (var i in str) {
 				env.Push();
@@ -1131,53 +1136,222 @@ public partial class Interpreter : INodeVisitor<object> {
 	[GeneratedRegex(@"\{(.*?)\}")]
 	private static partial Regex MyRegex();
 
-	public void ImportAssemblyFunctions(string modulePath) {
+	private Assembly LoadAssemblySafe(string modulePath) {
 		if (!File.Exists(modulePath))
 			throw new FileNotFoundException($"DLL not found: {modulePath}");
 
-		// Use ExternalManager to register wrappers and get the list
-		var wrappers = ExternalManager.RegisterAllManagedFunctionsFromAssembly(modulePath);
 
-		foreach (var kv in wrappers) {
+		if (_loadedAssemblies.TryGetValue(modulePath, out var existing))
+			return existing;
+
+
+// Create resolver for this path
+		var resolver = new AssemblyDependencyResolver(modulePath);
+		// _resolvers[modulePath] = resolver;
+
+
+		Assembly? asm;
+		try {
+// Hook up a resolving handler that uses the resolver to find dependency paths
+			AssemblyLoadContext.Default.Resolving += (context, name) => {
+				try {
+					var depPath = resolver.ResolveAssemblyToPath(name);
+					if (!string.IsNullOrEmpty(depPath) && File.Exists(depPath)) {
+						return context.LoadFromAssemblyPath(depPath);
+					}
+				} catch {
+// swallow here and let fallback occur
+				}
+
+
+// last ditch: probe same directory for simple name
+				var probe = Path.Combine(Path.GetDirectoryName(modulePath)!, name.Name + ".dll");
+				if (File.Exists(probe)) return context.LoadFromAssemblyPath(probe);
+				return null;
+			};
+
+
+			asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(modulePath);
+			_loadedAssemblies[modulePath] = asm;
+			return asm;
+		} catch (ReflectionTypeLoadException rtl) {
+			var sb = new System.Text.StringBuilder();
+			sb.AppendLine($"Failed to load assembly {modulePath}: {rtl.Message}");
+			foreach (var le in rtl.LoaderExceptions) {
+				sb.AppendLine(le!.Message);
+			}
+
+			throw new RuntimeError(sb.ToString());
+		} catch (Exception ex) {
+			throw new RuntimeError($"Failed to load assembly {modulePath}: {ex.Message}");
+		}
+	}
+
+	public void ImportAssemblyFunctions(string modulePath) {
+// Accept either absolute path or relative path; expand and validate
+		var absPath = Path.GetFullPath(modulePath);
+		if (!File.Exists(absPath)) throw new FileNotFoundException($"DLL not found: {absPath}");
+
+
+		var asm = LoadAssemblySafe(absPath);
+
+
+// Prefer if ExternalManager exposes an Assembly-aware API. Try both.
+		try {
+// If ExternalManager has an Assembly-based register, use it (preferred)
+			var method = typeof(ExternalManager).GetMethod("RegisterAllManagedFunctionsFromAssembly", new[] { typeof(Assembly) });
+			if (method != null) {
+				var wrappers = (Dictionary<string, Delegate>)method.Invoke(null, new object[] { asm })!;
+				// 'wrappers' is Dictionary<string, Delegate> from ExternalManager
+				foreach (var kv in wrappers) {
+					var methodName = kv.Key;
+					var rawDelegate = kv.Value; // System.Delegate
+
+					// Try infer arity from MethodInfo if possible
+					int arity;
+					try {
+						var mi = rawDelegate.Method;
+						arity = mi.GetParameters().Length;
+					} catch {
+						arity = -1;
+					}
+
+					// Ensure we pass a Func<object[], object> to ExternFunction.
+					Func<object[], object> wrapperFunc;
+
+					if (rawDelegate is Func<object[], object> alreadyGood) {
+						wrapperFunc = alreadyGood;
+					} else {
+						// Adapter: convert incoming cranberry args -> CLR args (best-effort) and call underlying delegate.
+						wrapperFunc = (incomingArgs) => {
+							try {
+								// If the delegate target method has parameter info, try to convert each argument.
+								var mi = rawDelegate.Method;
+								var pars = mi.GetParameters();
+
+								object[] invokeArgs;
+								if (pars.Length == (incomingArgs.Length)) {
+									invokeArgs = new object[pars.Length];
+									for (int i = 0; i < pars.Length; i++) {
+										// Use your ExternalManager conversion helper which knows how to convert Cranberry -> CLR
+										try {
+											invokeArgs[i] = ExternalManager.ConvertToClr(incomingArgs[i], pars[i].ParameterType) ?? incomingArgs[i];
+										} catch {
+											var wrappersFallback = ExternalManager.RegisterAllManagedFunctionsFromAssembly(absPath);
+											foreach (var new_kv in wrappersFallback) {
+												var new_methodName = new_kv.Key;
+												var new_rawDelegate = new_kv.Value;
+
+												int new_arity;
+												try {
+													new_arity = new_rawDelegate.Method.GetParameters().Length;
+												} catch {
+													new_arity = -1;
+												}
+
+												Func<object[], object> new_wrapperFunc;
+												if (new_rawDelegate is { } f) new_wrapperFunc = f;
+												else {
+													new_wrapperFunc = (new_incomingArgs) => {
+														try {
+															var new_pars = new_rawDelegate.Method.GetParameters();
+															object[] new_invokeArgs;
+															if (new_pars.Length == (new_incomingArgs.Length)) {
+																new_invokeArgs = new object[new_pars.Length];
+																for (int j = 0; j < new_pars.Length; j++) {
+																	try {
+																		new_invokeArgs[j] = ExternalManager.ConvertToClr(new_incomingArgs[j], new_pars[j].ParameterType) ?? new_incomingArgs[j];
+																	} catch {
+																		new_invokeArgs[j] = new_incomingArgs[j];
+																	}
+																}
+															} else {
+																new_invokeArgs = new_incomingArgs;
+															}
+
+															var result = new_rawDelegate.DynamicInvoke(new_invokeArgs);
+															return result!;
+														} catch (TargetInvocationException tie) {
+															throw tie.InnerException ?? tie;
+														}
+													};
+												}
+
+												var ef = new ExternFunction(absPath, new_methodName, new_wrapperFunc, new_arity);
+												env.Define(new_methodName, ef);
+											}
+										}
+									}
+								} else {
+									invokeArgs = incomingArgs.Select(a => {
+										try {
+											return ExternalManager.ConvertToClr(a, typeof(object)) ?? a;
+										} catch {
+											return a;
+										}
+									}).ToArray();
+								}
+
+								var result = rawDelegate.DynamicInvoke(invokeArgs);
+								return result!;
+							} catch (TargetInvocationException tie) {
+								// Unwrap to provide clearer error to Cranberry runtime
+								throw tie.InnerException ?? tie;
+							}
+						};
+					}
+
+					// Now create ExternFunction using new_wrapperFunc (a Func<object[],object>)
+					var ef = new ExternFunction(absPath, methodName, wrapperFunc, arity);
+					env.Define(methodName, ef);
+				}
+
+				return;
+			}
+		} catch (TargetInvocationException tie) {
+			throw new RuntimeError($"Error registering functions from {absPath}: {tie.InnerException?.Message ?? tie.Message}");
+		}
+
+
+// Fallback: try the path-based API
+		var wrappersFallback = ExternalManager.RegisterAllManagedFunctionsFromAssembly(absPath);
+		foreach (var kv in wrappersFallback) {
 			var methodName = kv.Key;
 			var wrapper = kv.Value;
-
-			// arity unknown (because of overloads) - use -1 or max overload param count if you prefer
 			int arity = -1;
-			var ef = new ExternFunction(modulePath, methodName, wrapper, arity);
+			var ef = new ExternFunction(absPath, methodName, wrapper, arity);
 			env.Define(methodName, ef);
 		}
 	}
 
 	public void ImportAssemblyClasses(string modulePath) {
 		if (!File.Exists(modulePath)) throw new FileNotFoundException(modulePath);
+
 		var asm = Assembly.LoadFrom(modulePath);
 
-		foreach (var t in asm.GetExportedTypes()) {
-			if (!t.IsPublic) continue;
+		// Helper to register a type
+		void RegisterType(Type t) {
+			if (t.ContainsGenericParameters) return;
+			if (!t.IsPublic) return;
 
-			// factory for instance creation
+			// Factory for creating instances
 			object? Factory(object?[] callArgs) {
 				var ctors = t.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
 					.OrderByDescending(c => c.GetParameters().Length)
 					.ToArray();
 
-				var errors = new System.Text.StringBuilder();
 				foreach (var ctor in ctors) {
 					var pars = ctor.GetParameters();
-					if (pars.Length != (callArgs?.Length ?? 0)) {
-						errors.AppendLine($"skip ctor {ctor}: expects {pars.Length}");
-						continue;
-					}
+					if (pars.Length != (callArgs?.Length ?? 0)) continue;
 
 					var invokeArgs = new object[pars.Length];
-					var ok = true;
+					bool ok = true;
+
 					for (int i = 0; i < pars.Length; i++) {
 						try {
 							invokeArgs[i] = ExternalManager.ConvertToClr(callArgs![i], pars[i].ParameterType)!;
-						} catch (Exception ex) {
+						} catch {
 							ok = false;
-							errors.AppendLine(ex.Message);
 							break;
 						}
 					}
@@ -1185,36 +1359,57 @@ public partial class Interpreter : INodeVisitor<object> {
 					if (!ok) continue;
 
 					try {
-						var inst = ctor.Invoke(invokeArgs);
-						return (inst != null!) ? new CClrObject(inst) : null;
-					} catch (TargetInvocationException tie) {
-						throw tie.InnerException ?? tie;
+						return ctor.Invoke(invokeArgs);
 					} catch (Exception ex) {
-						errors.AppendLine(ex.Message);
+						Console.WriteLine($"Constructor for {t.Name} failed: {ex.Message}");
+						// ignored
 					}
 				}
 
-				throw new RuntimeError($"No matching constructor for {t.FullName} with {(callArgs?.Length ?? 0)} args.\n{errors}");
+				throw new RuntimeError($"No matching constructor found for {t.FullName} with {(callArgs?.Length ?? 0)} args.");
 			}
 
 			var clrTypeObj = new CClrType(t, Factory);
 
-			// define type itself
+			// Define the type in the current environment (use simple name for accessibility)
 			env.Define(t.Name, clrTypeObj);
 
-			// --- expose static fields without converting to dictionaries ---
+			// Expose static fields
 			foreach (var f in t.GetFields(BindingFlags.Public | BindingFlags.Static)) {
-				var val = f.GetValue(null);
-				if (val != null)
-					env.Define(f.Name, new CClrObject(val)); // wrap struct/class
+				// Skip fields with generic parameters
+				if (f.FieldType.ContainsGenericParameters) continue;
+
+				try {
+					var val = f.GetValue(null);
+					if (val != null) env.Define(f.Name, new CClrObject(val));
+				} catch {
+					// Skip fields that can't be accessed
+				}
 			}
 
+			// Expose static properties
 			foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Static)) {
+				// Skip properties with generic parameters
+				if (p.PropertyType.ContainsGenericParameters) continue;
+
 				if (p.GetMethod != null) {
-					var val = p.GetValue(null);
-					if (val != null)
-						env.Define(p.Name, new CClrObject(val)); // wrap struct/class
+					try {
+						var val = p.GetValue(null);
+						if (val != null) env.Define(p.Name, new CClrObject(val));
+					} catch {
+						// Skip properties that can't be accessed
+					}
 				}
+			}
+		}
+		
+		// Register all top-level exported types
+		foreach (var t in asm.GetTypes()) {
+			RegisterType(t);
+
+			// Also register public nested types
+			foreach (var nested in t.GetNestedTypes(BindingFlags.Public)) {
+				RegisterType(nested);
 			}
 		}
 	}
