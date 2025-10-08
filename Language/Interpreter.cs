@@ -330,13 +330,20 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public object? VisitMemberAccess(MemberAccessNode node) {
 		var target = Evaluate(node.Target);
+		var member = Evaluate(node.Member);
 
-		if (target is IMemberAccessible access) {
-			var member = Evaluate(node.Member);
-			if (member is CString str)
-				return access.GetMember(str.Value);
+		if (member is CString str)
+			member = str.Value;
 
+		if (target is IMemberAccessible access)
 			return access.GetMember(member);
+
+		if (member is string m) {
+			var type = target.GetType();
+			var prop = type.GetProperty(m, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
+
+			if (prop != null)
+				return prop.GetValue(target);
 		}
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
@@ -983,15 +990,25 @@ public partial class Interpreter : INodeVisitor<object> {
 
 				foreach (var m in multiple) {
 					if (latest == std) {
+						var latest_space = (CNamespace)latest.GetMember(m);
 						if (node.Aliases.TryGetValue(m, out var alias))
-							env.DefineNamespace((CNamespace)latest.GetMember(m), alias);
-						else
-							env.DefineNamespace((CNamespace)latest.GetMember(m));
+							env.DefineNamespace(latest_space, alias);
+						else {
+							if (node.Wildcards.Contains(latest_space.Name))
+								env.DefineWildcardNamespace(latest_space);
+							else
+								env.DefineNamespace(latest_space);
+						}
 					} else if (latest_env.HasNamespace(m)) {
-						if (node.Aliases.TryGetValue(m, out var alias))
-							env.DefineNamespace(latest_env.GetNamespace(m), alias);
-						else
-							env.DefineNamespace(latest_env.GetNamespace(m));
+						var latest_space = latest_env.GetNamespace(m);
+						if (node.Aliases.TryGetValue(m, out var alias)) {
+							env.DefineNamespace(latest_space, alias);
+						} else {
+							if (node.Wildcards.Contains(latest_space.Name))
+								env.DefineWildcardNamespace(latest_space);
+							else
+								env.DefineNamespace(latest_space);
+						}
 					} else {
 						throw new RuntimeError($"Namespace `{m}` doesn't exist in `{latest!.Name}`.");
 					}
@@ -1003,7 +1020,13 @@ public partial class Interpreter : INodeVisitor<object> {
 			if (node.Aliases.TryGetValue(latest.Name, out var alias))
 				env.DefineNamespace(latest, alias);
 			else {
-				env.DefineNamespace(latest);
+				Console.WriteLine("def: {0}", latest.Name);
+				Console.WriteLine("Defining: {0}", node.Wildcards.Contains(latest.Name));
+				Console.WriteLine(Misc.FormatValue(node.Wildcards));
+				if (node.Wildcards.Contains(latest.Name))
+					env.DefineWildcardNamespace(latest);
+				else
+					env.DefineNamespace(latest);
 			}
 
 		return null;
@@ -1043,7 +1066,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			Evaluate(b);
 			env = original;
 
-			Evaluate(new UsingDirective(node.Names, new Dictionary<string, string>()));
+			Evaluate(new UsingDirective(node.Names, new Dictionary<string, string>(), []));
 		}
 
 		return null;
@@ -1402,7 +1425,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				}
 			}
 		}
-		
+
 		// Register all top-level exported types
 		foreach (var t in asm.GetTypes()) {
 			RegisterType(t);

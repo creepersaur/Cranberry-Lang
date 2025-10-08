@@ -98,4 +98,16 @@ public class Env {
 	public void DefineNamespace(CNamespace value, string? alias = null) {
 		Namespaces.TryAdd(alias ?? value.Name, value);
 	}
+	
+	public void DefineWildcardNamespace(CNamespace value) {
+		foreach (var pair in value.env.Constants.Peek()) {
+			DefineConstant(pair.Key, pair.Value);
+		}
+		foreach (var pair in value.env.Variables.Peek()) {
+			Define(pair.Key, pair.Value);
+		}
+		foreach (var pair in value.env.Namespaces) {
+			DefineNamespace(pair.Value);
+		}
+	}
 }

@@ -108,9 +108,10 @@ public class SwitchNode(Node expr, (Node[], BlockNode)[] cases, BlockNode? defau
 	}
 }
 
-public class UsingDirective(object[] names, Dictionary<string, string> aliases) : Node {
+public class UsingDirective(object[] names, Dictionary<string, string> aliases, List<string> wildcards) : Node {
 	public readonly object[] Names = names;
 	public readonly Dictionary<string, string> Aliases = aliases;
+	public readonly List<string> Wildcards = wildcards;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitUsingDirective(this);

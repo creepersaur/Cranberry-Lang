@@ -146,6 +146,7 @@ public class Parser(string[] Tokens) {
 		Advance();
 
 		var aliases = new Dictionary<string, string>();
+		var wild_card = new List<string>();
 		var spaces = new List<object>();
 
 		string first = Advance()!;
@@ -163,16 +164,21 @@ public class Parser(string[] Tokens) {
 
 					while (!Check("}")) {
 						string multi_name = Advance()!;
+						
 						if (!IsIdentifier(multi_name))
 							throw new ParseError("Namespace names must always be Identifiers.", Pos);
 
 						imports.Add(multi_name);
 
-						if (Check("as")) {
+						if (PeekAhead() == "::" && PeekAhead(2) == "*") {
+							wild_card.Add(multi_name);
+							Advance();
+							Advance();
+						} else if (Check("as")) {
 							Advance();
 							string alias = Advance()!;
 							if (!IsIdentifier(alias))
-								throw new ParseError("Namespace aliases must always be Identifiers.", Pos);
+								throw new ParseError("Namespace aliases must always be identifiers.", Pos);
 
 							if (!aliases.TryAdd(multi_name, alias))
 								throw new ParseError("Cannot have duplicate namespace aliases.", Pos);
@@ -191,12 +197,14 @@ public class Parser(string[] Tokens) {
 				}
 
 				string name = Advance()!;
-				if (!IsIdentifier(name))
+				if (!IsIdentifier(name) && name != "*")
 					throw new ParseError("Namespace names must always be Identifiers.", Pos);
 
 				spaces.Add(name);
 
-				if (Check("as")) {
+				if (PeekAhead() == "::" && PeekAhead(2) == "*") {
+					wild_card.Add(name);
+				} else if (Check("as")) {
 					Advance();
 
 					string alias = Advance()!;
@@ -208,7 +216,9 @@ public class Parser(string[] Tokens) {
 				}
 			}
 		} else {
-			if (Check("as")) {
+			if (Check("::") && PeekAhead() == "*") {
+				wild_card.Add(first);
+			} else if (Check("as")) {
 				Advance();
 
 				string alias = Advance()!;
@@ -220,7 +230,7 @@ public class Parser(string[] Tokens) {
 			}
 		}
 
-		return new UsingDirective(spaces.ToArray(), aliases);
+		return new UsingDirective(spaces.ToArray(), aliases, wild_card);
 	}
 
 	private ClassDef ParseClassDef() {
