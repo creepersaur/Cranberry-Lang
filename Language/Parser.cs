@@ -155,7 +155,7 @@ public class Parser(string[] Tokens) {
 
 		spaces.Add(first);
 
-		if (Check("::")) {
+		if (Check("::") && PeekAhead(2) != "*") {
 			while (Check("::")) {
 				Advance();
 				if (Check("{")) {
@@ -204,6 +204,8 @@ public class Parser(string[] Tokens) {
 
 				if (PeekAhead() == "::" && PeekAhead(2) == "*") {
 					wild_card.Add(name);
+					Advance();
+					Advance();
 				} else if (Check("as")) {
 					Advance();
 
@@ -216,8 +218,10 @@ public class Parser(string[] Tokens) {
 				}
 			}
 		} else {
-			if (Check("::") && PeekAhead() == "*") {
+			if (Check("::") && PeekAhead(2) == "*") {
 				wild_card.Add(first);
+				Advance();
+				Advance();
 			} else if (Check("as")) {
 				Advance();
 

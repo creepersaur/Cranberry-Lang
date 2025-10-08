@@ -1020,9 +1020,6 @@ public partial class Interpreter : INodeVisitor<object> {
 			if (node.Aliases.TryGetValue(latest.Name, out var alias))
 				env.DefineNamespace(latest, alias);
 			else {
-				Console.WriteLine("def: {0}", latest.Name);
-				Console.WriteLine("Defining: {0}", node.Wildcards.Contains(latest.Name));
-				Console.WriteLine(Misc.FormatValue(node.Wildcards));
 				if (node.Wildcards.Contains(latest.Name))
 					env.DefineWildcardNamespace(latest);
 				else
