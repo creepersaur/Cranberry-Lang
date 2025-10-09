@@ -128,9 +128,6 @@ public class CDirectory(string path) : IMemberAccessible {
 				var dir = Info.Parent!.FullName;
 				var newPath = System.IO.Path.Combine(dir, newName);
 				
-				Console.WriteLine(Path);
-				Console.WriteLine(newPath);
-				
 				Directory.Move(Path, newPath);
 
 				Path = newPath;

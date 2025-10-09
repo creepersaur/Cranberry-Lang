@@ -23,4 +23,8 @@
       <PackageReference Include="Tomlyn" Version="0.19.0" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Language\Types\Numerics\" />
+    </ItemGroup>
+
 </Project>

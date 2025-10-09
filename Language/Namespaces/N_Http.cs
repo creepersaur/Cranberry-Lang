@@ -161,7 +161,7 @@ public class N_Http : CNamespace {
 						response.OutputStream.Write(buffer, 0, buffer.Length);
 						response.OutputStream.Close();
 					} catch (Exception ex) {
-						Console.WriteLine($"[Cranberry Listen] Error: {ex}");
+						throw new RuntimeError($"[Cranberry Listen] Error: {ex}");
 					}
 				}
 			}),

@@ -468,7 +468,6 @@ public class Parser(string[] Tokens) {
 
 			var new_cases = new List<Node>();
 			while (!Check("=>")) {
-				Console.WriteLine("Got a case");
 				new_cases.Add(ParseExpression());
 
 				if (Check(",")) Advance();
