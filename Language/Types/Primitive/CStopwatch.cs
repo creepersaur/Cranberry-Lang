@@ -23,7 +23,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 							throw new RuntimeError("`Start() expects 0 arguments.");
 						
 						Stopwatch.Start();
-						return null;
+						return this;
 					});
 				
 				case "Stop":

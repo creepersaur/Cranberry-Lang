@@ -63,6 +63,11 @@ public class Lexer {
 				Advance();
 				continue;
 			}
+			
+			if (CurChar == '_' && int.TryParse(curToken, out var _)) {
+				Advance();
+				continue;
+			}
 
 			// Handle escape sequences inside strings
 			if (instr.HasValue && escaped) {

@@ -552,7 +552,7 @@ public class Parser(string[] Tokens) {
 	}
 
 	public Node ParseComparison() {
-		Node left = ParseAddSubtract(); // Next higher precedence
+		Node left = ParseRange(); // Next higher precedence
 
 		while (Pos < Tokens.Length) {
 			string? op = PeekAhead();
@@ -567,6 +567,31 @@ public class Parser(string[] Tokens) {
 		return left;
 	}
 
+	private Node ParseRange() {
+		Node first = ParseAddSubtract();
+
+		if (Check("..")) {
+			Advance();
+
+			bool inclusive = Check("=");
+			if (inclusive)
+				Advance();
+
+			Node second = ParseAddSubtract();
+
+			if (Check("..")) {
+				Advance();
+
+				Node third = ParseAddSubtract();
+				return new RangeNode(first, second, third, inclusive);
+			}
+
+			return new RangeNode(first, second, new NullNode(), inclusive);
+		}
+
+		return first;
+	}
+	
 	public Node ParseAddSubtract() {
 		Node left = ParseTerm();
 
@@ -598,7 +623,7 @@ public class Parser(string[] Tokens) {
 	}
 
 	private Node ParseFallback() {
-		Node left = ParseRange();
+		Node left = ParseUnary();
 
 		if (Check("??")) {
 			Advance();
@@ -607,31 +632,6 @@ public class Parser(string[] Tokens) {
 		}
 
 		return left;
-	}
-
-	private Node ParseRange() {
-		Node first = ParseUnary();
-
-		if (Check("..")) {
-			Advance();
-
-			bool inclusive = Check("=");
-			if (inclusive)
-				Advance();
-
-			Node second = ParseUnary();
-
-			if (Check("..")) {
-				Advance();
-
-				Node third = ParseUnary();
-				return new RangeNode(first, second, third, inclusive);
-			}
-
-			return new RangeNode(first, second, new NullNode(), inclusive);
-		}
-
-		return first;
 	}
 
 	private Node ParseUnary() {
