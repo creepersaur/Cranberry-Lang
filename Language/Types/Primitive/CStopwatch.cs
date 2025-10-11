@@ -32,7 +32,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 							throw new RuntimeError("`Stop() expects 0 arguments.");
 
 						Stopwatch.Stop();
-						return null;
+						return this;
 					});
 				
 				case "Restart":
@@ -41,7 +41,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 							throw new RuntimeError("`Restart() expects 0 arguments.");
 
 						Stopwatch.Restart();
-						return null;
+						return this;
 					});
 				
 				case "Reset":
@@ -50,7 +50,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 							throw new RuntimeError("`Restart() expects 0 arguments.");
 
 						Stopwatch.Reset();
-						return null;
+						return this;
 					});
 				
 				case "StartNew":
