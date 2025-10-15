@@ -51,14 +51,6 @@ public class Parser(string[] Tokens) {
 		if (token == null)
 			return new NullNode();
 
-		if (token == "let") {
-			return ParseLet();
-		}
-
-		if (token == "const") {
-			return ParseLet(true);
-		}
-
 		if (token == "using") {
 			return ParseUsingDirective();
 		}
@@ -102,10 +94,6 @@ public class Parser(string[] Tokens) {
 
 		if (is_identifier && (Check("=", 2) || Check(",", 2))) {
 			return ParseAssignment();
-		}
-
-		if (is_identifier && SHORTHANDS.Contains(PeekAhead(2))) {
-			return ParseShorthandAssignment();
 		}
 
 		return ParseExpression();
@@ -164,7 +152,7 @@ public class Parser(string[] Tokens) {
 
 					while (!Check("}")) {
 						string multi_name = Advance()!;
-						
+
 						if (!IsIdentifier(multi_name))
 							throw new ParseError("Namespace names must always be Identifiers.", Pos);
 
@@ -250,6 +238,8 @@ public class Parser(string[] Tokens) {
 		Advance();
 
 		var funcs = new List<FunctionDef>();
+		var lets = new List<LetNode>();
+
 		while (!Check("}")) {
 			SkipNewlines();
 			if (Check("constructor")) {
@@ -258,19 +248,17 @@ public class Parser(string[] Tokens) {
 
 				Advance();
 				constructor = ParseLambda();
-			}
-
-			if (Check("fn")) {
-				funcs.Add(ParseFunctionDef());
-			}
-
-			if (Check(";")) Advance();
+			} else if (Check("fn")) funcs.Add(ParseFunctionDef());
+			else if (Check("let")) lets.Add(ParseLet());
+			else if (Check(";")) Advance();
+			else if (Check("}")) break;
+			else throw new ParseError($"Class definitions only support functions, `let` statements and a constructor. Got `{PeekAhead()}`", Pos + 1);
 		}
 
 		Expect("}");
 		Advance();
 
-		return new ClassDef(name, funcs.ToArray(), constructor);
+		return new ClassDef(name, funcs.ToArray(), lets.ToArray(), constructor);
 	}
 
 	private WhileNode ParseWhile(bool is_true = false) {
@@ -338,28 +326,32 @@ public class Parser(string[] Tokens) {
 
 	private FunctionDef ParseFunctionDef(bool requires_block = true) {
 		Advance();
+		SkipNewlines();
 
 		var func_name = Advance();
 		if (!IsIdentifier(func_name)) {
 			throw new ParseError("Function name must be an identifier.", Pos);
 		}
+		SkipNewlines();
 
 		Expect("(");
 		Advance();
 
+		SkipNewlines();
 		var args = new List<string>();
 
 		while (!Check(")")) {
 			args.Add(Advance()!);
+			SkipNewlines();
 			if (Check(",")) {
 				Advance();
-			} else {
-				break;
-			}
+				SkipNewlines();
+			} else break;
 		}
 
 		Expect(")");
 		Advance();
+		SkipNewlines();
 
 		BlockNode? block = null;
 		if (requires_block)
@@ -496,7 +488,7 @@ public class Parser(string[] Tokens) {
 			if (Check(",")) Advance();
 			else break;
 		}
-		
+
 		Expect("=");
 		Advance(); // consume `=`
 
@@ -510,7 +502,7 @@ public class Parser(string[] Tokens) {
 
 		if (names.Count != values.Count)
 			throw new ParseError($"Number of variables being assigned ({names.Count}) is not equal to number of values ({values.Count}).", Pos);
-		
+
 		return new AssignmentNode(names.ToArray(), values.ToArray());
 	}
 
@@ -591,7 +583,7 @@ public class Parser(string[] Tokens) {
 
 		return first;
 	}
-	
+
 	public Node ParseAddSubtract() {
 		Node left = ParseTerm();
 
@@ -858,6 +850,14 @@ public class Parser(string[] Tokens) {
 			return new StringNode(token![1..^1]);
 		}
 
+		if (token == "let") {
+			return ParseLet();
+		}
+
+		if (token == "const") {
+			return ParseLet(true);
+		}
+
 		if (token == "while") {
 			return ParseWhile();
 		}
@@ -913,6 +913,10 @@ public class Parser(string[] Tokens) {
 
 		// variable (identifier)
 		if (IsIdentifier(token)) {
+			if (SHORTHANDS.Contains(PeekAhead(2))) {
+				return ParseShorthandAssignment();
+			}
+
 			Advance();
 
 			SkipNewlines();
@@ -969,8 +973,8 @@ public class Parser(string[] Tokens) {
 			_ => token
 		}}' after `{PeekAhead(0) switch {
 		"\n" => "\\n",
-			_ => PeekAhead(0)
-		}}`", Pos + 1);
+		_ => PeekAhead(0)
+	}}`", Pos + 1);
 	}
 
 	private FunctionNode ParseLambda() {

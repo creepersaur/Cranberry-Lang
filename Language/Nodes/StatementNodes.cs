@@ -39,9 +39,10 @@ public class FunctionDef(string name, string[] args, BlockNode? block) : Node {
 	}
 }
 
-public class ClassDef(string name, FunctionDef[] funcs, FunctionNode? constructor) : Node {
+public class ClassDef(string name, FunctionDef[] funcs, LetNode[] lets, FunctionNode? constructor) : Node {
 	public readonly string Name = name;
 	public readonly FunctionDef[] Functions = funcs;
+	public readonly LetNode[] Lets = lets;
 	public readonly FunctionNode? Constructor = constructor;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {

@@ -412,7 +412,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			}
 
 			access.SetMember(Evaluate(node.Member), newValue);
-			return new NullNode();
+			return newValue;
 		}
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
@@ -456,6 +456,15 @@ public partial class Interpreter : INodeVisitor<object> {
 				if (value is CDict dict) return dict.Items.Values;
 				if (value is CString c) return new CList(c.Value.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
 				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
+				if (value is CObject obj && obj.Class.Functions.TryGetValue("__Next__", out var f)) {
+					var list = new List<object>();
+					var next = Evaluate(new FunctionCall("", [obj]) { Target = f });
+					while (next is not NullNode) {
+						list.Add(next);
+						next = Evaluate(new FunctionCall("", [obj]) { Target = f });
+					}
+					return new CList(list);
+				};
 
 				break;
 			}
@@ -469,8 +478,11 @@ public partial class Interpreter : INodeVisitor<object> {
 	//////////////////////////////////////////
 
 	public object? VisitLet(LetNode node) {
+		object? first_value = null;
 		foreach (var (index, name) in node.Names.WithIndex()) {
 			var value = Evaluate(node.Values[index]);
+			first_value ??= value;
+
 			if (node.Constant) {
 				env.DefineConstant(name, value);
 			} else {
@@ -478,7 +490,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			}
 		}
 
-		return null;
+		return first_value;
 	}
 
 	public object VisitAssignment(AssignmentNode node) {
@@ -905,6 +917,30 @@ public partial class Interpreter : INodeVisitor<object> {
 			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
 		}
 
+		if (iterable is CObject obj) {
+			if (obj.Class.Functions.TryGetValue("__Next__", out var f)) {
+				while (true) {
+					env.Push();
+					try {
+						var value = Evaluate(new FunctionCall("", [obj]) { Target = f });
+						if (value is NullNode)
+							return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+						
+						env.Define(node.VarName, value);
+						Evaluate(node.Block);
+					} catch (BreakException be) {
+						return be.Value ?? (ReturnValues.Count > 0 ? ReturnValues : new NullNode());
+					} catch (OutException be) {
+						if (be.Value != null)
+							ReturnValues.Add(be.Value);
+					} catch (ContinueException) {
+					} finally {
+						env.Pop();
+					}
+				}
+			}
+		}
+
 		throw new RuntimeError($"Cannot loop over `{Evaluate(node.Iterable).GetType()}`. Expected iterable.");
 	}
 
@@ -947,6 +983,10 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		foreach (var f in node.Functions) {
 			class_value.Functions.Add(f.Name, new FunctionNode(f.Args, f.Block!));
+		}
+
+		foreach (var l in node.Lets) {
+			class_value.Lets.Add(l);
 		}
 
 		env.Define(node.Name, class_value);

@@ -8,10 +8,16 @@ public class CClass(string name, FunctionNode? constructor, Interpreter interpre
 	public readonly string Name = name;
 	public readonly FunctionNode? Constructor = constructor;
 	public readonly Dictionary<string, FunctionNode> Functions = new();
+	public readonly List<LetNode> Lets = [];
 
 	public InternalFunction GetCreateFunction() {
 		return new InternalFunction(callArgs => {
 			var obj = new CObject(this);
+			foreach (var letNode in Lets) {
+				foreach (var (i, name) in letNode.Names.WithIndex()) {
+					obj.SetMember(name, interpreter.Evaluate(letNode.Values[i]));
+				}
+			}
 
 			if (Constructor != null) {
 				var callList = new List<object>();
