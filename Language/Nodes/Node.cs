@@ -51,6 +51,5 @@ public interface INodeVisitor<out T> {
 	T? VisitSwitch(SwitchNode node);
 	T? VisitUsingDirective(UsingDirective node);
 	T? VisitNamespaceDirective(NamespaceDirective node);
-	T? VisitIncludeDirective(IncludeDirective node);
 	T? VisitDecorator(DecoratorNode node);
 }

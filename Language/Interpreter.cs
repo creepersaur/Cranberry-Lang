@@ -1121,36 +1121,10 @@ public partial class Interpreter : INodeVisitor<object> {
 		return null;
 	}
 
-	public object VisitIncludeDirective(IncludeDirective node) {
-		var file_path = Evaluate(node.Paths);
-
-		if (file_path is CList Paths) {
-			foreach (var path in Paths.Items) {
-				if (path is CString) continue;
-
-				throw new RuntimeError("`include` only takes string path or `{paths}`.");
-			}
-
-			throw new IncludeFileException(Paths.Items.Select(object (x) => {
-				if (x is CString cs)
-					return cs.Value;
-				return x;
-			}));
-		}
-
-		if (file_path is string p)
-			throw new IncludeFileException(p);
-
-		if (file_path is CString c)
-			throw new IncludeFileException(c.Value);
-
-		throw new RuntimeError("`include` only takes string path or list of strings.");
-	}
-
 	public object? VisitDecorator(DecoratorNode node) {
 		if (string.Equals(node.Name, "extern_all", StringComparison.OrdinalIgnoreCase)) {
 			if (node.Args.Length < 1)
-				throw new RuntimeError("@extern_all(path) expects a path to the `.dll`.");
+				throw new RuntimeError("`@extern_all(path)` expects a path to the `.dll`.");
 
 			ImportAssemblyFunctions(Evaluate(node.Args[0]).ToString()!);
 			ImportAssemblyClasses(Evaluate(node.Args[0]).ToString()!);
@@ -1158,50 +1132,57 @@ public partial class Interpreter : INodeVisitor<object> {
 			return null;
 		}
 
-		// Expect decorator name "extern"
-		if (!string.Equals(node.Name, "extern", StringComparison.OrdinalIgnoreCase)) {
-			throw new RuntimeError("Unknown decorator. Only @extern is known as of now.");
+		if (string.Equals(node.Name, "extern", StringComparison.OrdinalIgnoreCase)) {
+			if (node.Args.Length < 1)
+				throw new RuntimeError("`@extern(path, symbol?)` decorator expects at least one argument: the path to the DLL.");
+
+			var moduleVal = Evaluate(node.Args[0]);
+			if (moduleVal is not CString modulePath)
+				throw new RuntimeError("`@extern(path, symbol?)` decorator's first argument must be a string literal path to the DLL.");
+
+			string? explicitSymbol = null;
+			if (node.Args.Length >= 2) {
+				var symVal = Evaluate(node.Args[1]);
+				if (symVal is string s) explicitSymbol = s;
+				else throw new Exception("`@extern(path, symbol?)` decorator's second argument (symbol name) must be a string.");
+			}
+
+			var funcName = node.Func!.Name;
+			var symbolToFind = explicitSymbol ?? funcName;
+
+			ExternalManager.RegisterManagedFunctionFromAssembly(modulePath.Value, symbolToFind);
+			if (!ExternalManager.TryResolve(modulePath.Value, symbolToFind, out var wrapper))
+				throw new Exception($"Failed to register external function {symbolToFind} from {modulePath.Value}");
+
+			var arity = node.Func.Args.Length;
+			var extFunc = new ExternFunction(modulePath.Value, symbolToFind, wrapper!, arity);
+			env.Define(funcName, extFunc);
+
+			return null;	
 		}
 
-		// Evaluate decorator args to get module path (assume first arg is DLL path string)
-		if (node.Args.Length < 1)
-			throw new RuntimeError("extern decorator expects at least one argument: the path to the DLL.");
+		if (string.Equals(node.Name, "include", StringComparison.OrdinalIgnoreCase)) {
+			if (node.Args.Length < 1)
+				throw new RuntimeError("`@include(path/path list, recursive?)` decorator expects at least one argument: the path to the file/folder.");
+			
+			var file_path = Evaluate(node.Args[0]);
+			var recursive = node.Args.Length > 1 && Misc.IsTruthy(Evaluate(node.Args[1]));
 
-		// Evaluate the first arg expression to runtime value (string).
-		// We call Accept(this) to evaluate the Node — your interpreter probably has a VisitStringLiteral that returns string.
-		var moduleVal = Evaluate(node.Args[0]);
-		if (!(moduleVal is CString modulePath))
-			throw new RuntimeError("extern decorator's first argument must be a string literal path to the DLL.");
+			if (file_path is CList Paths) {
+				if (Paths.Items.Any(path => path is not CString)) {
+					throw new RuntimeError("`@include(path/path list, recursive?)` only takes string path or list of paths.");
+				}
 
-		// Optional: second argument can be explicit function name inside the DLL (otherwise use the Cranberry function name)
-		string? explicitSymbol = null;
-		if (node.Args.Length >= 2) {
-			var symVal = Evaluate(node.Args[1]);
-			if (symVal is string s) explicitSymbol = s;
-			else throw new Exception("extern decorator's second argument (symbol name) must be a string.");
+				throw new IncludeFileException(Paths.Items.Select(object (x) => x is CString cs ? cs.Value : x), recursive);
+			}
+
+			if (file_path is string p) throw new IncludeFileException(p, recursive);
+			if (file_path is CString c) throw new IncludeFileException(c.Value, recursive);
+
+			throw new RuntimeError("`@include(path/path list, recursive?)` only takes string path or list of paths.");
 		}
-
-		var funcName = node.Func!.Name; // the Cranberry function name
-
-		var symbolToFind = explicitSymbol ?? funcName;
-
-		// Attempt to register the method (this will throw with helpful messages if it fails)
-		ExternalManager.RegisterManagedFunctionFromAssembly(modulePath.Value, symbolToFind);
-
-		// After registration, resolve wrapper and get MethodInfo parameter count to set arity.
-		if (!ExternalManager.TryResolve(modulePath.Value, symbolToFind, out var wrapper))
-			throw new Exception($"Failed to register external function {symbolToFind} from {modulePath.Value}");
-
-		// Determine arity: we can try inspect the method signature via reflection again, but we didn't expose MethodInfo.
-		// For simplicity: derive arity from the FunctionDef signature node.Func.Args
-		var arity = node.Func.Args.Length;
-
-		var extFunc = new ExternFunction(modulePath.Value, symbolToFind, wrapper!, arity);
-
-		// Define in the environment under the original function name
-		env.Define(funcName, extFunc);
-
-		return null;
+		
+		throw new RuntimeError($"Unknown decorator `@{node.Name}`.");
 	}
 
 

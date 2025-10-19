@@ -21,7 +21,7 @@ public class Program {
 
 			var tokens = new Lexer(text).GetTokens();
 			var parser = new Parser(tokens.ToArray());
-			
+
 			var ast = new List<Node>(Math.Max(16, tokens.Count / 4));
 			var important = new List<Node>(8);
 
@@ -48,7 +48,8 @@ public class Program {
 					RunNode(node, path);
 				} catch (ReturnException) {
 					return;
-				} catch (OutException) {}
+				} catch (OutException) {
+				}
 			}
 
 			foreach (var node in ast) {
@@ -56,7 +57,8 @@ public class Program {
 					RunNode(node, path);
 				} catch (ReturnException) {
 					return;
-				} catch (OutException) {}
+				} catch (OutException) {
+				}
 			}
 		} finally {
 			interpreter.env = previousEnv;
@@ -69,40 +71,32 @@ public class Program {
 		} catch (BreakException) {
 			throw new RuntimeError("`break` must only be used in loops.");
 		} catch (IncludeFileException include) {
-			if (include.Path is List<object> l) {
-				foreach (var p in l) {
-					if (Includes.TryGetValue((string)p, out var value)) {
-						RunFile(value, (string)p);
-						return;
-					}
-					
-					var f = new FileInfo((string)p);
-					if (f.Exists) {
-						if (f.FullName != path) {
-							RunFile(File.ReadAllText(f.FullName), f.FullName);
-						} else {
-							throw new RuntimeError("Cyclic dependency on file self. Cannot `include` file of same path.");
-						}
-					} else {
-						throw new RuntimeError($"Failed to include file: `{f.FullName}`");
-					}
-				}
-			} else {
-				if (Includes.TryGetValue((string)include.Path, out var value)) {
-					RunFile(value, (string)include.Path);
-					return;
+			IEnumerable<string> paths;
+
+			// Handle single path or list of paths
+			if (include.Path is List<object> l) paths = l.Cast<string>();
+			else paths = new List<string> { (string)include.Path };
+
+			foreach (var p in paths) {
+				if (Includes.TryGetValue(p, out var value)) {
+					RunFile(value, p);
+					continue;
 				}
 
-				var f = new FileInfo((string)include.Path);
-				if (f.Exists) {
-					if (f.FullName != path) {
-						RunFile(File.ReadAllText(f.FullName), f.FullName);
-					} else {
-						throw new RuntimeError($"Cyclic dependency on file self. Cannot `include` file of same path.");
+				var f = new FileInfo(p);
+
+				if (f.Exists && !f.Attributes.HasFlag(FileAttributes.Directory)) {
+					// It's a file
+					if (f.FullName != path) RunFile(File.ReadAllText(f.FullName), f.FullName);
+					else throw new RuntimeError("Cyclic dependency on file self. Cannot `include` file of same path.");
+				} else if (Directory.Exists(p)) {
+					// It's a directory, include all *.cb files
+					var dir = new DirectoryInfo(p);
+					foreach (var file in dir.GetFiles("*.cb", include.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)) {
+						if (file.FullName != path) RunFile(File.ReadAllText(file.FullName), file.FullName);
+						else throw new RuntimeError("Cyclic dependency on file self. Cannot `include` file of same path.");
 					}
-				} else {
-					throw new RuntimeError($"Failed to include file: `{f.FullName}`");
-				}
+				} else throw new RuntimeError($"Failed to include file or directory: `{p}`");
 			}
 		}
 	}

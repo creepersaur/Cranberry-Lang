@@ -1,4 +1,8 @@
-﻿namespace Cranberry;
+﻿using System.Globalization;
+using System.Numerics;
+using System.Text;
+
+namespace Cranberry;
 
 public class Lexer {
 	private static readonly char[] PUNCTUATION = "\n!@$%^&*()[]{},./:;\\-=+~<>?".ToCharArray();
@@ -28,8 +32,15 @@ public class Lexer {
 
 	private static bool IsPunctuation(char? c) => c.HasValue && PUNCTUATION.Contains(c.Value);
 	private static bool IsQuote(char? c) => c.HasValue && QUOTES.Contains(c.Value);
-
 	private static bool IsSpace(char? c) => c.HasValue && SPACE.Contains(c.Value);
+	private static bool IsHexDigit(char c) => Uri.IsHexDigit(c);
+
+	private static int HexValue(char c) {
+		if (c is >= '0' and <= '9') return c - '0';
+		if (c is >= 'a' and <= 'f') return 10 + (c - 'a');
+		if (c is >= 'A' and <= 'F') return 10 + (c - 'A');
+		throw new ArgumentException($"Not a hex digit: {c}");
+	}
 
 	private static string ProcessEscapeSequences(string str) {
 		return str.Replace("\\n", "\n")
@@ -50,11 +61,6 @@ public class Lexer {
 		bool escaped = false;
 
 		while (CurChar.HasValue) {
-			// if (CurChar == '\n' && curToken.Length == 0) {
-			// 	Advance();
-			// 	continue;
-			// }
-			
 			if (in_comment) {
 				if (CurChar == '\n') {
 					in_comment = false;
@@ -63,11 +69,113 @@ public class Lexer {
 				Advance();
 				continue;
 			}
-			
-			if (CurChar == '_' && int.TryParse(curToken, out var _)) {
+
+			if (CurChar == '_' && int.TryParse(curToken, out _)) {
 				Advance();
 				continue;
 			}
+
+			if (CurChar == '0' && Pos + 1 < Text.Length && (Text[Pos + 1] == 'x' || Text[Pos + 1] == 'X')) {
+				// only trigger when curToken is empty (so "10 0x1" or "(0x1)" work)
+				if (curToken.Length < 1) {
+					// Consume hex literal and normalize to decimal double string
+					var hexLiteral = new StringBuilder();
+					hexLiteral.Append('0'); // we'll keep the 0x in the internal buffer for parsing
+					Advance(); // move from '0' to 'x'
+					hexLiteral.Append(CurChar); // 'x' or 'X'
+					Advance(); // move past 'x'
+
+					// read hex integer part (allow underscores)
+					var intPart = new StringBuilder();
+					while (CurChar.HasValue && (IsHexDigit(CurChar.Value) || CurChar == '_')) {
+						if (CurChar != '_') intPart.Append(CurChar);
+						hexLiteral.Append(CurChar);
+						Advance();
+					}
+
+					// possible fractional part
+					string? fracPart = null;
+					if (CurChar == '.') {
+						hexLiteral.Append(CurChar);
+						Advance(); // consume '.'
+						var fracSb = new StringBuilder();
+						while (CurChar.HasValue && (IsHexDigit(CurChar.Value) || CurChar == '_')) {
+							if (CurChar != '_') fracSb.Append(CurChar);
+							hexLiteral.Append(CurChar);
+							Advance();
+						}
+
+						fracPart = fracSb.Length > 0 ? fracSb.ToString() : "";
+					}
+
+					// optional binary exponent 'p' or 'P' with decimal exponent
+					int? exp = null;
+					if (CurChar is 'p' or 'P') {
+						Advance(); // consume 'p'
+						var sign = 1;
+						if (CurChar is '+' or '-') {
+							if (CurChar == '-') sign = -1;
+							Advance();
+						}
+
+						var expSb = new StringBuilder();
+						while (CurChar.HasValue && char.IsDigit(CurChar.Value)) {
+							expSb.Append(CurChar);
+							Advance();
+						}
+
+						if (expSb.Length > 0) {
+							exp = sign * int.Parse(expSb.ToString(), CultureInfo.InvariantCulture);
+						}
+					}
+
+					// compute value
+					double result;
+					if (string.IsNullOrEmpty(fracPart)) {
+						// integer hex (or no fractional digits)
+						// parse maybe-large integer using BigInteger
+						var hexDigits = intPart.Length > 0 ? intPart.ToString() : "0";
+						try {
+							var bigint = BigInteger.Parse(hexDigits, NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
+							result = (double)bigint;
+							if (exp.HasValue) result = result * Math.Pow(2, exp.Value);
+						} catch {
+							// fallback: incremental parse
+							double accum = 0;
+							foreach (var ch in hexDigits) {
+								accum = accum * 16 + HexValue(ch);
+							}
+
+							result = accum;
+							if (exp.HasValue) result = result * Math.Pow(2, exp.Value);
+						}
+					} else {
+						// hex float: mantissa = intPart.fracPart in base 16, scale by 2^exp (if provided)
+						double intVal = 0;
+						var intDigits = intPart.Length > 0 ? intPart.ToString() : "0";
+						foreach (var ch in intDigits) {
+							intVal = intVal * 16 + HexValue(ch);
+						}
+
+						double fracVal = 0;
+						for (int i = 0; i < fracPart.Length; i++) {
+							fracVal += HexValue(fracPart[i]) / Math.Pow(16, i + 1);
+						}
+
+						double mantissa = intVal + fracVal;
+						int effectiveExp = exp ?? 0; // if no 'p' exponent given, treat exponent as 0
+						result = mantissa * Math.Pow(2, effectiveExp);
+					}
+
+					// normalize to invariant-culture decimal string (double)
+					var decString = result.ToString("R", CultureInfo.InvariantCulture);
+
+					tokens.Add(decString);
+					curToken = "";
+					continue;
+				}
+			}
+
 
 			// Handle escape sequences inside strings
 			if (instr.HasValue && escaped) {

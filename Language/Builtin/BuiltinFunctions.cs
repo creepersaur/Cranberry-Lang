@@ -100,7 +100,7 @@ public static class BuiltinFunctions {
 			InternalFunction => "function",
 			ObjectMethod => "function",
 			CNamespace => "namespace",
-			CList => "list",
+			CList list => list.IsTuple ? "tuple" : "list",
 			CDict => "dict",
 			CStopwatch => "stopwatch",
 			CFile => "file",

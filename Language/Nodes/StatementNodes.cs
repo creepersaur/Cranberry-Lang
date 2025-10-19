@@ -128,14 +128,6 @@ public class NamespaceDirective(object[] names, BlockNode? block = null) : Node 
 	}
 }
 
-public class IncludeDirective(Node paths) : Node {
-	public readonly Node Paths = paths;
-	
-	public override object? Accept<T>(INodeVisitor<T> visitor) {
-		return visitor.VisitIncludeDirective(this);
-	}
-}
-
 public class DecoratorNode(string name, Node[] args, FunctionDef? func = null) : Node {
 	public readonly string Name = name;
 	public readonly Node[] Args = args;

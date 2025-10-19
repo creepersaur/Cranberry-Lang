@@ -55,10 +55,6 @@ public class Parser(string[] Tokens) {
 			return ParseUsingDirective();
 		}
 
-		if (token == "include") {
-			return ParseInclude();
-		}
-
 		if (token == "namespace") {
 			return ParseNamespace();
 		}
@@ -97,11 +93,6 @@ public class Parser(string[] Tokens) {
 		}
 
 		return ParseExpression();
-	}
-
-	private IncludeDirective ParseInclude() {
-		Advance();
-		return new IncludeDirective(ParseExpression());
 	}
 
 	private NamespaceDirective ParseNamespace() {
