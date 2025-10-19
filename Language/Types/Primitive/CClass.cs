@@ -8,6 +8,7 @@ public class CClass(string name, FunctionNode? constructor, Interpreter interpre
 	public readonly string Name = name;
 	public readonly FunctionNode? Constructor = constructor;
 	public readonly Dictionary<string, FunctionNode> Functions = new();
+	public readonly Dictionary<string, object> Values = new();
 	public readonly List<LetNode> Lets = [];
 
 	public InternalFunction GetCreateFunction() {
@@ -53,12 +54,27 @@ public class CClass(string name, FunctionNode? constructor, Interpreter interpre
 	
 	public object GetMember(object? member) {
 		if (member is string m) {
-			if (Functions.TryGetValue(m, out var node)) {
-				return node;
-			}
+			if (Functions.TryGetValue(m, out var node)) return node;
+			if (Values.TryGetValue(m, out var value)) return value;
 		}
 		
 		throw new RuntimeError($"Tried to get unknown member: `{member}` on `Class:{Name}`.");
+	}
+
+	public void SetMember(object? member, object? value) {
+		if (value is FunctionNode f) {
+			Functions[(string)member!] = f;
+			return;
+		}
+
+		if (member is not CString && member is not string)
+			throw new RuntimeError($"Can only set string members on Class:{Name}.");
+
+		if (member is CString c) {
+			Values[c.Value] = value!;
+		} else {
+			Values[(string)member] = value!;
+		}
 	}
 
 	public override string ToString() => $"Class:{Name}";

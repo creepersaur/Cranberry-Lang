@@ -7,7 +7,19 @@ namespace Cranberry.Types;
 public class CString(string value) : IMemberAccessible {
 	public readonly string Value = value;
 
-	public override string ToString() => $"{Value}";
+	public override string ToString() => Value;
+
+	// Pick either implicit OR explicit. Here is explicit:
+	public static explicit operator string(CString cstr) {
+		if (cstr == null) throw new ArgumentNullException(nameof(cstr));
+		return cstr.Value;
+	}
+
+	// From string to CString
+	public static implicit operator CString(string str) {
+		return new CString(str);
+	}
+
 
 	/////////////////////////////////////////////////////////
 	// MEMBERSHIP
@@ -25,7 +37,7 @@ public class CString(string value) : IMemberAccessible {
 					Misc.DoubleToIndex(range.Start, Value.Length + 1, true)
 						..Misc.DoubleToIndex(range.End, Value.Length + 1, true)
 				]);
-			
+
 			return new CString(Value[
 				Misc.DoubleToIndex(range.Start, Value.Length, true)
 					..Misc.DoubleToIndex(range.End, Value.Length, true)
@@ -70,15 +82,15 @@ public class CString(string value) : IMemberAccessible {
 						if (args[0] is CString sep) {
 							if (sep.Value.Length < 1)
 								return new CList(Value.ToCharArray().Select(object (x) => x.ToString()).ToList());
-								
+
 							return new CList(Value.Split(sep.Value).Select(object (x) => x).ToList());
 						} else {
 							throw new RuntimeError("`Split(separator)` expects 0-1 string arguments.");
 						}
-					
+
 					return new CList(Value.Split(" ").Select(object (x) => new CString(x)).ToList());
 				}),
-				
+
 				"trim" => new InternalFunction(args => {
 					if (args.Length != 0) throw new RuntimeError("`trim()` expects 0 arguments.");
 					return new CString(Value.Trim());
@@ -86,18 +98,18 @@ public class CString(string value) : IMemberAccessible {
 
 				"starts_with" => new InternalFunction(args => {
 					if (args.Length != 1) throw new RuntimeError("`starts_with(prefix)` expects 1 argument.");
-					
+
 					string p = args[0] is CString csp ? csp.Value : args[0] as string ?? throw new RuntimeError("`starts_with` expects a string argument.");
 					return Value.StartsWith(p);
 				}),
 
 				"ends_with" => new InternalFunction(args => {
 					if (args.Length != 1) throw new RuntimeError("`ends_with(suffix)` expects 1 argument.");
-					
+
 					string p = args[0] is CString csp ? csp.Value : args[0] as string ?? throw new RuntimeError("`ends_with` expects a string argument.");
 					return Value.EndsWith(p);
 				}),
-				
+
 				"replace" => new InternalFunction(args => {
 					if (args.Length != 2) throw new RuntimeError("`replace(old, new)` expects 2 arguments.");
 					string oldv = args[0] is CString cs0 ? cs0.Value : args[0] as string ?? throw new RuntimeError("`replace` expects string arguments.");
@@ -105,16 +117,16 @@ public class CString(string value) : IMemberAccessible {
 					return new CString(Value.Replace(oldv, newv));
 				}),
 
-                "contains" => new InternalFunction(args => {
-                    if (args.Length != 1) throw new RuntimeError("`contains(substr)` expects 1 argument.");
-                    string s = args[0] switch {
-                        CString cs => cs.Value,
-                        string str => str,
-                        _ => throw new RuntimeError("`contains` expects a string argument.")
-                    };
-                    return new NumberNode(Value.Contains(s) ? 1 : 0);
-                }),
-				
+				"contains" => new InternalFunction(args => {
+					if (args.Length != 1) throw new RuntimeError("`contains(substr)` expects 1 argument.");
+					string s = args[0] switch {
+						CString cs => cs.Value,
+						string str => str,
+						_ => throw new RuntimeError("`contains` expects a string argument.")
+					};
+					return new NumberNode(Value.Contains(s) ? 1 : 0);
+				}),
+
 				"find" => new InternalFunction(args => {
 					if (args.Length != 1) throw new RuntimeError("`find(substr)` expects 1 argument.");
 					string s = args[0] switch {
@@ -124,7 +136,7 @@ public class CString(string value) : IMemberAccessible {
 					};
 					return new NumberNode(Value.IndexOf(s, StringComparison.Ordinal));
 				}),
-				
+
 				"sub" => new InternalFunction(args => {
 					if (args.Length is < 1 or > 2) throw new RuntimeError("`sub(start, length)` expects 1-2 arguments.");
 					if (args[0] is not double s) throw new RuntimeError("`sub` start must be a number.");
@@ -140,6 +152,63 @@ public class CString(string value) : IMemberAccessible {
 					return new CString(Value.Substring(start, length));
 				}),
 				
+				"is_digit" => new InternalFunction(args => {
+					if (args.Length != 0)
+						throw new RuntimeError("`is_digit()` expects 0 arguments.");
+					return Value.All(char.IsDigit);
+				}),
+
+				"is_alpha" => new InternalFunction(args => {
+					if (args.Length != 0)
+						throw new RuntimeError("`is_alpha()` expects 0 arguments.");
+					return Value.All(char.IsLetter);
+				}),
+
+				"is_letter" => new InternalFunction(args => {
+					if (args.Length != 0)
+						throw new RuntimeError("`is_letter()` expects 0 arguments.");
+					return Value.All(char.IsLetter);
+				}),
+
+				"is_alphanum" => new InternalFunction(args => {
+					if (args.Length != 0)
+						throw new RuntimeError("`is_alphanum()` expects 0 arguments.");
+					return Value.All(char.IsLetterOrDigit);
+				}),
+
+				"is_number" => new InternalFunction(args => {
+					if (args.Length != 0)
+						throw new RuntimeError("`is_number()` expects 0 arguments.");
+    
+					// allow optional leading + or - and at most one decimal point
+					if (string.IsNullOrWhiteSpace(Value)) return false;
+
+					bool hasDecimal = false;
+					for (int i = 0; i < Value.Length; i++) {
+						char c = Value[i];
+						if (c == '.' && !hasDecimal) {
+							hasDecimal = true;
+						} else if ((c == '-' || c == '+') && i == 0) {
+							// leading sign is ok
+						} else if (!char.IsDigit(c)) {
+							return false;
+						}
+					}
+					return true;
+				}),
+
+				"is_upper" => new InternalFunction(args => {
+					if (args.Length != 0)
+						throw new RuntimeError("`is_upper()` expects 0 arguments.");
+					return Value.All(char.IsUpper);
+				}),
+
+				"is_lower" => new InternalFunction(args => {
+					if (args.Length != 0)
+						throw new RuntimeError("`is_lower()` expects 0 arguments.");
+					return Value.All(char.IsLower);
+				}),
+
 				_ => throw new RuntimeError($"Tried getting unknown member `{member}` on type `string`")
 			};
 

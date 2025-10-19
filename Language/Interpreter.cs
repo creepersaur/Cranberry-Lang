@@ -21,6 +21,16 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	// --- assembly loading helpers ---
 	private readonly Dictionary<string, Assembly> _loadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
+	
+	// STATIC EXCEPTIONS
+	private static readonly ReturnException ReturnNull = new(null);
+	private static readonly BreakException BreakNull = new(null);
+	private static readonly OutException OutNull = new(null);
+	private static readonly ContinueException ContinueNull = new();
+	
+	private static readonly ReturnException ExReturn = new(null);
+	private static readonly BreakException ExBreak = new(null);
+	private static readonly OutException ExOut = new(null);
 
 	public Interpreter(bool is_build) {
 		IsBuild = is_build;
@@ -41,11 +51,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object VisitString(StringNode node) => new CString(node.Value);
 
 	public object VisitFunction(FunctionNode node) {
-		// Capture the closure only once (when the function is defined),
-		// don't overwrite it every time the node is evaluated.
-		if (node.Env == null) {
-			node.Env = env.Variables.Peek();
-		}
+		node.Env ??= env.Variables.Peek();
 
 		return node;
 	}
@@ -478,7 +484,9 @@ public partial class Interpreter : INodeVisitor<object> {
 	// STATEMENTS
 	//////////////////////////////////////////
 
-	public object? VisitLet(LetNode node) {
+	public object? VisitLet(LetNode node, bool no_define = false) {
+		var fake_define = new Dictionary<string, object>();
+		
 		object? first_value = null;
 		foreach (var (index, name) in node.Names.WithIndex()) {
 			var value = node.Values.Length > index ? Evaluate(node.Values[index]) : new NullNode();
@@ -492,17 +500,25 @@ public partial class Interpreter : INodeVisitor<object> {
 								? val_list.Items[l_index]
 								: throw new RuntimeError("Failed to destructure tuple. Number of names is more than length of tuple.");
 
-						if (node.Constant) env.DefineConstant(l_name, l_value);
-						else env.Define(l_name, l_value);
+						if (node.Constant)
+							if (no_define) fake_define.Add(l_name, l_value);
+							else env.DefineConstant(l_name, l_value);
+						else
+							if (no_define) fake_define.Add(l_name, l_value);
+							else env.Define(l_name, l_value);
 					}
 				} else throw new RuntimeError("Destructuring syntax only works with tuples.");
 			} else {
-				if (node.Constant) env.DefineConstant((string)name, value);
+				if (node.Constant)
+					if (no_define) fake_define.Add((string)name, value);
+					else env.DefineConstant((string)name, value);
+				else
+				if (no_define) fake_define.Add((string)name, value);
 				else env.Define((string)name, value);
 			}
 		}
 
-		return first_value;
+		return no_define ? fake_define : first_value;
 	}
 
 	public object VisitAssignment(AssignmentNode node) {
@@ -781,30 +797,33 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public object VisitReturn(ReturnNode node) {
 		if (node.Value != null) {
-			throw new ReturnException(Evaluate(node.Value));
+			ExReturn.Value = Evaluate(node.Value);
+			throw ExReturn;
 		}
 
-		throw new ReturnException(null);
+		throw ReturnNull;
 	}
 
 	public object VisitBreak(BreakNode node) {
 		if (node.Value != null) {
-			throw new BreakException(Evaluate(node.Value));
+			ExBreak.Value = Evaluate(node.Value);
+			throw ExBreak;
 		}
 
-		throw new BreakException(null);
+		throw BreakNull;
 	}
 
 	public object VisitOut(OutNode node) {
 		if (node.Value != null) {
-			throw new OutException(Evaluate(node.Value));
+			ExOut.Value = Evaluate(node.Value);
+			throw ExOut;
 		}
 
-		throw new OutException(null);
+		throw OutNull;
 	}
 
 	public object VisitContinue(ContinueNode node) {
-		throw new ContinueException();
+		throw ContinueNull;
 	}
 
 	public object? VisitWhile(WhileNode node) {
@@ -999,6 +1018,12 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		foreach (var l in node.Lets) {
 			class_value.Lets.Add(l);
+			
+			if (VisitLet(l, true) is Dictionary<string, object> def) {
+				foreach (var (key, value) in def) {
+					class_value.Values.Add(key, value);
+				}
+			}
 		}
 
 		env.Define(node.Name, class_value);
@@ -1203,7 +1228,6 @@ public partial class Interpreter : INodeVisitor<object> {
 		// _resolvers[modulePath] = resolver;
 
 
-		Assembly? asm;
 		try {
 // Hook up a resolving handler that uses the resolver to find dependency paths
 			AssemblyLoadContext.Default.Resolving += (context, name) => {
@@ -1224,7 +1248,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			};
 
 
-			asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(modulePath);
+			var asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(modulePath);
 			_loadedAssemblies[modulePath] = asm;
 			return asm;
 		} catch (ReflectionTypeLoadException rtl) {
@@ -1252,9 +1276,9 @@ public partial class Interpreter : INodeVisitor<object> {
 // Prefer if ExternalManager exposes an Assembly-aware API. Try both.
 		try {
 // If ExternalManager has an Assembly-based register, use it (preferred)
-			var method = typeof(ExternalManager).GetMethod("RegisterAllManagedFunctionsFromAssembly", new[] { typeof(Assembly) });
+			var method = typeof(ExternalManager).GetMethod("RegisterAllManagedFunctionsFromAssembly", [typeof(Assembly)]);
 			if (method != null) {
-				var wrappers = (Dictionary<string, Delegate>)method.Invoke(null, new object[] { asm })!;
+				var wrappers = (Dictionary<string, Delegate>)method.Invoke(null, [asm])!;
 				// 'wrappers' is Dictionary<string, Delegate> from ExternalManager
 				foreach (var kv in wrappers) {
 					var methodName = kv.Key;

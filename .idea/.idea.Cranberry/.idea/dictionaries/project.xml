@@ -3,9 +3,11 @@
     <words>
       <w>cdict</w>
       <w>clist</w>
+      <w>controlflow</w>
       <w>creepersaur</w>
       <w>cright</w>
       <w>crpkg</w>
+      <w>cstr</w>
       <w>ctors</w>
       <w>externs</w>
       <w>funcs</w>

@@ -371,6 +371,7 @@ public class Parser(string[] Tokens) {
 				var elif_condition = ParseExpression();
 				SkipNewlines();
 				elif.Add((elif_condition, ParseBlock()));
+				SkipNewlines();
 			} else {
 				else_statement = ParseBlock();
 				break;
@@ -772,6 +773,7 @@ public class Parser(string[] Tokens) {
 
 	private DecoratorNode ParseDecorator() {
 		string name = Advance()!;
+		SkipNewlines();
 
 		var args = new List<Node>();
 		if (Check("(")) {
@@ -780,6 +782,7 @@ public class Parser(string[] Tokens) {
 			while (!Check(")")) {
 				SkipNewlines();
 				args.Add(ParseExpression());
+				SkipNewlines();
 
 				if (Check(",")) Advance();
 				else break;
@@ -829,7 +832,13 @@ public class Parser(string[] Tokens) {
 			Node key = ParseExpression();
 
 			SkipNewlines();
-			Expect(":");
+
+			if (Check("=")) {
+				if (key is not VariableNode v)
+					throw new RuntimeError("`=` can only be used for identifier named keys in dictionaries.");
+				key = new StringNode(v.Name);
+			} else Expect(":");
+			
 			Advance();
 			SkipNewlines();
 

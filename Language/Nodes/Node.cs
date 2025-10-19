@@ -37,7 +37,7 @@ public interface INodeVisitor<out T> {
 	
 	// Statements
 	
-	T? VisitLet(LetNode node);
+	T? VisitLet(LetNode node, bool no_define);
 	T? VisitIF(IFNode node);
 	T? VisitFunctionDef(FunctionDef node);
 	T? VisitClassDef(ClassDef node);

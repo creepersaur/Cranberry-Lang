@@ -6,7 +6,7 @@ public class LetNode(object[] names, Node[] values, bool constant) : Node {
 	public readonly bool Constant = constant;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
-		return visitor.VisitLet(this);
+		return visitor.VisitLet(this, false);
 	}
 }
 
