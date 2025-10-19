@@ -8,55 +8,55 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 	public object? GetMember(object? member) {
 		if (member is string m) {
 			switch (m) {
-				case "Microseconds": return Stopwatch.Elapsed.TotalMicroseconds;
-				case "Nanoseconds": return Stopwatch.Elapsed.TotalNanoseconds;
-				case "Milliseconds": return Stopwatch.Elapsed.TotalMilliseconds;
-				case "Seconds": return Stopwatch.Elapsed.TotalSeconds;
-				case "Elapsed": return Stopwatch.Elapsed.TotalSeconds;
-				case "Minutes": return Stopwatch.Elapsed.TotalMinutes;
-				case "Hours": return Stopwatch.Elapsed.TotalHours;
-				case "Days": return Stopwatch.Elapsed.TotalDays;
+				case "microseconds": return Stopwatch.Elapsed.TotalMicroseconds;
+				case "nanoseconds": return Stopwatch.Elapsed.TotalNanoseconds;
+				case "milliseconds": return Stopwatch.Elapsed.TotalMilliseconds;
+				case "seconds": return Stopwatch.Elapsed.TotalSeconds;
+				case "elapsed": return Stopwatch.Elapsed.TotalSeconds;
+				case "minutes": return Stopwatch.Elapsed.TotalMinutes;
+				case "hours": return Stopwatch.Elapsed.TotalHours;
+				case "days": return Stopwatch.Elapsed.TotalDays;
 				
-				case "Start":
+				case "start":
 					return new InternalFunction(args => {
 						if (args.Length > 0)
-							throw new RuntimeError("`Start() expects 0 arguments.");
+							throw new RuntimeError("`start() expects 0 arguments.");
 						
 						Stopwatch.Start();
 						return this;
 					});
 				
-				case "Stop":
+				case "stop":
 					return new InternalFunction(args => {
 						if (args.Length > 0)
-							throw new RuntimeError("`Stop() expects 0 arguments.");
+							throw new RuntimeError("`stop() expects 0 arguments.");
 
 						Stopwatch.Stop();
 						return this;
 					});
 				
-				case "Restart":
+				case "restart":
 					return new InternalFunction(args => {
 						if (args.Length > 0)
-							throw new RuntimeError("`Restart() expects 0 arguments.");
+							throw new RuntimeError("`restart() expects 0 arguments.");
 
 						Stopwatch.Restart();
 						return this;
 					});
 				
-				case "Reset":
+				case "reset":
 					return new InternalFunction(args => {
 						if (args.Length > 0)
-							throw new RuntimeError("`Restart() expects 0 arguments.");
+							throw new RuntimeError("`reset() expects 0 arguments.");
 
 						Stopwatch.Reset();
 						return this;
 					});
 				
-				case "StartNew":
+				case "start_new":
 					return new InternalFunction(args => {
 						if (args.Length > 0)
-							throw new RuntimeError("`Restart() expects 0 arguments.");
+							throw new RuntimeError("`start_new() expects 0 arguments.");
 						
 						return new CStopwatch(Stopwatch.StartNew());
 					});

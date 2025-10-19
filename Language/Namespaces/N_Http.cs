@@ -12,14 +12,14 @@ namespace Cranberry.Namespaces;
 public class N_Http : CNamespace {
 	public N_Http(Interpreter interpreter) : base("Http", true) {
 		env.Variables.Push(new Dictionary<string, object> {
-			["Get"] = new InternalFunction(args => {
+			["get"] = new InternalFunction(args => {
 				if (args.Length < 1 || args.Length > 2)
-					throw new RuntimeError("Get(url, headers?) expects 1 or 2 arguments.");
+					throw new RuntimeError("get(url, headers?) expects 1 or 2 arguments.");
 
 				var url = args[0] switch {
 					CString c => c.Value,
 					string s => s,
-					_ => throw new RuntimeError("Get(url): url must be a string.")
+					_ => throw new RuntimeError("get(url): url must be a string.")
 				};
 
 				var client = new HttpClient();
@@ -35,7 +35,7 @@ public class N_Http : CNamespace {
 								client.DefaultRequestHeaders.Add(key, value);
 						}
 					} else {
-						throw new RuntimeError("Get(url, headers): headers must be a dictionary.");
+						throw new RuntimeError("get(url, headers): headers must be a dictionary.");
 					}
 				}
 
@@ -44,14 +44,14 @@ public class N_Http : CNamespace {
 				return new CString(data);
 			}),
 
-			["Post"] = new InternalFunction(args => {
+			["post"] = new InternalFunction(args => {
 				if (args.Length < 2 || args.Length > 3)
-					throw new RuntimeError("Post(url, body, headers?) expects 2 or 3 arguments.");
+					throw new RuntimeError("post(url, body, headers?) expects 2 or 3 arguments.");
 
 				var url = args[0] switch {
 					CString c => c.Value,
 					string s => s,
-					_ => throw new RuntimeError("Post(url, body): url must be a string.")
+					_ => throw new RuntimeError("post(url, body): url must be a string.")
 				};
 
 				string payload = args[1] switch {
@@ -60,7 +60,7 @@ public class N_Http : CNamespace {
 					CList o => JsonSerializer.Serialize(o.Items),
 					CDict o => JsonSerializer.Serialize(o.Items),
 					{ } o => JsonSerializer.Serialize(o),
-					_ => throw new RuntimeError("Post(url, body): body cannot be nil.")
+					_ => throw new RuntimeError("post(url, body): body cannot be nil.")
 				};
 
 				var client = new HttpClient();
@@ -85,16 +85,15 @@ public class N_Http : CNamespace {
 				string data = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 				return new CString(data);
 			}),
-
-
-			["Listen"] = new InternalFunction(args => {
+			
+			["listen"] = new InternalFunction(args => {
 				if (args.Length != 2)
-					throw new RuntimeError("Listen(port, callback) expects 2 arguments: port (number) and callback (function).");
+					throw new RuntimeError("listen(port, callback) expects 2 arguments: port (number) and callback (function).");
 
 				int port = args[0] switch {
 					double d => (int)d,
 					int i => i,
-					_ => throw new RuntimeError("Listen: port must be a number.")
+					_ => throw new RuntimeError("listen: port must be a number.")
 				};
 
 				var listener = new HttpListener();
@@ -102,7 +101,7 @@ public class N_Http : CNamespace {
 				listener.Start();
 
 				if (args[1] is not InternalFunction && args[1] is not FunctionNode)
-					throw new RuntimeError($"Listen: callback must be a function. Got `{args[1]}`");
+					throw new RuntimeError($"listen: callback must be a function. Got `{args[1]}`");
 
 				while (true) {
 					try {

@@ -15,23 +15,24 @@ public class CDirectory(string path) : IMemberAccessible {
 			throw new RuntimeError($"Tried to get member of unsupported datatype `{member}` on Directory.");
 
 		return member switch {
-			"Path" => Path,
-			"Name" => Info.Name,
-			"FullName" => Info.FullName,
-			"Parent" => new CDirectory(Info.Parent!.FullName),
+			"path" => Path,
+			"name" => Info.Name,
+			"full_name" => Info.FullName,
+			"parent" => new CDirectory(Info.Parent!.FullName),
+			"exists" => Info.Exists,
 
-			"Create" => new InternalFunction(args => {
+			"create" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`Directory.Create()` expects 0 arguments.");
+					throw new RuntimeError("`Directory.create()` expects 0 arguments.");
 
 				Directory.CreateDirectory(Path);
 				
 				return new NullNode();
 			}),
 			
-			"GetFiles" => new InternalFunction(args => {
+			"get_files" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`Directory.GetFiles()` expects 0 arguments.");
+					throw new RuntimeError("`Directory.get_files()` expects 0 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"Directory does not exist at path `{Path}`.");
@@ -40,9 +41,9 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new CList(files.Select(object (x) => new CFile(x.FullName)).ToList());
 			}),
 			
-			"GetDirectories" => new InternalFunction(args => {
+			"get_directories" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`Directory.GetDirectories()` expects 0 arguments.");
+					throw new RuntimeError("`Directory.get_directories()` expects 0 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"Directory does not exist at path `{Path}`.");
@@ -51,9 +52,9 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new CList(files.Select(object (x) => new CDirectory(x.FullName)).ToList());
 			}),
 			
-			"Clear" => new InternalFunction(args => {
+			"clear" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`Directory.Clear()` expects 0 arguments.");
+					throw new RuntimeError("`Directory.clear()` expects 0 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"Directory does not exist at path `{Path}`.");
@@ -64,9 +65,9 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"FileCount" => new InternalFunction(args => {
+			"file_count" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`Directory.FileCount()` expects 0 arguments.");
+					throw new RuntimeError("`Directory.file_count()` expects 0 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"Directory does not exist at path `{Path}`.");
@@ -74,31 +75,24 @@ public class CDirectory(string path) : IMemberAccessible {
 				return (double)Info.GetFiles().Length;
 			}),
 
-			"Exists" => new InternalFunction(args => {
+			"delete" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`Directory.Exists()` expects 0 arguments.");
-
-				return Info.Exists;
-			}),
-
-			"Delete" => new InternalFunction(args => {
-				if (args.Length != 0)
-					throw new RuntimeError("`Directory.Delete()` expects 0 arguments.");
+					throw new RuntimeError("`Directory.delete()` expects 0 arguments.");
 
 				Directory.Delete(Path, recursive: true);
 
 				return new NullNode();
 			}),
 
-			"MoveTo" => new InternalFunction(args => {
+			"move_to" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`Directory.MoveTo(path)` expects 1 arguments.");
+					throw new RuntimeError("`Directory.move_to(path)` expects 1 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"Directory does not exist at path `{Path}`.");
 				
 				if (args[0] is not string new_path)
-					throw new RuntimeError("`Directory.MoveTo()` expects a `string` argument.");
+					throw new RuntimeError("`Directory.move_to()` expects a `string` argument.");
 				
 				try {
 					Directory.Move(Path, System.IO.Path.Combine(new_path, Info.Name));
@@ -111,13 +105,13 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"Rename" => new InternalFunction(args => {
+			"rename" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`Directory.Rename(new_name: string)` expects 1 argument.");
+					throw new RuntimeError("`Directory.rename(new_name: string)` expects 1 argument.");
 
 				var newName = args[0]!.ToString();
 				if (string.IsNullOrWhiteSpace(newName))
-					throw new RuntimeError("`Directory.Rename(new_name: string)` requires a valid non-empty name.");
+					throw new RuntimeError("`Directory.rename(new_name: string)` requires a valid non-empty name.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"Directory does not exist at path `{Path}`.");
@@ -136,27 +130,27 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"GetAttributes" => new InternalFunction(args => {
+			"get_attributes" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`Directory.GetAttributes()` expects 0 arguments.");
+					throw new RuntimeError("`Directory.get_attributes()` expects 0 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"Directory does not exist at path `{Path}`.");
 
 				var attrs = new CDict(new Dictionary<object, object> {
-					["ReadOnly"] = (double)((Info.Attributes & FileAttributes.ReadOnly) != 0 ? 1 : 0),
-					["Hidden"] = (double)((Info.Attributes & FileAttributes.Hidden) != 0 ? 1 : 0),
-					["Archive"] = (double)((Info.Attributes & FileAttributes.Archive) != 0 ? 1 : 0),
-					["CreationTime"] = Info.CreationTime.ToOADate(),
-					["LastWriteTime"] = Info.LastWriteTime.ToOADate()
+					["read_only"] = (double)((Info.Attributes & FileAttributes.ReadOnly) != 0 ? 1 : 0),
+					["hidden"] = (double)((Info.Attributes & FileAttributes.Hidden) != 0 ? 1 : 0),
+					["archive"] = (double)((Info.Attributes & FileAttributes.Archive) != 0 ? 1 : 0),
+					["creation_time"] = Info.CreationTime.ToOADate(),
+					["last_write_time"] = Info.LastWriteTime.ToOADate()
 				});
 
 				return attrs;
 			}),
 
-			"SetReadOnly" => new InternalFunction(args => {
+			"set_read_only" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`Directory.SetReadOnly(flag: bool)` expects 1 argument.");
+					throw new RuntimeError("`Directory.set_read_only(flag: bool)` expects 1 argument.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"Directory does not exist at path `{Path}`.");

@@ -11,9 +11,9 @@ public class N_Task : CNamespace {
 		var interpreter1 = interpreter;
 
 		env.Variables.Push(new Dictionary<string, object> {
-			["Wait"] = new InternalFunction(args => {
+			["wait"] = new InternalFunction(args => {
 				if (args.Length != 1 || !Misc.IsNumber(args[0]!))
-					throw new RuntimeError("Wait(seconds) expects 1 number argument.");
+					throw new RuntimeError("wait(seconds) expects 1 number argument.");
 
 				double seconds = Convert.ToDouble(args[0]!);
 				if (seconds <= 0) return new NullNode();
@@ -40,9 +40,9 @@ public class N_Task : CNamespace {
 
 				return new NullNode();
 			}),
-			["WaitMilliseconds"] = new InternalFunction(args => {
+			["wait_milliseconds"] = new InternalFunction(args => {
 				if (args.Length != 1 || !Misc.IsNumber(args[0]!))
-					throw new RuntimeError("WaitMilliseconds(ms) expects 1 number argument.");
+					throw new RuntimeError("wait_milliseconds(ms) expects 1 number argument.");
 
 				double ms = Convert.ToDouble(args[0]!);
 				if (ms <= 0) return new NullNode();
@@ -63,15 +63,15 @@ public class N_Task : CNamespace {
 
 				return new NullNode();
 			}),
-			["Now"] = new InternalFunction(args => {
+			["now"] = new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("Now() expects 0 arguments.");
+					throw new RuntimeError("now() expects 0 arguments.");
 
 				return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 			}),
-			["Spawn"] = new InternalFunction(args => {
+			["spawn"] = new InternalFunction(args => {
 				if (args.Length < 1 || args[0] is not FunctionNode func)
-					throw new RuntimeError("Spawn(fn, ...) expects first argument as function.");
+					throw new RuntimeError("spawn(fn, ...) expects first argument as function.");
 
 				var new_args = args.ToList();
 				new_args.RemoveAt(0);
@@ -82,9 +82,9 @@ public class N_Task : CNamespace {
 				thread.Start();
 				return new NullNode();
 			}),
-			["Stopwatch"] = new InternalFunction(args => {
+			["stopwatch"] = new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("Stopwatch() expects 0 arguments.");
+					throw new RuntimeError("stopwatch() expects 0 arguments.");
 
 				return new CStopwatch(new Stopwatch());
 			})

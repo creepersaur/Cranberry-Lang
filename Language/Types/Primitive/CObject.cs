@@ -31,14 +31,14 @@ public class CObject(CClass from_class) : IMemberAccessible {
 	}
 
 	public override string ToString() {
-		if (Class.Functions.TryGetValue("__ToString__", out var f)) {
+		if (Class.Functions.TryGetValue("__tostring__", out var f)) {
 			var string_func = new ObjectMethod(this, f);
 			var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target]) {
 				Target = string_func.Func
 			});
 
 			if (value == null)
-				throw new RuntimeError("`__ToString__()` expects a return value.");
+				throw new RuntimeError("`__tostring__()` expects a return value.");
 
 			return value.ToString()!;
 		}

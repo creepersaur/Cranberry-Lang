@@ -15,16 +15,19 @@ public class CRange(double start, double end, double step, bool inclusive) : IMe
 	// MEMBERSHIP
 	///////////////////////////////////////////////////////// 
 
-	public object? GetMember(object? member) {
-		string name = Convert.ToString(member)!;
-		return name switch {
-			"length" => new NumberNode(Math.Abs(Start - End)),
-			"start" => new NumberNode(Start),
-			"end" => new NumberNode(End),
-			"step" => new NumberNode(Step),
-			"inclusive" => new BoolNode(Inclusive),
+	public object GetMember(object? member) {
+		if (member is string name) {
+			return name switch {
+				"length" => new NumberNode(Math.Abs(Start - End)),
+				"start" => new NumberNode(Start),
+				"end" => new NumberNode(End),
+				"step" => new NumberNode(Step),
+				"inclusive" => new BoolNode(Inclusive),
 			
-			_ => throw new RuntimeError($"Tried getting unknown member `{member}` on type `Range`")
-		};
+				_ => throw new RuntimeError($"Tried getting unknown member `{member}` on type `Range`")
+			};
+		}
+
+		throw new RuntimeError($"Tried getting unknown member `{member}` on type `Range`");
 	}
 }

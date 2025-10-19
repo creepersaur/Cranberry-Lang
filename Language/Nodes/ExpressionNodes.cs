@@ -74,8 +74,9 @@ public class RangeNode(Node start, Node end, Node step, bool inclusive) : Node {
 	}
 }
 
-public class ListNode(List<Node> items) : Node {
+public class ListNode(List<Node> items, bool is_tuple = false) : Node {
 	public readonly List<Node> Items = items;
+	public readonly bool IsTuple = is_tuple;
 	
 	public override object Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitList(this);

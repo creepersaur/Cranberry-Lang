@@ -1,7 +1,7 @@
 ﻿namespace Cranberry.Nodes;
 
-public class LetNode(string[] names, Node[] values, bool constant) : Node {
-	public readonly string[] Names = names;
+public class LetNode(object[] names, Node[] values, bool constant) : Node {
+	public readonly object[] Names = names;
 	public readonly Node[] Values = values;
 	public readonly bool Constant = constant;
 	

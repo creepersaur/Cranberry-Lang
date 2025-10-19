@@ -391,22 +391,58 @@ public class Parser(string[] Tokens) {
 
 	private LetNode ParseLet(bool constant = false) {
 		Advance();
-		var names = new List<string>();
+		var names = new List<object>();
 		var first_name = Advance();
-		if (!IsIdentifier(first_name)) {
-			throw new ParseError($"Expected identifier as variable name, got: `{first_name}`", Pos + 1);
-		}
+		if (first_name == "(") {
+			var destructured = new List<string>();
 
-		names.Add(first_name!);
+			if (Check(")")) throw new RuntimeError("Empty destructuring is not allowed.");
+			
+			while (!Check(")")) {
+				var d_name = Advance();
+				if (!IsIdentifier(d_name)) {
+					throw new ParseError($"Expected identifier as destructured name, got: `{d_name}`", Pos + 1);
+				}
+				destructured.Add(d_name!);
+
+				if (PeekAhead() == ",") Advance();
+				else break;
+			}
+
+			Expect(")");
+			Advance();
+				
+			names.Add(destructured);
+		} else if (!IsIdentifier(first_name)) {
+			throw new ParseError($"Expected identifier as variable name, got: `{first_name}`", Pos + 1);
+		} else {
+			names.Add(first_name!);
+		}
 
 		while (Check(",")) {
 			Advance();
 			var name = Advance();
-			if (!IsIdentifier(name)) {
-				throw new ParseError($"Expected identifier as variable name, got: `{name}`", Pos + 1);
-			}
 
-			names.Add(name!);
+			if (name == "(") {
+				var destructured = new List<string>();
+				
+				while (!Check(")")) {
+					var d_name = Advance();
+					if (!IsIdentifier(d_name)) {
+						throw new ParseError($"Expected identifier as destructured name, got: `{d_name}`", Pos + 1);
+					}
+					destructured.Add(d_name!);
+				}
+
+				Expect(")");
+				Advance();
+				
+				names.Add(destructured);
+			} else if (!IsIdentifier(name)) {
+				throw new ParseError($"Expected identifier as variable name or destructuring, got: `{name}`", Pos + 1);
+			} else {
+				names.Add(name!);
+			}
 		}
 
 		// Initialization
@@ -420,11 +456,7 @@ public class Parser(string[] Tokens) {
 				Advance();
 				values.Add(ParseExpression());
 			}
-
-			if (values.Count != names.Count) {
-				throw new ParseError($"Number of expressions ({values.Count}) should match number of variables ({names.Count}).", Pos);
-			}
-
+			
 			return new LetNode(names.ToArray(), values.ToArray(), constant);
 		}
 
@@ -957,9 +989,30 @@ public class Parser(string[] Tokens) {
 		// parentheses
 		if (token == "(") {
 			Advance(); // Consume `(`
-
+			SkipNewlines();
+			
 			Node expr = ParseExpression();
+			SkipNewlines();
 
+			if (PeekAhead() == ",") {
+				Advance();
+				SkipNewlines();
+
+				var expressions = new List<Node>{expr};
+				
+				while (!Check(")")) {
+					expressions.Add(ParseExpression());
+					SkipNewlines();
+
+					if (PeekAhead() == ",") {
+						Advance();
+						SkipNewlines();
+					} else break;
+				}
+
+				expr = new ListNode(expressions, true);
+			}
+			
 			Expect(")"); // Consume `)`
 			Advance();
 			return expr;

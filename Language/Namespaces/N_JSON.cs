@@ -8,7 +8,7 @@ namespace Cranberry.Namespaces;
 public class N_JSON : CNamespace {
 	public N_JSON() : base("JSON", true) {
 		env.Variables.Push(new Dictionary<string, object> {
-			["Stringify"] = new InternalFunction(args => {
+			["stringify"] = new InternalFunction(args => {
 				if (args.Length != 1)
 					throw new RuntimeError("JSON.Stringify(value) expects 1 argument.");
 
@@ -22,8 +22,7 @@ public class N_JSON : CNamespace {
 					throw new RuntimeError($"Could not serialize `{args[0]}` to JSON string.");
 				}
 			}),
-
-			["Parse"] = new InternalFunction(args => {
+			["parse"] = new InternalFunction(args => {
 				if (args.Length != 1)
 					throw new RuntimeError("JSON.Parse(string) expects 1 argument.");
 				

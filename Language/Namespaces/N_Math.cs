@@ -71,36 +71,36 @@ public class N_Math : CNamespace {
 		}
 
 		// Add commonly used constants
-		AddConst("PI", Math.PI);
-		AddConst("E", Math.E);
-		AddConst("Tau", Math.PI * 2.0);
+		AddConst("pi", Math.PI);
+		AddConst("e", Math.E);
+		AddConst("tau", Math.PI * 2.0);
 
 		// Simple unary/binary functions
-		AddBinary("Max", (a, b) => Math.Max(a, b));
-		AddBinary("Min", (a, b) => Math.Min(a, b));
-		AddTernary("Clamp", (v, lo, hi) => Math.Clamp(v, lo, hi));
+		AddBinary("max", (a, b) => Math.Max(a, b));
+		AddBinary("min", (a, b) => Math.Min(a, b));
+		AddTernary("clamp", (v, lo, hi) => Math.Clamp(v, lo, hi));
 
-		AddUnary("Sin", x => Math.Sin(x));
-		AddUnary("Cos", x => Math.Cos(x));
-		AddUnary("Tan", x => Math.Tan(x));
-		AddUnary("Asin", x => Math.Asin(x));
-		AddUnary("Acos", x => Math.Acos(x));
-		AddUnary("Atan", x => Math.Atan(x));
-		AddUnary("Asinh", x => Math.Asinh(x));
-		AddUnary("Acosh", x => Math.Acosh(x));
-		AddUnary("Atanh", x => Math.Atanh(x));
-
-		AddBinary("Atan2", (y, x) => Math.Atan2(y, x));
-		AddUnary("Abs", x => Math.Abs(x));
-		AddUnary("Floor", x => Math.Floor(x));
-		AddUnary("Ceil", x => Math.Ceiling(x));
-		AddUnary("Round", x => Math.Round(x));
-		AddUnary("Exp", x => Math.Exp(x));
-		AddBinary("Pow", (a, b) => Math.Pow(a, b));
-		AddUnary("Sqrt", x => Math.Sqrt(x));
+		AddUnary("sin", x => Math.Sin(x));
+		AddUnary("cos", x => Math.Cos(x));
+		AddUnary("tan", x => Math.Tan(x));
+		AddUnary("asin", x => Math.Asin(x));
+		AddUnary("acos", x => Math.Acos(x));
+		AddUnary("atan", x => Math.Atan(x));
+		AddUnary("asinh", x => Math.Asinh(x));
+		AddUnary("acosh", x => Math.Acosh(x));
+		AddUnary("atanh", x => Math.Atanh(x));
+		AddBinary("atan2", (y, x) => Math.Atan2(y, x));
+		
+		AddUnary("abs", x => Math.Abs(x));
+		AddUnary("floor", x => Math.Floor(x));
+		AddUnary("ceil", x => Math.Ceiling(x));
+		AddUnary("round", x => Math.Round(x));
+		AddUnary("exp", x => Math.Exp(x));
+		AddBinary("pow", (a, b) => Math.Pow(a, b));
+		AddUnary("sqrt", x => Math.Sqrt(x));
 		
 		// Wrapped Add/Sub
-		AddTernary("WrappedAdd", (value, addAmount, wrapAt) => {
+		AddTernary("wrapped_add", (value, addAmount, wrapAt) => {
 			var result = (value + addAmount) % wrapAt;
         
 			// Handle negative results
@@ -109,7 +109,7 @@ public class N_Math : CNamespace {
         
 			return result;
 		});
-		AddTernary("WrappedSub", (value, addAmount, wrapAt) => {
+		AddTernary("wrapped_sub", (value, addAmount, wrapAt) => {
 			var result = (value - addAmount) % wrapAt;
         
 			// Handle negative results
@@ -120,11 +120,11 @@ public class N_Math : CNamespace {
 		});
 
 		// Lerp: a + (b - a) * t
-		table["Lerp"] = new InternalFunction(args => {
-			ExpectCount("Lerp", args, 3);
-			ExpectNumber("Lerp", args[0], 0);
-			ExpectNumber("Lerp", args[1], 1);
-			ExpectNumber("Lerp", args[2], 2);
+		table["lerp"] = new InternalFunction(args => {
+			ExpectCount("lerp", args, 3);
+			ExpectNumber("lerp", args[0], 0);
+			ExpectNumber("lerp", args[1], 1);
+			ExpectNumber("lerp", args[2], 2);
 			var a = ToDouble(args[0]);
 			var b = ToDouble(args[1]);
 			var t = ToDouble(args[2]);
@@ -132,14 +132,14 @@ public class N_Math : CNamespace {
 		});
 
 		// Example varargs overloads
-		AddVarArgs("MaxAll", arr => {
+		AddVarArgs("max_all", arr => {
 			double m = arr[0];
 			for (int i = 1; i < arr.Length; i++)
 				if (arr[i] > m)
 					m = arr[i];
 			return m;
 		});
-		AddVarArgs("MinAll", arr => {
+		AddVarArgs("min_all", arr => {
 			double m = arr[0];
 			for (int i = 1; i < arr.Length; i++)
 				if (arr[i] < m)

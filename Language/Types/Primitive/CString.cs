@@ -34,37 +34,37 @@ public class CString(string value) : IMemberAccessible {
 
 		if (member is string name)
 			return name switch {
-				"Length" => new InternalFunction(args => {
+				"length" => new InternalFunction(args => {
 					if (args.Length != 0)
-						throw new RuntimeError("`Length()` expects 0 arguments.");
+						throw new RuntimeError("`length()` expects 0 arguments.");
 
 					return (double)Value.Length;
 				}),
 
-				"Chars" => new InternalFunction(args => {
+				"chars" => new InternalFunction(args => {
 					if (args.Length != 0)
-						throw new RuntimeError("`Chars()` expects 0 arguments.");
+						throw new RuntimeError("`chars()` expects 0 arguments.");
 
 					return new CList(Value.ToCharArray().Cast<object>().ToList());
 				}),
 
-				"Lower" => new InternalFunction(args => {
+				"lower" => new InternalFunction(args => {
 					if (args.Length != 0)
-						throw new RuntimeError("`Lower()` expects 0 arguments.");
+						throw new RuntimeError("`lower()` expects 0 arguments.");
 
 					return new CString(Value.ToLower());
 				}),
 
-				"Upper" => new InternalFunction(args => {
+				"upper" => new InternalFunction(args => {
 					if (args.Length != 0)
-						throw new RuntimeError("`Upper()` expects 0 arguments.");
+						throw new RuntimeError("`upper()` expects 0 arguments.");
 
 					return new CString(Value.ToUpper());
 				}),
 
-				"Split" => new InternalFunction(args => {
+				"split" => new InternalFunction(args => {
 					if (args.Length > 1)
-						throw new RuntimeError("`Split(separator)` expects 0-1 arguments.");
+						throw new RuntimeError("`split(separator)` expects 0-1 arguments.");
 
 					if (args.Length > 0)
 						if (args[0] is CString sep) {
@@ -79,55 +79,55 @@ public class CString(string value) : IMemberAccessible {
 					return new CList(Value.Split(" ").Select(object (x) => new CString(x)).ToList());
 				}),
 				
-				"Trim" => new InternalFunction(args => {
-					if (args.Length != 0) throw new RuntimeError("`Trim()` expects 0 arguments.");
+				"trim" => new InternalFunction(args => {
+					if (args.Length != 0) throw new RuntimeError("`trim()` expects 0 arguments.");
 					return new CString(Value.Trim());
 				}),
 
-				"StartsWith" => new InternalFunction(args => {
-					if (args.Length != 1) throw new RuntimeError("`StartsWith(prefix)` expects 1 argument.");
+				"starts_with" => new InternalFunction(args => {
+					if (args.Length != 1) throw new RuntimeError("`starts_with(prefix)` expects 1 argument.");
 					
-					string p = args[0] is CString csp ? csp.Value : args[0] as string ?? throw new RuntimeError("`StartsWith` expects a string argument.");
+					string p = args[0] is CString csp ? csp.Value : args[0] as string ?? throw new RuntimeError("`starts_with` expects a string argument.");
 					return Value.StartsWith(p);
 				}),
 
-				"EndsWith" => new InternalFunction(args => {
-					if (args.Length != 1) throw new RuntimeError("`EndsWith(suffix)` expects 1 argument.");
+				"ends_with" => new InternalFunction(args => {
+					if (args.Length != 1) throw new RuntimeError("`ends_with(suffix)` expects 1 argument.");
 					
-					string p = args[0] is CString csp ? csp.Value : args[0] as string ?? throw new RuntimeError("`EndsWith` expects a string argument.");
+					string p = args[0] is CString csp ? csp.Value : args[0] as string ?? throw new RuntimeError("`ends_with` expects a string argument.");
 					return Value.EndsWith(p);
 				}),
 				
-				"Replace" => new InternalFunction(args => {
-					if (args.Length != 2) throw new RuntimeError("`Replace(old, new)` expects 2 arguments.");
-					string oldv = args[0] is CString cs0 ? cs0.Value : args[0] as string ?? throw new RuntimeError("`Replace` expects string arguments.");
-					string newv = args[1] is CString cs1 ? cs1.Value : args[1] as string ?? throw new RuntimeError("`Replace` expects string arguments.");
+				"replace" => new InternalFunction(args => {
+					if (args.Length != 2) throw new RuntimeError("`replace(old, new)` expects 2 arguments.");
+					string oldv = args[0] is CString cs0 ? cs0.Value : args[0] as string ?? throw new RuntimeError("`replace` expects string arguments.");
+					string newv = args[1] is CString cs1 ? cs1.Value : args[1] as string ?? throw new RuntimeError("`replace` expects string arguments.");
 					return new CString(Value.Replace(oldv, newv));
 				}),
 
-                "Contains" => new InternalFunction(args => {
-                    if (args.Length != 1) throw new RuntimeError("`Contains(substr)` expects 1 argument.");
+                "contains" => new InternalFunction(args => {
+                    if (args.Length != 1) throw new RuntimeError("`contains(substr)` expects 1 argument.");
                     string s = args[0] switch {
                         CString cs => cs.Value,
                         string str => str,
-                        _ => throw new RuntimeError("`Contains` expects a string argument.")
+                        _ => throw new RuntimeError("`contains` expects a string argument.")
                     };
                     return new NumberNode(Value.Contains(s) ? 1 : 0);
                 }),
 				
-				"Find" => new InternalFunction(args => {
-					if (args.Length != 1) throw new RuntimeError("`IndexOf(substr)` expects 1 argument.");
+				"find" => new InternalFunction(args => {
+					if (args.Length != 1) throw new RuntimeError("`find(substr)` expects 1 argument.");
 					string s = args[0] switch {
 						CString cs => cs.Value,
 						string str => str,
-						_ => throw new RuntimeError("`IndexOf` expects a string argument.")
+						_ => throw new RuntimeError("`find` expects a string argument.")
 					};
 					return new NumberNode(Value.IndexOf(s, StringComparison.Ordinal));
 				}),
 				
-				"Sub" => new InternalFunction(args => {
-					if (args.Length is < 1 or > 2) throw new RuntimeError("`Substring(start, length)` expects 1-2 arguments.");
-					if (args[0] is not double s) throw new RuntimeError("`Substring` start must be a number.");
+				"sub" => new InternalFunction(args => {
+					if (args.Length is < 1 or > 2) throw new RuntimeError("`sub(start, length)` expects 1-2 arguments.");
+					if (args[0] is not double s) throw new RuntimeError("`sub` start must be a number.");
 
 					var start = Misc.DoubleToIndex(s, Value.Length, true);
 
@@ -135,7 +135,7 @@ public class CString(string value) : IMemberAccessible {
 						return new CString(Value[start..]);
 					}
 
-					if (args[1] is not double len) throw new RuntimeError("`Substring` length must be a number.");
+					if (args[1] is not double len) throw new RuntimeError("`sub` length must be a number.");
 					var length = Convert.ToInt32(len);
 					return new CString(Value.Substring(start, length));
 				}),

@@ -6,7 +6,7 @@ using Cranberry.Types;
 namespace Cranberry.Builtin;
 
 public abstract class Misc {
-	public static string? FormatValue(object v, bool show_quotes = false, bool simple_classes = false, HashSet<object?>? seen = null) {
+	public static string? FormatValue(object v, bool show_quotes = false, bool simple_classes = false, HashSet<object?>? seen = null, bool tuple = false) {
 		switch (v) {
 			case null:
 				return "null";
@@ -25,6 +25,7 @@ public abstract class Misc {
 			case bool b:
 				return b ? "true" : "false";
 			case CList clist:
+				if (clist.IsTuple) return FormatValue(clist.Items, tuple: true);
 				return FormatValue(clist.Items);
 			case CDict cdict:
 				return FormatValue(cdict.Items);
@@ -42,10 +43,13 @@ public abstract class Misc {
 					return "{" + string.Join(", ", parts) + "}";
 				}
 				case System.Collections.IEnumerable ie and not string: {
-					if (!seen.Add(v)) return "[...]"; // cycle guard
+					if (!seen.Add(v)) return "[cyclic...]"; // cycle guard
 
 					var parts = new List<string?>();
 					foreach (var item in ie) parts.Add(FormatValue(item, true, false, seen));
+					if (tuple)
+						return "(" + string.Join(", ", parts) + ")";
+					
 					return "[" + string.Join(", ", parts) + "]";
 				}
 			}

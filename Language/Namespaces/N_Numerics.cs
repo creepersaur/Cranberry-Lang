@@ -60,9 +60,9 @@ public class N_Numerics : CNamespace {
 			});
 		}
 		
-		AddBinary("Vector2", (x, y) => new Vector2((float)x, (float)y));
-		AddTernary("Vector3", (x, y, z) => new Vector3((float)x, (float)y, (float)z));
-		AddVarArgs("Matrix3x2", (args) => {
+		AddBinary("vector2", (x, y) => new Vector2((float)x, (float)y));
+		AddTernary("vector3", (x, y, z) => new Vector3((float)x, (float)y, (float)z));
+		AddVarArgs("matrix3x2", (args) => {
 			// Note: Add the argument count check here (see improvement below)
 			if (args.Length != 6)
 			{
@@ -76,7 +76,7 @@ public class N_Numerics : CNamespace {
 			// Corrected to use m31 and m32
 			return new Matrix3x2((float)m11, (float)m12, (float)m21, (float)m22, (float)m31, (float)m32);
 		});
-		AddVarArgs("Matrix4x4", (args) => {
+		AddVarArgs("matrix4x4", (args) => {
 			// Add this check for strictness
 			if (args.Length != 16)
 			{

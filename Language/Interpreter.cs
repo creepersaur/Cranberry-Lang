@@ -64,10 +64,10 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public CList VisitList(ListNode node) {
 		if (node.Items.Count > 0 && Evaluate(node.Items[0]) is List<object> l) {
-			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList());
+			return new CList(l.Select(x => x is Node a ? Evaluate(a) : x).ToList(), node.IsTuple);
 		}
 
-		return new CList(node.Items.Select(Evaluate).ToList());
+		return new CList(node.Items.Select(Evaluate).ToList(), node.IsTuple);
 	}
 
 	public object VisitInternalFunction(InternalFunction node) => node;
@@ -124,7 +124,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (left is CObject cl) {
-			if (cl.Class.Functions.TryGetValue("__Add__", out var f)) {
+			if (cl.Class.Functions.TryGetValue("__add__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
 					Target = string_func.Func
@@ -135,7 +135,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (right is CObject cr) {
-			if (cr.Class.Functions.TryGetValue("__Add__", out var f)) {
+			if (cr.Class.Functions.TryGetValue("__add__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
 					Target = string_func.Func
@@ -154,7 +154,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	private static object HandleSubtraction(object left, object right) {
 		if (left is CObject cl) {
-			if (cl.Class.Functions.TryGetValue("__Sub__", out var f)) {
+			if (cl.Class.Functions.TryGetValue("__sub__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
 					Target = string_func.Func
@@ -165,7 +165,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (right is CObject cr) {
-			if (cr.Class.Functions.TryGetValue("__Sub__", out var f)) {
+			if (cr.Class.Functions.TryGetValue("__sub__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
 					Target = string_func.Func
@@ -189,7 +189,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (left is CObject cl) {
-			if (cl.Class.Functions.TryGetValue("__Mul__", out var f)) {
+			if (cl.Class.Functions.TryGetValue("__mul__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
 					Target = string_func.Func
@@ -200,7 +200,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (right is CObject cr) {
-			if (cr.Class.Functions.TryGetValue("__Mul__", out var f)) {
+			if (cr.Class.Functions.TryGetValue("__mul__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
 					Target = string_func.Func
@@ -219,7 +219,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	private static object HandleDivision(object left, object right) {
 		if (left is CObject cl) {
-			if (cl.Class.Functions.TryGetValue("__Div__", out var f)) {
+			if (cl.Class.Functions.TryGetValue("__div__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
 					Target = string_func.Func
@@ -230,7 +230,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (right is CObject cr) {
-			if (cr.Class.Functions.TryGetValue("__Div__", out var f)) {
+			if (cr.Class.Functions.TryGetValue("__div__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
 					Target = string_func.Func
@@ -263,7 +263,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (right is CString csr) right = csr.Value;
 
 		if (left is CObject cl) {
-			if (cl.Class.Functions.TryGetValue("__Eq__", out var f)) {
+			if (cl.Class.Functions.TryGetValue("__eq__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
 					Target = string_func.Func
@@ -274,7 +274,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (right is CObject cr) {
-			if (cr.Class.Functions.TryGetValue("__Eq__", out var f)) {
+			if (cr.Class.Functions.TryGetValue("__eq__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
 				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
 					Target = string_func.Func
@@ -456,15 +456,16 @@ public partial class Interpreter : INodeVisitor<object> {
 				if (value is CDict dict) return dict.Items.Values;
 				if (value is CString c) return new CList(c.Value.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
 				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
-				if (value is CObject obj && obj.Class.Functions.TryGetValue("__Next__", out var f)) {
+				if (value is CObject obj && obj.Class.Functions.TryGetValue("__next__", out var f)) {
 					var list = new List<object>();
 					var next = Evaluate(new FunctionCall("", [obj]) { Target = f });
 					while (next is not NullNode) {
 						list.Add(next);
 						next = Evaluate(new FunctionCall("", [obj]) { Target = f });
 					}
+
 					return new CList(list);
-				};
+				}
 
 				break;
 			}
@@ -480,13 +481,24 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object? VisitLet(LetNode node) {
 		object? first_value = null;
 		foreach (var (index, name) in node.Names.WithIndex()) {
-			var value = Evaluate(node.Values[index]);
+			var value = node.Values.Length > index ? Evaluate(node.Values[index]) : new NullNode();
 			first_value ??= value;
 
-			if (node.Constant) {
-				env.DefineConstant(name, value);
+			if (name is List<string> l) {
+				if (value is CList { IsTuple: true } val_list) {
+					foreach (var (l_index, l_name) in l.WithIndex()) {
+						var l_value =
+							l.Count > l_index
+								? val_list.Items[l_index]
+								: throw new RuntimeError("Failed to destructure tuple. Number of names is more than length of tuple.");
+
+						if (node.Constant) env.DefineConstant(l_name, l_value);
+						else env.Define(l_name, l_value);
+					}
+				} else throw new RuntimeError("Destructuring syntax only works with tuples.");
 			} else {
-				env.Define(name, value);
+				if (node.Constant) env.DefineConstant((string)name, value);
+				else env.Define((string)name, value);
 			}
 		}
 
@@ -660,7 +672,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			}
 
 			if (target is CObject co) {
-				if (co.Class.Functions.TryGetValue("__Call__", out var f)) {
+				if (co.Class.Functions.TryGetValue("__call__", out var f)) {
 					return Evaluate(new FunctionCall("", [co, ..args]) {
 						Target = f
 					});
@@ -707,7 +719,7 @@ public partial class Interpreter : INodeVisitor<object> {
 						return re.Value;
 					}
 				} else if (lookup is CObject co) {
-					if (co.Class.Functions.TryGetValue("__Call__", out var f)) {
+					if (co.Class.Functions.TryGetValue("__call__", out var f)) {
 						return Evaluate(new FunctionCall("", [co, ..args]) {
 							Target = f
 						});
@@ -918,14 +930,14 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (iterable is CObject obj) {
-			if (obj.Class.Functions.TryGetValue("__Next__", out var f)) {
+			if (obj.Class.Functions.TryGetValue("__next__", out var f)) {
 				while (true) {
 					env.Push();
 					try {
 						var value = Evaluate(new FunctionCall("", [obj]) { Target = f });
 						if (value is NullNode)
 							return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
-						
+
 						env.Define(node.VarName, value);
 						Evaluate(node.Block);
 					} catch (BreakException be) {

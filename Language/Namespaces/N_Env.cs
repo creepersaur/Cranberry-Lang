@@ -11,7 +11,7 @@ public class N_Env : CNamespace {
 		// registration helpers
 		void AddConst(string name, object value) => table[name] = value;
 
-		AddConst("Args",
+		AddConst("args",
 			is_build
 				? new CList(Environment.GetCommandLineArgs().Select(object (x) => new CString(x)).ToList())
 				: new CList(Environment.GetCommandLineArgs().Select(object (x) => new CString(x)).Skip(2).ToList())

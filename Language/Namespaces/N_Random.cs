@@ -59,25 +59,25 @@ public class N_Random : CNamespace {
 		}
 
 		// Simple unary/binary functions
-		AddNoArgs("Float", () => {
+		AddNoArgs("float", () => {
 			int max = 1000000; // number of steps
 			return Random.Shared.Next(0, max + 1) / max;
 		});
-		AddBinary("FloatRange", (min, max) => {
+		AddBinary("float_range", (min, max) => {
 			int max_tolerance = 1000000; // number of steps
 			double value = Random.Shared.Next(0, max_tolerance + 1) / (double)max_tolerance; // [0.0, 1.0] inclusive
 			return Math.Min(min, max) + value * Math.Abs(max - min);
 		});
 
-		AddNoArgs("Int", () => (double)Random.Shared.NextInt64());
-		AddBinary("IntRange",
+		AddNoArgs("int", () => (double)Random.Shared.NextInt64());
+		AddBinary("int_range",
 			(min, max) => (double)Random.Shared.NextInt64(
 				Convert.ToInt64(Math.Abs(min - max) < TOLERANCE ? min : Math.Max(min, max)),
 				Convert.ToInt64(Math.Abs(min - max) < TOLERANCE ? max : Math.Max(min, max)) + 1
 			)
 		);
 
-		AddVarArgs("RandomArgument", args => args[Random.Shared.NextInt64(0, args.Length)]);
+		AddVarArgs("random_argument", args => args[Random.Shared.NextInt64(0, args.Length)]);
 
 		// push dictionary into the env
 		env.Variables.Push(table);

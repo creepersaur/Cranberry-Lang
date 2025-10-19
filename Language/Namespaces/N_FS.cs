@@ -7,24 +7,24 @@ namespace Cranberry.Namespaces;
 public class N_FS : CNamespace {
 	public N_FS() : base("FS", true) {
 		env.Variables.Push(new Dictionary<string, object> {
-			["GetFile"] = new InternalFunction(args => {
+			["get_file"] = new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`GetFile(path)` expects 1 argument.");
+					throw new RuntimeError("`get_file(path)` expects 1 argument.");
 
 				if (args[0] is CString path)
 					return new CFile(path.Value);
 
-				throw new RuntimeError("`GetFile(path)` expects a `string` path.");
+				throw new RuntimeError("`get_file(path)` expects a `string` path.");
 			}),
 			
-			["GetDirectory"] = new InternalFunction(args => {
+			["get_directory"] = new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`GetDirectory(path)` expects 1 argument.");
+					throw new RuntimeError("`get_directory(path)` expects 1 argument.");
 
 				if (args[0] is CString path)
 					return new CDirectory(path.Value);
 
-				throw new RuntimeError("`GetDirectory(path)` expects a `string` path.");
+				throw new RuntimeError("`get_directory(path)` expects a `string` path.");
 			})
 		});
 	}

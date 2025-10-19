@@ -15,34 +15,35 @@ public class CFile(string path) : IMemberAccessible {
 			throw new RuntimeError($"Tried to get member of unsupported datatype `{member}` on File.");
 
 		return member switch {
-			"Path" => Path,
-			"Name" => Info.Name,
-			"FullName" => Info.FullName,
-			"Extension" => Info.Extension[1..],
-			"Stem" => System.IO.Path.GetFileNameWithoutExtension(Info.Name),
-			"Parent" => new CDirectory(Info.DirectoryName!),
+			"path" => Path,
+			"name" => Info.Name,
+			"full_name" => Info.FullName,
+			"extension" => Info.Extension[1..],
+			"stem" => System.IO.Path.GetFileNameWithoutExtension(Info.Name),
+			"parent" => new CDirectory(Info.DirectoryName!),
+			"exists" => Info.Exists,
 
-			"Create" => new InternalFunction(args => {
+			"create" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`File.Create()` expects 0 arguments.");
+					throw new RuntimeError("`File.create()` expects 0 arguments.");
 
 				File.Create(Path);
 				
 				return new NullNode();
 			}),
 			
-			"Clear" => new InternalFunction(args => {
+			"clear" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`File.Create()` expects 0 arguments.");
+					throw new RuntimeError("`File.clear()` expects 0 arguments.");
 
 				File.WriteAllText(Path, "");
 				
 				return new NullNode();
 			}),
 			
-			"Read" => new InternalFunction(args => {
+			"read" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`File.Read()` expects 0 arguments.");
+					throw new RuntimeError("`File.read()` expects 0 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");
@@ -50,12 +51,12 @@ public class CFile(string path) : IMemberAccessible {
 				return new CString(File.ReadAllText(Path));
 			}),
 
-			"ReadBytes" => new InternalFunction(args => {
+			"read_bytes" => new InternalFunction(args => {
 				if (args.Length != 2)
-					throw new RuntimeError("`File.ReadBytes(offset: int, count: int)` expects 2 arguments.");
+					throw new RuntimeError("`File.read_bytes(offset: int, count: int)` expects 2 arguments.");
 
 				if (!Misc.TryGetInt(args[0], out int offset) || !Misc.TryGetInt(args[1], out int count))
-					throw new RuntimeError("`File.ReadBytes(offset: int, count: int)` expects two integer arguments.");
+					throw new RuntimeError("`File.read_bytes(offset: int, count: int)` expects two integer arguments.");
 
 				if (offset < 0 || count < 0)
 					throw new RuntimeError("offset and count must be non-negative integers.");
@@ -85,9 +86,9 @@ public class CFile(string path) : IMemberAccessible {
 				return new CList(buffer.Select(b => (object)(double)b).ToList());
 			}),
 
-			"Write" => new InternalFunction(args => {
+			"write" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`File.Write(text)` expects 1 argument.");
+					throw new RuntimeError("`File.write(text)` expects 1 argument.");
 
 				if (args[0] is CString c)
 					return File.WriteAllTextAsync(Path, c.Value);
@@ -95,9 +96,9 @@ public class CFile(string path) : IMemberAccessible {
 				return File.WriteAllTextAsync(Path, Misc.FormatValue(args[0]!));
 			}),
 
-			"Append" => new InternalFunction(args => {
+			"append" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`File.Append(text)` expects 1 argument.");
+					throw new RuntimeError("`File.append(text)` expects 1 argument.");
 
 				if (args[0] is CString c)
 					return File.AppendAllTextAsync(Path, c.Value);
@@ -105,18 +106,18 @@ public class CFile(string path) : IMemberAccessible {
 				return File.AppendAllTextAsync(Path, Misc.FormatValue(args[0]!));
 			}),
 
-			"WriteBytes" => new InternalFunction(args => {
+			"write_bytes" => new InternalFunction(args => {
 				if (args.Length != 2)
-					throw new RuntimeError("`File.WriteBytes(offset: int, bytes: list[number])` expects 2 arguments.");
+					throw new RuntimeError("`File.write_bytes(offset: int, bytes: list[number])` expects 2 arguments.");
 
 				if (!Misc.TryGetInt(args[0], out int fileOffset))
-					throw new RuntimeError("`File.WriteBytes(offset: int, bytes: list[number])`\n\t\t   ^^^ expects an integer as the first argument.");
+					throw new RuntimeError("`File.write_bytes(offset: int, bytes: list[number])`\n\t\t   ^^^ expects an integer as the first argument.");
 
 				if (fileOffset < 0)
 					throw new RuntimeError("offset must be non-negative.");
 
 				if (args[1] is not CList buffer)
-					throw new RuntimeError("`File.WriteBytes(offset: int, bytes: list[number])`\n\t\t   ^^^ expects a list of bytes as the second argument.");
+					throw new RuntimeError("`File.write_bytes(offset: int, bytes: list[number])`\n\t\t   ^^^ expects a list of bytes as the second argument.");
 
 				int count = buffer.Items.Count;
 				if (count == 0)
@@ -132,10 +133,10 @@ public class CFile(string path) : IMemberAccessible {
 					else if (item is int ii) d = ii;
 					else if (item is long ll) d = ll;
 					else if (!double.TryParse(item.ToString(), out d))
-						throw new RuntimeError($"WriteBytes: buffer item at index {i} is not a number.");
+						throw new RuntimeError($"write_bytes: buffer item at index {i} is not a number.");
 
 					if (d is < 0 or > 255)
-						throw new RuntimeError($"WriteBytes: buffer item at index {i} ({d}) is out of byte range 0..255.");
+						throw new RuntimeError($"write_bytes: buffer item at index {i} ({d}) is out of byte range 0..255.");
 
 					bytes[i] = Convert.ToByte(d);
 				}
@@ -151,15 +152,15 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"Truncate" => new InternalFunction(args => {
+			"truncate" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`File.Truncate(length: int)` expects 1 argument.");
+					throw new RuntimeError("`File.truncate(length: int)` expects 1 argument.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");
 
 				if (!Misc.TryGetInt(args[0]!, out var new_length))
-					throw new RuntimeError("`File.Truncate(length: int)` expects 1 integer argument.");
+					throw new RuntimeError("`File.truncate(length: int)` expects 1 integer argument.");
 
 				using var stream = Info.Open(FileMode.OpenOrCreate, FileAccess.Write);
 				stream.SetLength(new_length);
@@ -167,9 +168,9 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"Length" => new InternalFunction(args => {
+			"length" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`File.Length()` expects 0 arguments.");
+					throw new RuntimeError("`File.length()` expects 0 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");
@@ -177,31 +178,24 @@ public class CFile(string path) : IMemberAccessible {
 				return (double)Info.Length;
 			}),
 
-			"Exists" => new InternalFunction(args => {
+			"delete" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`File.Exists()` expects 0 arguments.");
-
-				return Info.Exists;
-			}),
-
-			"Delete" => new InternalFunction(args => {
-				if (args.Length != 0)
-					throw new RuntimeError("`File.Delete()` expects 0 arguments.");
+					throw new RuntimeError("`File.delete()` expects 0 arguments.");
 
 				File.Delete(Path);
 
 				return new NullNode();
 			}),
 
-			"MoveTo" => new InternalFunction(args => {
+			"move_to" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`File.MoveTo(path, override?)` expects 1-2 arguments.");
+					throw new RuntimeError("`File.move_to(path, override?)` expects 1-2 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");
 
 				if (args[0] is not string new_path)
-					throw new RuntimeError("`File.MoveTo()` expects a `string` argument.");
+					throw new RuntimeError("`File.move_to()` expects a `string` argument.");
 
 				try {
 					File.Move(Path, new_path, Misc.IsTruthy(args[1]));
@@ -214,13 +208,13 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"Rename" => new InternalFunction(args => {
+			"rename" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`File.Rename(new_name: string)` expects 1 argument.");
+					throw new RuntimeError("`File.rename(new_name: string)` expects 1 argument.");
 
 				var newName = args[0]!.ToString();
 				if (string.IsNullOrWhiteSpace(newName))
-					throw new RuntimeError("`File.Rename(new_name: string)` requires a valid non-empty name.");
+					throw new RuntimeError("`File.rename(new_name: string)` requires a valid non-empty name.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");
@@ -238,27 +232,27 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"GetAttributes" => new InternalFunction(args => {
+			"get_attributes" => new InternalFunction(args => {
 				if (args.Length != 0)
-					throw new RuntimeError("`File.GetAttributes()` expects 0 arguments.");
+					throw new RuntimeError("`File.get_attributes()` expects 0 arguments.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");
 
 				var attrs = new CDict(new Dictionary<object, object> {
-					["ReadOnly"] = (double)((Info.Attributes & FileAttributes.ReadOnly) != 0 ? 1 : 0),
-					["Hidden"] = (double)((Info.Attributes & FileAttributes.Hidden) != 0 ? 1 : 0),
-					["Archive"] = (double)((Info.Attributes & FileAttributes.Archive) != 0 ? 1 : 0),
-					["CreationTime"] = Info.CreationTime.ToOADate(),
-					["LastWriteTime"] = Info.LastWriteTime.ToOADate()
+					["read_only"] = (double)((Info.Attributes & FileAttributes.ReadOnly) != 0 ? 1 : 0),
+					["hidden"] = (double)((Info.Attributes & FileAttributes.Hidden) != 0 ? 1 : 0),
+					["archive"] = (double)((Info.Attributes & FileAttributes.Archive) != 0 ? 1 : 0),
+					["creation_time"] = Info.CreationTime.ToOADate(),
+					["last_write_time"] = Info.LastWriteTime.ToOADate()
 				});
 
 				return attrs;
 			}),
 
-			"SetReadOnly" => new InternalFunction(args => {
+			"set_read_only" => new InternalFunction(args => {
 				if (args.Length != 1)
-					throw new RuntimeError("`File.SetReadOnly(flag: bool)` expects 1 argument.");
+					throw new RuntimeError("`File.set_read_only(flag: bool)` expects 1 argument.");
 
 				if (!Info.Exists)
 					throw new RuntimeError($"File does not exist at path `{Path}`.");

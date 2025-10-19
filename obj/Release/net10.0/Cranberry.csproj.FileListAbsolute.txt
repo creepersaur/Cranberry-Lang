@@ -1,7 +1,6 @@
 D:\Coding\Rider\Cranberry\bin\Release\net10.0\Cranberry.exe
 D:\Coding\Rider\Cranberry\bin\Release\net10.0\cranberry.toml
 D:\Coding\Rider\Cranberry\bin\Release\net10.0\src\main.cb
-D:\Coding\Rider\Cranberry\bin\Release\net10.0\src\raylib.cb
 D:\Coding\Rider\Cranberry\bin\Release\net10.0\Cranberry.deps.json
 D:\Coding\Rider\Cranberry\bin\Release\net10.0\Cranberry.runtimeconfig.json
 D:\Coding\Rider\Cranberry\bin\Release\net10.0\Cranberry.dll
