@@ -396,10 +396,11 @@ public class Parser(string[] Tokens) {
 		if (first_name == "(") {
 			var destructured = new List<string>();
 
-			if (Check(")")) throw new RuntimeError("Empty destructuring is not allowed.");
+			if (Check(")")) throw new ParseError("Empty destructuring is not allowed.", Pos + 1);
 			
 			while (!Check(")")) {
 				var d_name = Advance();
+				if (d_name == "(") throw new ParseError("Cannot destructure again inside destructure syntax.", Pos);
 				if (!IsIdentifier(d_name)) {
 					throw new ParseError($"Expected identifier as destructured name, got: `{d_name}`", Pos + 1);
 				}
@@ -428,6 +429,7 @@ public class Parser(string[] Tokens) {
 				
 				while (!Check(")")) {
 					var d_name = Advance();
+					if (d_name == "(") throw new ParseError("Cannot destructure again inside destructure syntax.", Pos);
 					if (!IsIdentifier(d_name)) {
 						throw new ParseError($"Expected identifier as destructured name, got: `{d_name}`", Pos + 1);
 					}
