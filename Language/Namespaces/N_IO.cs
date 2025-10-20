@@ -8,7 +8,7 @@ namespace Cranberry.Namespaces;
 public class N_IO : CNamespace {
 	public N_IO() : base("IO", true) {
 		env.Variables.Push(new Dictionary<string, object> {
-			["read_line"] = new InternalFunction(args => {
+			["read_line"] = new InternalFunction((_, args) => {
 				if (args.Length > 0) {
 					string prompt = "";
 					foreach (var v in args) {
@@ -21,7 +21,7 @@ public class N_IO : CNamespace {
 				return new CString(Console.ReadLine()!);
 			}),
 
-			["read"] = new InternalFunction(args => {
+			["read"] = new InternalFunction((_, args) => {
 				if (args.Length > 0) {
 					string prompt = "";
 					foreach (var v in args) {
@@ -34,7 +34,7 @@ public class N_IO : CNamespace {
 				return (double)Console.Read();
 			}),
 
-			["read_key"] = new InternalFunction(args => {
+			["read_key"] = new InternalFunction((_, args) => {
 				if (args.Length > 1)
 					throw new RuntimeError("ReadKey(intercept?) takes in 1 argument.");
 
@@ -59,7 +59,7 @@ public class N_IO : CNamespace {
 				return new CString(result);
 			}),
 
-			["clear"] = new InternalFunction(args => {
+			["clear"] = new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("clear() takes 0 arguments.");
 
@@ -67,7 +67,7 @@ public class N_IO : CNamespace {
 				return new NullNode();
 			}),
 
-			["beep"] = new InternalFunction(args => {
+			["beep"] = new InternalFunction((_, args) => {
 				if (args.Length == 1 || args.Length > 2)
 					throw new RuntimeError("beep(frequency, duration) takes 0 or 2 arguments.");
 
@@ -85,7 +85,7 @@ public class N_IO : CNamespace {
 				return new NullNode();
 			}),
 
-			["write"] = new InternalFunction(args => {
+			["write"] = new InternalFunction((_, args) => {
 				if (args.Length > 0) {
 					string prompt = "";
 					foreach (var v in args) {
@@ -98,7 +98,7 @@ public class N_IO : CNamespace {
 				return new NullNode();
 			}),
 
-			["write_line"] = new InternalFunction(args => {
+			["write_line"] = new InternalFunction((_, args) => {
 				if (args.Length > 0) {
 					string prompt = "";
 					foreach (var v in args) {
@@ -111,7 +111,7 @@ public class N_IO : CNamespace {
 				return new NullNode();
 			}),
 
-			["set_foreground"] = new InternalFunction(args => {
+			["set_foreground"] = new InternalFunction((_, args) => {
 				if (args.Length != 1) throw new RuntimeError("`set_foreground(color: string)` expects 1 argument.");
       
 				if (args[0] is CString colorName) {
@@ -128,7 +128,7 @@ public class N_IO : CNamespace {
 				return new NullNode();
 			}),
 
-			["reset_color"] = new InternalFunction(_ => {
+			["reset_color"] = new InternalFunction((_, _) => {
 				Console.ResetColor();
 				return new NullNode();
 			}),

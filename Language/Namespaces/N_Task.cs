@@ -11,7 +11,7 @@ public class N_Task : CNamespace {
 		var interpreter1 = interpreter;
 
 		env.Variables.Push(new Dictionary<string, object> {
-			["wait"] = new InternalFunction(args => {
+			["wait"] = new InternalFunction((_, args) => {
 				if (args.Length != 1 || !Misc.IsNumber(args[0]!))
 					throw new RuntimeError("wait(seconds) expects 1 number argument.");
 
@@ -40,7 +40,7 @@ public class N_Task : CNamespace {
 
 				return new NullNode();
 			}),
-			["wait_milliseconds"] = new InternalFunction(args => {
+			["wait_milliseconds"] = new InternalFunction((_, args) => {
 				if (args.Length != 1 || !Misc.IsNumber(args[0]!))
 					throw new RuntimeError("wait_milliseconds(ms) expects 1 number argument.");
 
@@ -63,26 +63,26 @@ public class N_Task : CNamespace {
 
 				return new NullNode();
 			}),
-			["now"] = new InternalFunction(args => {
+			["now"] = new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("now() expects 0 arguments.");
 
 				return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 			}),
-			["spawn"] = new InternalFunction(args => {
+			["spawn"] = new InternalFunction((_, args) => {
 				if (args.Length < 1 || args[0] is not FunctionNode func)
 					throw new RuntimeError("spawn(fn, ...) expects first argument as function.");
 
 				var new_args = args.ToList();
 				new_args.RemoveAt(0);
 
-				var thread = new Thread(() => interpreter1.VisitFunctionCall(new FunctionCall("", new_args.ToArray()) {
+				var thread = new Thread(() => interpreter1.VisitFunctionCall(new FunctionCall(null, "", new_args.ToArray()) {
 					Target = func
 				}));
 				thread.Start();
 				return new NullNode();
 			}),
-			["stopwatch"] = new InternalFunction(args => {
+			["stopwatch"] = new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("stopwatch() expects 0 arguments.");
 

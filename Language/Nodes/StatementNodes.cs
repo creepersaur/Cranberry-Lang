@@ -1,6 +1,6 @@
 ﻿namespace Cranberry.Nodes;
 
-public class LetNode(object[] names, Node[] values, bool constant) : Node {
+public class LetNode(Token start_token, object[] names, Node[] values, bool constant) : Node(start_token) {
 	public readonly object[] Names = names;
 	public readonly Node[] Values = values;
 	public readonly bool Constant = constant;
@@ -10,7 +10,7 @@ public class LetNode(object[] names, Node[] values, bool constant) : Node {
 	}
 }
 
-public class ScopeNode(BlockNode block) : Node {
+public class ScopeNode(Token start_token, BlockNode block) : Node(start_token) {
 	public readonly BlockNode Block = block;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -18,7 +18,7 @@ public class ScopeNode(BlockNode block) : Node {
 	}
 }
 
-public class IFNode(Node condition, BlockNode then, (Node, BlockNode)[] elif, BlockNode? else_statements) : Node {
+public class IFNode(Token start_token, Node condition, BlockNode then, (Node, BlockNode)[] elif, BlockNode? else_statements) : Node(start_token) {
 	public readonly Node Condition = condition;
 	public readonly BlockNode Then = then;
 	public readonly (Node, BlockNode)[] Elif = elif;
@@ -29,7 +29,7 @@ public class IFNode(Node condition, BlockNode then, (Node, BlockNode)[] elif, Bl
 	}
 }
 
-public class FunctionDef(string name, string[] args, BlockNode? block) : Node {
+public class FunctionDef(Token start_token, string name, string[] args, BlockNode? block) : Node(start_token) {
 	public readonly string Name = name;
 	public readonly string[] Args = args;
 	public readonly BlockNode? Block = block;
@@ -39,7 +39,7 @@ public class FunctionDef(string name, string[] args, BlockNode? block) : Node {
 	}
 }
 
-public class ClassDef(string name, FunctionDef[] funcs, LetNode[] lets, FunctionNode? constructor) : Node {
+public class ClassDef(Token start_token, string name, FunctionDef[] funcs, LetNode[] lets, FunctionNode? constructor) : Node(start_token) {
 	public readonly string Name = name;
 	public readonly FunctionDef[] Functions = funcs;
 	public readonly LetNode[] Lets = lets;
@@ -50,7 +50,7 @@ public class ClassDef(string name, FunctionDef[] funcs, LetNode[] lets, Function
 	}
 }
 
-public class ReturnNode(Node? value) : Node {
+public class ReturnNode(Token start_token, Node? value) : Node(start_token) {
 	public readonly Node? Value = value;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -58,7 +58,7 @@ public class ReturnNode(Node? value) : Node {
 	}
 }
 
-public class BreakNode(Node? value) : Node {
+public class BreakNode(Token start_token, Node? value) : Node(start_token) {
 	public readonly Node? Value = value;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -66,7 +66,7 @@ public class BreakNode(Node? value) : Node {
 	}
 }
 
-public class OutNode(Node? value) : Node {
+public class OutNode(Token start_token, Node? value) : Node(start_token) {
 	public readonly Node? Value = value;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -74,13 +74,13 @@ public class OutNode(Node? value) : Node {
 	}
 }
 
-public class ContinueNode : Node {
+public class ContinueNode(Token start_token) : Node(start_token) {
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitContinue(this);
 	}
 }
 
-public class WhileNode(Node condition, BlockNode block) : Node {
+public class WhileNode(Token start_token, Node condition, BlockNode block) : Node(start_token) {
 	public readonly Node Condition = condition;
 	public readonly Node Block = block;
 	
@@ -89,7 +89,7 @@ public class WhileNode(Node condition, BlockNode block) : Node {
 	}
 }
 
-public class ForNode(string var_name, Node iterable, BlockNode block) : Node {
+public class ForNode(Token start_token, string var_name, Node iterable, BlockNode block) : Node(start_token) {
 	public readonly string VarName = var_name;
 	public readonly Node Iterable = iterable;
 	public readonly BlockNode Block = block;
@@ -99,7 +99,7 @@ public class ForNode(string var_name, Node iterable, BlockNode block) : Node {
 	}
 }
 
-public class SwitchNode(Node expr, (Node[], BlockNode)[] cases, BlockNode? default_case) : Node {
+public class SwitchNode(Token start_token, Node expr, (Node[], BlockNode)[] cases, BlockNode? default_case) : Node(start_token) {
 	public readonly Node Expr = expr;
 	public readonly (Node[], BlockNode)[] Cases = cases;
 	public readonly BlockNode? DefaultCase = default_case;
@@ -109,7 +109,7 @@ public class SwitchNode(Node expr, (Node[], BlockNode)[] cases, BlockNode? defau
 	}
 }
 
-public class UsingDirective(object[] names, Dictionary<string, string> aliases, List<string> wildcards) : Node {
+public class UsingDirective(Token start_token, object[] names, Dictionary<string, string> aliases, List<string> wildcards) : Node(start_token) {
 	public readonly object[] Names = names;
 	public readonly Dictionary<string, string> Aliases = aliases;
 	public readonly List<string> Wildcards = wildcards;
@@ -119,7 +119,7 @@ public class UsingDirective(object[] names, Dictionary<string, string> aliases, 
 	}
 }
 
-public class NamespaceDirective(object[] names, BlockNode? block = null) : Node {
+public class NamespaceDirective(Token start_token, object[] names, BlockNode? block = null) : Node(start_token) {
 	public readonly object[] Names = names;
 	public readonly BlockNode? Block = block;
 	
@@ -128,7 +128,7 @@ public class NamespaceDirective(object[] names, BlockNode? block = null) : Node 
 	}
 }
 
-public class DecoratorNode(string name, Node[] args, FunctionDef? func = null) : Node {
+public class DecoratorNode(Token start_token, string name, Node[] args, FunctionDef? func = null) : Node(start_token) {
 	public readonly string Name = name;
 	public readonly Node[] Args = args;
 	public readonly FunctionDef? Func = func;

@@ -13,7 +13,7 @@ public abstract class FuncGen {
 		return funcs;
 	}
 	
-	public static (string, InternalFunction) FuncInternal(string name, Func<object?[], object?> implementation) {
-		return (name, new InternalFunction(implementation));
+	public static (string, InternalFunction) FuncInternal(string? name, Func<Token?, object?[], object?> implementation) {
+		return (name, new InternalFunction(implementation))!;
 	}
 }

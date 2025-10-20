@@ -7,7 +7,7 @@ namespace Cranberry.Nodes;
 // TYPES
 /////////////////////////////////////////////////////////
 
-public class NullNode : Node {
+public class NullNode(Token? start_token = null) : Node(start_token) {
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitNull(this);
 	}
@@ -15,7 +15,7 @@ public class NullNode : Node {
 	public override string ToString() => "nil";
 }
 
-public class NumberNode(double value) : Node {
+public class NumberNode(Token? start_token, double value) : Node(start_token) {
 	public readonly double Value = value;
     
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -25,7 +25,7 @@ public class NumberNode(double value) : Node {
 	public override string ToString() => Convert.ToString(Value, CultureInfo.InvariantCulture);
 }
 
-public class StringNode(string value) : Node {
+public class StringNode(Token start_token, string value) : Node(start_token) {
 	public readonly string Value = value;
     
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -35,7 +35,7 @@ public class StringNode(string value) : Node {
 	public override string ToString() => Value;
 }
 
-public class BlockNode(Node[] statements) : Node {
+public class BlockNode(Token start_token, Node[] statements) : Node(start_token) {
 	public readonly Node[] Statements = statements;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -43,7 +43,7 @@ public class BlockNode(Node[] statements) : Node {
 	}
 }
 
-public class BoolNode(bool value) : Node {
+public class BoolNode(Token? start_token, bool value) : Node(start_token) {
 	public readonly bool Value = value;
     
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -53,7 +53,7 @@ public class BoolNode(bool value) : Node {
 	public override string ToString() => Convert.ToString(Value);
 }
 
-public class FunctionNode(string[] args, BlockNode block) : Node {
+public class FunctionNode(Token start_token, string[] args, BlockNode block) : Node(start_token) {
 	public readonly string[] Args = args;
 	public readonly BlockNode Block = block;
 	public Dictionary<string, object>? Env { get; set; }
@@ -63,7 +63,7 @@ public class FunctionNode(string[] args, BlockNode block) : Node {
 	}
 }
 
-public class RangeNode(Node start, Node end, Node step, bool inclusive) : Node {
+public class RangeNode(Token start_token, Node start, Node end, Node step, bool inclusive) : Node(start_token) {
 	public readonly Node Start = start;
 	public readonly Node End = end;
 	public readonly Node Step = step;
@@ -74,7 +74,7 @@ public class RangeNode(Node start, Node end, Node step, bool inclusive) : Node {
 	}
 }
 
-public class ListNode(List<Node> items, bool is_tuple = false) : Node {
+public class ListNode(Token start_token, List<Node> items, bool is_tuple = false) : Node(start_token) {
 	public readonly List<Node> Items = items;
 	public readonly bool IsTuple = is_tuple;
 	
@@ -95,7 +95,7 @@ public class ListNode(List<Node> items, bool is_tuple = false) : Node {
 	}
 }
 
-public class DictNode(Dictionary<Node, Node> items) : Node {
+public class DictNode(Token start_token, Dictionary<Node, Node> items) : Node(start_token) {
 	public readonly Dictionary<Node, Node> Items = items;
 	
 	public override object Accept<T>(INodeVisitor<T> visitor) {
@@ -107,7 +107,7 @@ public class DictNode(Dictionary<Node, Node> items) : Node {
 // OPERATIONS
 /////////////////////////////////////////////////////////
 
-public class BinaryOpNode(Node left, string op, Node right) : Node {
+public class BinaryOpNode(Token start_token, Node left, string op, Node right) : Node(start_token) {
 	public readonly Node Left = left;
 	public readonly string Op = op;
 	public readonly Node Right = right;
@@ -117,7 +117,7 @@ public class BinaryOpNode(Node left, string op, Node right) : Node {
 	}
 }
 
-public class UnaryOpNode(string op, Node value) : Node {
+public class UnaryOpNode(Token start_token, string op, Node value) : Node(start_token) {
 	public readonly Node Value = value;
 	public readonly string Op = op;
     
@@ -128,7 +128,7 @@ public class UnaryOpNode(string op, Node value) : Node {
 	public override string ToString() => Op + Value;
 }
 
-public class VariableNode(string name) : Node {
+public class VariableNode(Token start_token, string name) : Node(start_token) {
 	public readonly string Name = name;
     
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
@@ -136,7 +136,7 @@ public class VariableNode(string name) : Node {
 	}
 }
 
-public class AssignmentNode(string[] names, Node[] values) : Node {
+public class AssignmentNode(Token start_token, string[] names, Node[] values) : Node(start_token) {
 	public readonly string[] Names = names;
 	public readonly Node[] Values = values;
     
@@ -145,7 +145,7 @@ public class AssignmentNode(string[] names, Node[] values) : Node {
 	}
 }
 
-public class ShorthandAssignmentNode(string name, string op, Node? value) : Node {
+public class ShorthandAssignmentNode(Token start_token, string name, string op, Node? value) : Node(start_token) {
 	public readonly string Name = name;
 	public readonly string Op = op;
 	public readonly Node? Value = value;
@@ -155,7 +155,7 @@ public class ShorthandAssignmentNode(string name, string op, Node? value) : Node
 	}
 }
 
-public class FunctionCall(string name, object?[] args) : Node {
+public class FunctionCall(Token? start_token, string name, object?[] args) : Node(start_token) {
 	public readonly string Name = name;
 	public readonly object?[] Args = args;
 	public Node? Target { get; init; } // What we're calling (for lambdas)
@@ -165,7 +165,7 @@ public class FunctionCall(string name, object?[] args) : Node {
 	}
 }
 
-public class MemberAccessNode(Node target, Node member) : Node {
+public class MemberAccessNode(Token start_token, Node target, Node member) : Node(start_token) {
 	public readonly Node Target = target;
 	public readonly Node Member = member;
 
@@ -176,7 +176,7 @@ public class MemberAccessNode(Node target, Node member) : Node {
 	public override string ToString() => $"{Target}.{Member}";
 }
 
-public class MemberAssignmentNode(Node target, Node member, Node value) : Node {
+public class MemberAssignmentNode(Token start_token, Node target, Node member, Node value) : Node(start_token) {
 	public readonly Node Target = target;
 	public readonly Node Member = member;
 	public readonly Node Value = value;
@@ -188,7 +188,7 @@ public class MemberAssignmentNode(Node target, Node member, Node value) : Node {
 	public override string ToString() => $"{Target}.{Member}";
 }
 
-public class MemberShorthandAssignmentNode(Node target, Node member, Node value, string op) : Node {
+public class MemberShorthandAssignmentNode(Token start_token, Node target, Node member, Node value, string op) : Node(start_token) {
 	public readonly Node Target = target;
 	public readonly Node Member = member;
 	public readonly Node Value = value;
@@ -201,7 +201,7 @@ public class MemberShorthandAssignmentNode(Node target, Node member, Node value,
 	public override string ToString() => $"{Target} ()= {Member}";
 }
 
-public class FallbackNode(Node left, Node right) : Node {
+public class FallbackNode(Token start_token, Node left, Node right) : Node(start_token) {
 	public readonly Node Left = left;
 	public readonly Node Right = right;
 
@@ -210,7 +210,7 @@ public class FallbackNode(Node left, Node right) : Node {
 	}
 }
 
-public class CastNode(string type, object to_cast) : Node {
+public class CastNode(Token start_token, string type, object to_cast) : Node(start_token) {
 	public readonly string Type = type;
 	public readonly object ToCast = to_cast;
 

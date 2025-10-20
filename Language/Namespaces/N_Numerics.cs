@@ -28,7 +28,7 @@ public class N_Numerics : CNamespace {
 		}
 		
 		void AddBinary(string name, Func<double, double, object> impl) {
-			table[name] = new InternalFunction(args => {
+			table[name] = new InternalFunction((_, args) => {
 				ExpectCount(name, args, 2);
 				ExpectNumber(name, args[0], 0);
 				ExpectNumber(name, args[1], 1);
@@ -37,7 +37,7 @@ public class N_Numerics : CNamespace {
 		}
 
 		void AddTernary(string name, Func<double, double, double, object> impl) {
-			table[name] = new InternalFunction(args => {
+			table[name] = new InternalFunction((_, args) => {
 				ExpectCount(name, args, 3);
 				ExpectNumber(name, args[0], 0);
 				ExpectNumber(name, args[1], 1);
@@ -48,7 +48,7 @@ public class N_Numerics : CNamespace {
 
 		// varargs, returns double (or whatever)
 		void AddVarArgs(string name, Func<double[], object> impl) {
-			table[name] = new InternalFunction(args => {
+			table[name] = new InternalFunction((_, args) => {
 				ExpectMinCount(name, args, 1);
 				var arr = new double[args.Length];
 				for (int i = 0; i < args.Length; i++) {

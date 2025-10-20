@@ -21,7 +21,7 @@ public class CDirectory(string path) : IMemberAccessible {
 			"parent" => new CDirectory(Info.Parent!.FullName),
 			"exists" => Info.Exists,
 
-			"create" => new InternalFunction(args => {
+			"create" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`Directory.create()` expects 0 arguments.");
 
@@ -30,7 +30,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 			
-			"get_files" => new InternalFunction(args => {
+			"get_files" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`Directory.get_files()` expects 0 arguments.");
 
@@ -41,7 +41,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new CList(files.Select(object (x) => new CFile(x.FullName)).ToList());
 			}),
 			
-			"get_directories" => new InternalFunction(args => {
+			"get_directories" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`Directory.get_directories()` expects 0 arguments.");
 
@@ -52,7 +52,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new CList(files.Select(object (x) => new CDirectory(x.FullName)).ToList());
 			}),
 			
-			"clear" => new InternalFunction(args => {
+			"clear" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`Directory.clear()` expects 0 arguments.");
 
@@ -65,7 +65,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"file_count" => new InternalFunction(args => {
+			"file_count" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`Directory.file_count()` expects 0 arguments.");
 
@@ -75,7 +75,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return (double)Info.GetFiles().Length;
 			}),
 
-			"delete" => new InternalFunction(args => {
+			"delete" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`Directory.delete()` expects 0 arguments.");
 
@@ -84,7 +84,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"move_to" => new InternalFunction(args => {
+			"move_to" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`Directory.move_to(path)` expects 1 arguments.");
 
@@ -105,7 +105,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"rename" => new InternalFunction(args => {
+			"rename" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`Directory.rename(new_name: string)` expects 1 argument.");
 
@@ -130,7 +130,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"get_attributes" => new InternalFunction(args => {
+			"get_attributes" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`Directory.get_attributes()` expects 0 arguments.");
 
@@ -148,7 +148,7 @@ public class CDirectory(string path) : IMemberAccessible {
 				return attrs;
 			}),
 
-			"set_read_only" => new InternalFunction(args => {
+			"set_read_only" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`Directory.set_read_only(flag: bool)` expects 1 argument.");
 

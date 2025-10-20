@@ -13,33 +13,48 @@ public class Program {
 		original_env = interpreter.env;
 	}
 
-	public void RunFile(string text, string path) {
-		var previousEnv = interpreter!.env;
+	public int? RunFile(string text, FileInfo path) {
+		interpreter!.FileName = path.Name;
+		interpreter.FilePath = path.FullName;
+		var previousEnv = interpreter.env;
 
 		try {
 			interpreter.env = original_env;
 
-			var tokens = new Lexer(text).GetTokens();
-			var parser = new Parser(tokens.ToArray());
+			var tokens = new Lexer(text, path.Name, path.FullName).GetTokens();
+			var parser = new Parser(tokens.ToArray(), path);
 
 			var ast = new List<Node>(Math.Max(16, tokens.Count / 4));
 			var important = new List<Node>(8);
 
-			while (parser.PeekAhead() != null) {
-				if (parser.Check(";")) {
-					parser.Advance();
-					continue;
-				}
+			try {
+				while (parser.PeekAhead() != null) {
+					if (parser.Check(";")) {
+						parser.Advance();
+						continue;
+					}
 
-				var node = parser.Parse();
-				if (node is FunctionDef or ClassDef) {
-					important.Add(node);
-				} else {
-					ast.Add(node);
-				}
+					var node = parser.Parse();
+					if (node is FunctionDef or ClassDef) {
+						important.Add(node);
+					} else {
+						ast.Add(node);
+					}
 
-				if (parser.Check(";") || parser.Check("\n")) {
-					parser.Advance();
+					if (parser.Check(";") || parser.Check("\n")) {
+						parser.Advance();
+					}
+				}
+			} catch (ParseError e) {
+				ErrorPrinter.PrintError(e, $"ParseError at line {e.Token!.Line}:{e.Token!.Col}, file `{e.Token.FileName}`");
+				return ErrorPrinter.PrintErrorLine(e.Token, ConsoleColor.Magenta);
+			}
+
+			foreach (var node in ast) {
+				if (node is BinaryOpNode b) {
+					var e = new RuntimeError($"Unexpected binary operation (`{b.Op}`).", b.StartToken);
+					ErrorPrinter.PrintError(e, $"ParseError at line {e.StartToken!.Line}:{e.StartToken!.Col}, file `{e.StartToken.FileName}`");
+					return ErrorPrinter.PrintErrorLine(e.StartToken, ConsoleColor.Magenta, true);
 				}
 			}
 
@@ -47,8 +62,14 @@ public class Program {
 				try {
 					RunNode(node, path);
 				} catch (ReturnException) {
-					return;
+					return null;
+				} catch (ExecutionError e) {
+					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col}, file `{e.StartToken.FileName}`");
 				} catch (OutException) {
+				} catch (RuntimeError e) {
+					if (e.StartToken != null)
+						return ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col}, file `{e.StartToken.FileName}`");
+					return ErrorPrinter.PrintError(e, $"RuntimeError");
 				}
 			}
 
@@ -56,20 +77,32 @@ public class Program {
 				try {
 					RunNode(node, path);
 				} catch (ReturnException) {
-					return;
+					return null;
+				} catch (ExecutionError e) {
+					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col}, file `{e.StartToken.FileName}`");
 				} catch (OutException) {
+				} catch (RuntimeError e) {
+					if (e.StartToken != null) {
+						ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col}, file `{e.StartToken.FileName}`");
+						return ErrorPrinter.PrintErrorLine(e.StartToken, null);
+					}
+					return ErrorPrinter.PrintError(e, $"RuntimeError");
 				}
 			}
 		} finally {
 			interpreter.env = previousEnv;
 		}
+
+		return null;
 	}
 
-	public void RunNode(Node node, string path) {
+	public void RunNode(Node node, FileInfo path) {
 		try {
 			interpreter!.Evaluate(node);
-		} catch (BreakException) {
-			throw new RuntimeError("`break` must only be used in loops.");
+		} catch (BreakException e) {
+			throw new RuntimeError("`break` must only be used in loops.", e.StartToken ?? node.StartToken);
+		} catch (ContinueException e) {
+			throw new RuntimeError("`continue` must only be used in loops.", e.StartToken ?? node.StartToken);
 		} catch (IncludeFileException include) {
 			IEnumerable<string> paths;
 
@@ -78,22 +111,22 @@ public class Program {
 			else paths = new List<string> { (string)include.Path };
 
 			foreach (var p in paths) {
+				var f = new FileInfo(p);
+				
 				if (Includes.TryGetValue(p, out var value)) {
-					RunFile(value, p);
+					RunFile(value, f);
 					continue;
 				}
 
-				var f = new FileInfo(p);
-
 				if (f.Exists && !f.Attributes.HasFlag(FileAttributes.Directory)) {
 					// It's a file
-					if (f.FullName != path) RunFile(File.ReadAllText(f.FullName), f.FullName);
+					if (f.FullName != path.FullName) RunFile(File.ReadAllText(f.FullName), f);
 					else throw new RuntimeError("Cyclic dependency on file self. Cannot `include` file of same path.");
 				} else if (Directory.Exists(p)) {
 					// It's a directory, include all *.cb files
 					var dir = new DirectoryInfo(p);
 					foreach (var file in dir.GetFiles("*.cb", include.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly)) {
-						if (file.FullName != path) RunFile(File.ReadAllText(file.FullName), file.FullName);
+						if (file.FullName != path.FullName) RunFile(File.ReadAllText(file.FullName), file);
 						else throw new RuntimeError("Cyclic dependency on file self. Cannot `include` file of same path.");
 					}
 				} else throw new RuntimeError($"Failed to include file or directory: `{p}`");
@@ -101,34 +134,34 @@ public class Program {
 		}
 	}
 
-	public (string, List<string>) CollectFiles(string entry_point) {
+	public (string, List<FileInfo>) CollectFiles(string entry_point) {
 		var main = new FileInfo(entry_point);
 		var dir = new DirectoryInfo("src");
-		var files = new List<string>();
+		var files = new List<FileInfo>();
 		string entry = main.FullName;
 
 		if (dir.Exists) {
 			foreach (var file in dir.GetFiles("*.cb", SearchOption.AllDirectories)) {
 				if (file.FullName == main.FullName) continue;
 
-				files.Add(file.FullName);
+				files.Add(new FileInfo(file.FullName));
 			}
 		}
 
 		return (entry, files);
 	}
 
-	public void RunProgram(string entry, List<string> files) {
+	public void RunProgram(FileInfo entry, List<FileInfo> files) {
 		foreach (var path in files) {
-			RunFile(File.ReadAllText(path), path);
+			RunFile(File.ReadAllText(path.FullName), path);
 		}
 
-		RunFile(File.ReadAllText(entry), entry);
+		RunFile(File.ReadAllText(entry.FullName), entry);
 	}
 
-	public void RunBuild(string entry, Dictionary<string, string> files) {
+	public void RunBuild(FileInfo entry, Dictionary<FileInfo, string> files) {
 		foreach (var (name, data) in files) {
-			if (name != entry && name != ".srcConfig")
+			if (name != entry && name.Name != ".srcConfig")
 				RunFile(data, name);
 		}
 

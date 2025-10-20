@@ -30,7 +30,7 @@ public class N_Math : CNamespace {
 		void AddConst(string name, object value) => table[name] = value;
 
 		void AddUnary(string name, Func<double, object> impl) {
-			table[name] = new InternalFunction(args => {
+			table[name] = new InternalFunction((_, args) => {
 				ExpectCount(name, args, 1);
 				ExpectNumber(name, args[0], 0);
 				return impl(ToDouble(args[0]));
@@ -38,7 +38,7 @@ public class N_Math : CNamespace {
 		}
 
 		void AddBinary(string name, Func<double, double, object> impl) {
-			table[name] = new InternalFunction(args => {
+			table[name] = new InternalFunction((_, args) => {
 				ExpectCount(name, args, 2);
 				ExpectNumber(name, args[0], 0);
 				ExpectNumber(name, args[1], 1);
@@ -47,7 +47,7 @@ public class N_Math : CNamespace {
 		}
 
 		void AddTernary(string name, Func<double, double, double, object> impl) {
-			table[name] = new InternalFunction(args => {
+			table[name] = new InternalFunction((_, args) => {
 				ExpectCount(name, args, 3);
 				ExpectNumber(name, args[0], 0);
 				ExpectNumber(name, args[1], 1);
@@ -58,7 +58,7 @@ public class N_Math : CNamespace {
 
 		// varargs, returns double (or whatever)
 		void AddVarArgs(string name, Func<double[], object> impl) {
-			table[name] = new InternalFunction(args => {
+			table[name] = new InternalFunction((_, args) => {
 				ExpectMinCount(name, args, 1);
 				var arr = new double[args.Length];
 				for (int i = 0; i < args.Length; i++) {
@@ -120,7 +120,7 @@ public class N_Math : CNamespace {
 		});
 
 		// Lerp: a + (b - a) * t
-		table["lerp"] = new InternalFunction(args => {
+		table["lerp"] = new InternalFunction((_, args) => {
 			ExpectCount("lerp", args, 3);
 			ExpectNumber("lerp", args[0], 0);
 			ExpectNumber("lerp", args[1], 1);

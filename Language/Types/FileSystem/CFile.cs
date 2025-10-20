@@ -23,7 +23,7 @@ public class CFile(string path) : IMemberAccessible {
 			"parent" => new CDirectory(Info.DirectoryName!),
 			"exists" => Info.Exists,
 
-			"create" => new InternalFunction(args => {
+			"create" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`File.create()` expects 0 arguments.");
 
@@ -32,7 +32,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 			
-			"clear" => new InternalFunction(args => {
+			"clear" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`File.clear()` expects 0 arguments.");
 
@@ -41,7 +41,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 			
-			"read" => new InternalFunction(args => {
+			"read" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`File.read()` expects 0 arguments.");
 
@@ -51,7 +51,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new CString(File.ReadAllText(Path));
 			}),
 
-			"read_bytes" => new InternalFunction(args => {
+			"read_bytes" => new InternalFunction((_, args) => {
 				if (args.Length != 2)
 					throw new RuntimeError("`File.read_bytes(offset: int, count: int)` expects 2 arguments.");
 
@@ -86,7 +86,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new CList(buffer.Select(b => (object)(double)b).ToList());
 			}),
 
-			"write" => new InternalFunction(args => {
+			"write" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`File.write(text)` expects 1 argument.");
 
@@ -96,7 +96,7 @@ public class CFile(string path) : IMemberAccessible {
 				return File.WriteAllTextAsync(Path, Misc.FormatValue(args[0]!));
 			}),
 
-			"append" => new InternalFunction(args => {
+			"append" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`File.append(text)` expects 1 argument.");
 
@@ -106,7 +106,7 @@ public class CFile(string path) : IMemberAccessible {
 				return File.AppendAllTextAsync(Path, Misc.FormatValue(args[0]!));
 			}),
 
-			"write_bytes" => new InternalFunction(args => {
+			"write_bytes" => new InternalFunction((_, args) => {
 				if (args.Length != 2)
 					throw new RuntimeError("`File.write_bytes(offset: int, bytes: list[number])` expects 2 arguments.");
 
@@ -152,7 +152,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"truncate" => new InternalFunction(args => {
+			"truncate" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`File.truncate(length: int)` expects 1 argument.");
 
@@ -168,7 +168,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"length" => new InternalFunction(args => {
+			"length" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`File.length()` expects 0 arguments.");
 
@@ -178,7 +178,7 @@ public class CFile(string path) : IMemberAccessible {
 				return (double)Info.Length;
 			}),
 
-			"delete" => new InternalFunction(args => {
+			"delete" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`File.delete()` expects 0 arguments.");
 
@@ -187,7 +187,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"move_to" => new InternalFunction(args => {
+			"move_to" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`File.move_to(path, override?)` expects 1-2 arguments.");
 
@@ -208,7 +208,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"rename" => new InternalFunction(args => {
+			"rename" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`File.rename(new_name: string)` expects 1 argument.");
 
@@ -232,7 +232,7 @@ public class CFile(string path) : IMemberAccessible {
 				return new NullNode();
 			}),
 
-			"get_attributes" => new InternalFunction(args => {
+			"get_attributes" => new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("`File.get_attributes()` expects 0 arguments.");
 
@@ -250,7 +250,7 @@ public class CFile(string path) : IMemberAccessible {
 				return attrs;
 			}),
 
-			"set_read_only" => new InternalFunction(args => {
+			"set_read_only" => new InternalFunction((_, args) => {
 				if (args.Length != 1)
 					throw new RuntimeError("`File.set_read_only(flag: bool)` expects 1 argument.");
 

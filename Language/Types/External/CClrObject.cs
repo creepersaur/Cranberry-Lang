@@ -5,14 +5,9 @@ using Cranberry.Errors;
 
 namespace Cranberry.Types {
 	// A CLR-backed object visible to Cranberry. Implements IMemberAccessible so '.' works.
-	public class CClrObject : IMemberAccessible {
-		public readonly object? Instance; // null for static types
-		public readonly Type Type;
-
-		public CClrObject(object? instance, Type? type = null) {
-			Instance = instance;
-			Type = type ?? instance?.GetType() ?? throw new ArgumentNullException(nameof(type));
-		}
+	public class CClrObject(object? instance, Type? type = null) : IMemberAccessible {
+		public readonly object? Instance = instance; // null for static types
+		public readonly Type Type = type ?? instance?.GetType() ?? throw new ArgumentNullException(nameof(type));
 
 		private static object WrapClr(object? val) {
 			if (val == null) return null!;
@@ -36,7 +31,7 @@ namespace Cranberry.Types {
 			if (prop != null && prop.GetMethod != null) {
 				try {
 					var val = prop.GetValue(Instance);
-					return WrapClr(val)!;
+					return WrapClr(val);
 				} catch (TargetInvocationException tie) {
 					throw tie.InnerException ?? tie;
 				}
@@ -46,7 +41,7 @@ namespace Cranberry.Types {
 			var field = Type.GetField(name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
 			if (field != null) {
 				var val = field.GetValue(Instance);
-				return WrapClr(val)!;
+				return WrapClr(val);
 			}
 
 			// 3) Try methods: return an InternalFunction bound to this instance
@@ -56,7 +51,7 @@ namespace Cranberry.Types {
 
 			if (methods.Length > 0) {
 				// Return an InternalFunction that will attempt overload resolution and invoke on Instance
-				return new InternalFunction(callArgs => {
+				return new InternalFunction((_, callArgs) => {
 					// callArgs is a CLR array of Cranberry runtime values (not converted yet)
 					// We'll try overloads and use ExternalManager.ConvertToClrPublic for conversions
 					var errors = new System.Text.StringBuilder();

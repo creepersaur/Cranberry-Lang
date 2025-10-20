@@ -4,6 +4,17 @@ using System.Text;
 
 namespace Cranberry;
 
+public class Token(string value, int line, int col, string filename, string filepath) {
+	public readonly string Value = value;
+	public readonly int Line = line;
+	public readonly int Col = col;
+	public readonly string FileName = filename;
+	public readonly string FilePath = filepath;
+
+	public override string ToString() => Value;
+	public static explicit operator string(Token t) => t.Value;
+}
+
 public class Lexer {
 	private static readonly char[] PUNCTUATION = "\n!@$%^&*()[]{},./:;\\-=+~<>?".ToCharArray();
 	public static readonly char[] QUOTES = "\"\'`".ToCharArray();
@@ -11,11 +22,17 @@ public class Lexer {
 	private static readonly string[] DOUBLE_PUNCS = "+= -= *= /= ++ -- // .. == != >= <= => ?? :: && ||".Split();
 
 	private readonly char[] Text;
+	private readonly string FileName;
+	private readonly string FilePath;
 	private int Pos;
+	private int Line;
+	private int Col;
 	private char? CurChar;
 
-	public Lexer(string text) {
+	public Lexer(string text, string filename, string filepath) {
 		Text = text.ToCharArray();
+		FileName = filename;
+		FilePath = filepath;
 
 		if (Text.Length > 0)
 			CurChar = Text[0]; // Initialize current character at the start
@@ -28,6 +45,10 @@ public class Lexer {
 		} else {
 			CurChar = null; // CurChar should be null if there are no more characters
 		}
+		if (CurChar == '\n') {
+			Line++;
+			Col = -1;
+		} else Col++;
 	}
 
 	private static bool IsPunctuation(char? c) => c.HasValue && PUNCTUATION.Contains(c.Value);
@@ -53,12 +74,18 @@ public class Lexer {
 			.Replace("\\0", "\0");
 	}
 
-	public List<string> GetTokens() {
-		var tokens = new List<string>();
+	public void Add(List<Token> tokens, string t) {
+		tokens.Add(new Token(t, Line, Col - t.Length, FileName, FilePath));
+	}
+
+	public List<Token> GetTokens() {
+		var tokens = new List<Token>();
 		var curToken = "";
 		char? instr = null;
 		bool in_comment = false;
 		bool escaped = false;
+		Line = 1;
+		Col = 0;
 
 		while (CurChar.HasValue) {
 			if (in_comment) {
@@ -170,7 +197,7 @@ public class Lexer {
 					// normalize to invariant-culture decimal string (double)
 					var decString = result.ToString("R", CultureInfo.InvariantCulture);
 
-					tokens.Add(decString);
+					Add(tokens, decString);
 					curToken = "";
 					continue;
 				}
@@ -195,12 +222,12 @@ public class Lexer {
 
 			if (IsSpace(CurChar) && !instr.HasValue) {
 				if (curToken.Length > 0) {
-					tokens.Add(curToken);
+					Add(tokens, curToken);
 					curToken = "";
 				}
 			} else if (CurChar == '#' && !instr.HasValue) {
 				if (curToken.Length > 0) {
-					tokens.Add(curToken);
+					Add(tokens, curToken);
 					curToken = "";
 				}
 
@@ -216,20 +243,20 @@ public class Lexer {
 					curToken += CurChar;
 				} else {
 					if (curToken.Length > 0) {
-						tokens.Add(curToken);
+						Add(tokens, curToken);
 						curToken = "";
 					}
 
 					if (Pos + 1 < Text.Length && IsPunctuation(Text[Pos + 1])) {
 						var double_punctuation = CurChar.Value + Text[Pos + 1].ToString();
 						if (DOUBLE_PUNCS.Contains(double_punctuation)) {
-							tokens.Add(CurChar.Value + Text[Pos + 1].ToString());
+							Add(tokens, CurChar.Value + Text[Pos + 1].ToString());
 							Advance();
 						} else {
-							tokens.Add(CurChar.Value.ToString());
+							Add(tokens, CurChar.Value.ToString());
 						}
 					} else {
-						tokens.Add(CurChar.Value.ToString());
+						Add(tokens, CurChar.Value.ToString());
 					}
 				}
 			} else if (IsQuote(CurChar)) {
@@ -238,7 +265,7 @@ public class Lexer {
 						instr = null;
 						curToken += CurChar;
 
-						tokens.Add(ProcessEscapeSequences(curToken));
+						Add(tokens, ProcessEscapeSequences(curToken));
 						curToken = "";
 
 						Advance();
@@ -246,6 +273,10 @@ public class Lexer {
 						continue;
 					}
 				} else {
+					if (curToken.Length > 0) {
+						Add(tokens, curToken);
+						curToken = "";
+					}
 					instr = CurChar;
 				}
 
@@ -258,7 +289,7 @@ public class Lexer {
 		}
 
 		if (curToken.Length > 0)
-			tokens.Add(curToken);
+			Add(tokens, curToken);
 
 		return tokens;
 	}

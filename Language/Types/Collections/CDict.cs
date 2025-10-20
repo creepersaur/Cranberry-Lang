@@ -33,7 +33,7 @@ public class CDict : IMemberAccessible {
 		Functions = FuncGen.GenerateFunctions([
 			FuncGen.FuncInternal(
 				"length",
-				args => {
+				(_, args) => {
 					if (args.Length > 0) throw new RuntimeError("`length()` expects 0 arguments.");
 					return Items.Count;
 				}
@@ -41,7 +41,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"keys",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`keys()` expects 0 arguments.");
 					return new CList(Items.Keys.ToList());
 				}
@@ -49,7 +49,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"values",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`values()` expects 0 arguments.");
 					return new CList(Items.Values.ToList());
 				}
@@ -57,7 +57,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"set",
-				args => {
+				(_, args) => {
 					if (args.Length != 2) throw new RuntimeError("`set(key, value)` expects 2 arguments.");
 
 					var member = args[0];
@@ -74,7 +74,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"get",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`get(key)` expects 1 argument.");
 					
 					if (Items.TryGetValue(args[0]!, out var value))
@@ -89,7 +89,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"get_or_else",
-				args => {
+				(_, args) => {
 					if (args.Length != 2) throw new RuntimeError("`get_or_else(key, value)` expects 2 arguments.");
 					if (Items.TryGetValue(args[0]!, out var value))
 						return value;
@@ -103,7 +103,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"remove",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`remove(key)` expects 1 argument.");
 					Items.Remove(args[0]!);
 					return new NullNode();
@@ -112,7 +112,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"clear",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`clear()` expects 0 arguments.");
 					Items.Clear();
 					return new NullNode();
@@ -121,7 +121,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"merge",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`merge(dict)` expects 1 argument.");
 					if (args[0] is CDict c) {
 						foreach (var (key, value) in c.Items) {
@@ -137,7 +137,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"clone",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`clone()` expects 0 arguments.");
 					return new CDict(Items.Copy());
 				}
@@ -145,7 +145,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"has",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`has(obj)` expects 1 argument.");
 					if (args[0] is CString c)
 						return Items.ContainsValue(c.Value) || Items.ContainsValue(args[0]!);
@@ -156,7 +156,7 @@ public class CDict : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"has_key",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`has_key(obj)` expects 1 argument.");
 					
 					if (args[0] is CString c)

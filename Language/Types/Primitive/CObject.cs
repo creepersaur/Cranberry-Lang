@@ -33,7 +33,7 @@ public class CObject(CClass from_class) : IMemberAccessible {
 	public override string ToString() {
 		if (Class.Functions.TryGetValue("__tostring__", out var f)) {
 			var string_func = new ObjectMethod(this, f);
-			var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target]) {
+			var value = Program.interpreter!.Evaluate(new FunctionCall(null, "", [string_func.Target]) {
 				Target = string_func.Func
 			});
 

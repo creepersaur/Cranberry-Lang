@@ -3,7 +3,8 @@ using Cranberry.Types;
 
 namespace Cranberry.Nodes;
 
-public abstract class Node : IMemberAccessible {
+public abstract class Node(Token? start_token) : IMemberAccessible {
+	public readonly Token StartToken = start_token ?? new Token("<unknown>", -1, 1, "<unknown>", "<unknown>");
 	public abstract object? Accept<T>(INodeVisitor<T> visitor);
 }
 

@@ -54,13 +54,13 @@ public class CList : IMemberAccessible {
 		Functions = FuncGen.GenerateFunctions([
 			FuncGen.FuncInternal(
 				"length",
-				args => {
+				(_, args) => {
 					if (args.Length > 0) throw new RuntimeError("`length()` expects 0 arguments.");
 					return Items.Count;
 				}
 			),
 
-			IsTuple ? null : FuncGen.FuncInternal("push", args => {
+			IsTuple ? null : FuncGen.FuncInternal("push", (_, args) => {
 				if (args.Length != 1) throw new RuntimeError("`push(item)` expects 1 argument.");
 				if (args[0] is CString c) Items.Add(c.Value);
 				else Items.Add(args[0]!);
@@ -69,7 +69,7 @@ public class CList : IMemberAccessible {
 
 			IsTuple ? null : FuncGen.FuncInternal(
 				"pop",
-				args => {
+				(_, args) => {
 					if (args.Length > 0) throw new RuntimeError("`pop()` expects 0 arguments.");
 					if (Items.Count < 1) throw new RuntimeError("`List` needs at least 1 item to `pop()`.");
 
@@ -82,7 +82,7 @@ public class CList : IMemberAccessible {
 
 			IsTuple ? null : FuncGen.FuncInternal(
 				"remove",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`remove(index)` expects 1 argument.");
 					int index = Misc.DoubleToIndex(args[0]!, Items.Count, true);
 					Items.RemoveAt(index);
@@ -92,7 +92,7 @@ public class CList : IMemberAccessible {
 
 			IsTuple ? null : FuncGen.FuncInternal(
 				"insert",
-				args => {
+				(_, args) => {
 					if (args.Length != 2) throw new RuntimeError("`insert(index, item)` expects 2 arguments.");
 					int index = Misc.DoubleToIndex(args[0]!, Items.Count, true);
 					Items.Insert(index, args[1]!);
@@ -102,7 +102,7 @@ public class CList : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"find",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`find(item)` expects 1 argument.");
 
 					// if CString, check underlying string value as well
@@ -115,7 +115,7 @@ public class CList : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"last",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`last()` expects 0 arguments.");
 					return Items.Count > 0 ? Items.Last() : new NullNode();
 				}
@@ -123,7 +123,7 @@ public class CList : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"first",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`first()` expects 0 arguments.");
 					return Items.Count > 0 ? Items.First() : new NullNode();
 				}
@@ -131,7 +131,7 @@ public class CList : IMemberAccessible {
 
 			IsTuple ? null : FuncGen.FuncInternal(
 				"clear",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`clear()` expects 0 arguments.");
 					Items.Clear();
 					return new NullNode();
@@ -140,7 +140,7 @@ public class CList : IMemberAccessible {
 
 			IsTuple ? null : FuncGen.FuncInternal(
 				"append",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`append(list)` expects 1 argument.");
 
 					if (args[0] is CList c) {
@@ -157,7 +157,7 @@ public class CList : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"clone",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`clone()` expects 0 arguments.");
 					// preserve tuple-ness: clone of a tuple is still a tuple (fixed-size)
 					return new CList(Items.Copy(), IsTuple);
@@ -166,7 +166,7 @@ public class CList : IMemberAccessible {
 
 			FuncGen.FuncInternal(
 				"has",
-				args => {
+				(_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`has(obj)` expects 1 argument.");
 					if (args[0] is CString c)
 						return Items.Contains(c.Value) || Items.Contains(args[0]!);
@@ -178,21 +178,21 @@ public class CList : IMemberAccessible {
 			// convenience: convert to a mutable list copy
 			FuncGen.FuncInternal(
 				"to_list",
-				args => {
+				(_, args) => {
 					if (args.Length != 0) throw new RuntimeError("`to_list()` expects 0 arguments.");
 					return new CList(Items.Copy());
 				}
 			)
 		]);
 
-		Functions["map"] = new InternalFunction(args => {
+		Functions["map"] = new InternalFunction((_, args) => {
 			if (args.Length != 1) throw new RuntimeError("`map( func(value) )` expects 1 argument.");
 			if (args[0] is not FunctionNode f)
 				throw new RuntimeError("`map( func(value) )` expects 1 function argument.");
 
 			var list = new List<object>();
 			foreach (var v in Items) {
-				list.Add(Program.interpreter!.Evaluate(new FunctionCall("", [v]) {
+				list.Add(Program.interpreter!.Evaluate(new FunctionCall(null, "", [v]) {
 					Target = (Node)Program.interpreter.Evaluate(f)
 				}));
 			}

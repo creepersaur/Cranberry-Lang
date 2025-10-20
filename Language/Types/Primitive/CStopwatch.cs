@@ -18,7 +18,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 				case "days": return Stopwatch.Elapsed.TotalDays;
 				
 				case "start":
-					return new InternalFunction(args => {
+					return new InternalFunction((_, args) => {
 						if (args.Length > 0)
 							throw new RuntimeError("`start() expects 0 arguments.");
 						
@@ -27,7 +27,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 					});
 				
 				case "stop":
-					return new InternalFunction(args => {
+					return new InternalFunction((_, args) => {
 						if (args.Length > 0)
 							throw new RuntimeError("`stop() expects 0 arguments.");
 
@@ -36,7 +36,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 					});
 				
 				case "restart":
-					return new InternalFunction(args => {
+					return new InternalFunction((_, args) => {
 						if (args.Length > 0)
 							throw new RuntimeError("`restart() expects 0 arguments.");
 
@@ -45,7 +45,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 					});
 				
 				case "reset":
-					return new InternalFunction(args => {
+					return new InternalFunction((_, args) => {
 						if (args.Length > 0)
 							throw new RuntimeError("`reset() expects 0 arguments.");
 
@@ -54,7 +54,7 @@ public class CStopwatch(Stopwatch Stopwatch) : IMemberAccessible {
 					});
 				
 				case "start_new":
-					return new InternalFunction(args => {
+					return new InternalFunction((_, args) => {
 						if (args.Length > 0)
 							throw new RuntimeError("`start_new() expects 0 arguments.");
 						

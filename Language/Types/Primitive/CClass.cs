@@ -12,7 +12,7 @@ public class CClass(string name, FunctionNode? constructor, Interpreter interpre
 	public readonly List<LetNode> Lets = [];
 
 	public InternalFunction GetCreateFunction() {
-		return new InternalFunction(callArgs => {
+		return new InternalFunction((_, callArgs) => {
 			var obj = new CObject(this);
 			foreach (var letNode in Lets) {
 				foreach (var (i, name) in letNode.Names.WithIndex()) {

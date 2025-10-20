@@ -6,7 +6,7 @@ namespace Cranberry.Packager;
 public static class CrpkgZip {
 	private static string BuildDir = "build/debug";
 
-	public static void Pack(string entryPoint, string[] inputFilePaths, bool is_release, string[] includeFilePaths, string[] includeDirs) {
+	public static void Pack(string entryPoint, FileInfo[] inputFilePaths, bool is_release, string[] includeFilePaths, string[] includeDirs) {
 		var compression = is_release switch {
 			true => CompressionLevel.SmallestSize,
 			false => CompressionLevel.Fastest
@@ -23,9 +23,9 @@ public static class CrpkgZip {
 
 		// PACK MAIN PROGRAM
 		foreach (var path in inputFilePaths) {
-			var entry = archive.CreateEntry(Path.GetFullPath(path), compression);
+			var entry = archive.CreateEntry(path.FullName, compression);
 			using var entryStream = entry.Open();
-			using var inFile = File.OpenRead(path);
+			using var inFile = File.OpenRead(path.FullName);
 			inFile.CopyTo(entryStream);
 		}
 
@@ -50,7 +50,7 @@ public static class CrpkgZip {
 		}
 	}
 
-	public static void Build(string entryPoint, string[] inputFilePaths, BuildConfig config) {
+	public static void Build(string entryPoint, FileInfo[] inputFilePaths, BuildConfig config) {
 		bool is_release = config.Profile == "release";
 		if (is_release)
 			BuildDir = "build/release";
@@ -71,7 +71,7 @@ public static class CrpkgZip {
 		File.Copy($"{exe_dir}/Cranberry.runtimeconfig.json", $"{BuildDir}/Cranberry.runtimeconfig.json");
 	}
 
-	public static (string?, Dictionary<string, string>) ReadPackage(string crpkgPath, bool is_main = true) {
+	public static (string?, Dictionary<FileInfo, string>) ReadPackage(string crpkgPath, bool is_main = true) {
 		using var fs = File.OpenRead(crpkgPath);
 		using var archive = new ZipArchive(fs, ZipArchiveMode.Read, leaveOpen: false);
 
@@ -85,13 +85,13 @@ public static class CrpkgZip {
 		}
 
 		// Read all other files
-		var files = new Dictionary<string, string>();
+		var files = new Dictionary<FileInfo, string>();
 		foreach (var entry in archive.Entries) {
 			using var s = entry.Open();
 			using var sr = new StreamReader(s, Encoding.UTF8);
 
 			string fileData = sr.ReadToEnd();
-			files.Add(entry.Name, fileData);
+			files.Add(new FileInfo(entry.Name), fileData);
 		}
 
 		return (configData, files);

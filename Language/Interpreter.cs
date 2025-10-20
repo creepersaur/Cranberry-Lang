@@ -16,10 +16,12 @@ namespace Cranberry;
 
 public partial class Interpreter : INodeVisitor<object> {
 	public Env env = new();
+	public string FileName = "<unknown file>";
+	public string FilePath = "<unknown path>";
 	public readonly bool IsBuild;
 	private readonly Dictionary<string, CNamespace> Namespaces = new();
 	private const double TOLERANCE = 1e-9;
-
+	
 	// --- assembly loading helpers ---
 	private readonly Dictionary<string, Assembly> _loadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
 	
@@ -40,7 +42,12 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public object Evaluate(Node node) {
-		return node.Accept(this)!;
+		try {
+			return node.Accept(this)!;
+		} catch (RuntimeError e) {
+			e.StartToken ??= node.StartToken;
+			throw;
+		}
 	}
 
 	//////////////////////////////////////////
@@ -134,7 +141,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (left is CObject cl) {
 			if (cl.Class.Functions.TryGetValue("__add__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, right]) {
 					Target = string_func.Func
 				});
 
@@ -145,7 +152,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (right is CObject cr) {
 			if (cr.Class.Functions.TryGetValue("__add__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, left]) {
 					Target = string_func.Func
 				});
 
@@ -164,7 +171,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (left is CObject cl) {
 			if (cl.Class.Functions.TryGetValue("__sub__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, right]) {
 					Target = string_func.Func
 				});
 
@@ -175,7 +182,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (right is CObject cr) {
 			if (cr.Class.Functions.TryGetValue("__sub__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, left]) {
 					Target = string_func.Func
 				});
 
@@ -199,7 +206,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (left is CObject cl) {
 			if (cl.Class.Functions.TryGetValue("__mul__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, right]) {
 					Target = string_func.Func
 				});
 
@@ -210,7 +217,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (right is CObject cr) {
 			if (cr.Class.Functions.TryGetValue("__mul__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, left]) {
 					Target = string_func.Func
 				});
 
@@ -229,7 +236,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (left is CObject cl) {
 			if (cl.Class.Functions.TryGetValue("__div__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, right]) {
 					Target = string_func.Func
 				});
 
@@ -240,7 +247,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (right is CObject cr) {
 			if (cr.Class.Functions.TryGetValue("__div__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, left]) {
 					Target = string_func.Func
 				});
 
@@ -273,7 +280,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (left is CObject cl) {
 			if (cl.Class.Functions.TryGetValue("__eq__", out var f)) {
 				var string_func = new ObjectMethod(cl, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, right]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, right]) {
 					Target = string_func.Func
 				});
 
@@ -284,7 +291,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (right is CObject cr) {
 			if (cr.Class.Functions.TryGetValue("__eq__", out var f)) {
 				var string_func = new ObjectMethod(cr, f);
-				var value = Program.interpreter!.Evaluate(new FunctionCall("", [string_func.Target, left]) {
+				var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [string_func.Target, left]) {
 					Target = string_func.Func
 				});
 
@@ -319,7 +326,8 @@ public partial class Interpreter : INodeVisitor<object> {
 				string key = match.Groups[1].Value;
 				return Misc.FormatValue(Evaluate(
 					new Parser(
-						new Lexer(key).GetTokens().ToArray()
+						new Lexer(key, FileName, FilePath).GetTokens().ToArray(),
+						new FileInfo(FilePath)
 					).ParseExpression()
 				))!;
 			});
@@ -362,7 +370,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		if (target is IMemberAccessible access) {
 			access.SetMember(Evaluate(node.Member), Evaluate(node.Value));
-			return new NullNode();
+			return new NullNode(node.StartToken);
 		}
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
@@ -373,7 +381,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		if (target is IMemberAccessible access) {
 			var currentValue = Evaluate(node.Value);
-			var other = Evaluate(new MemberAccessNode(node.Target, node.Member));
+			var other = Evaluate(new MemberAccessNode(node.StartToken, node.Target, node.Member));
 			object newValue;
 
 			switch (node.Op) {
@@ -466,10 +474,10 @@ public partial class Interpreter : INodeVisitor<object> {
 				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
 				if (value is CObject obj && obj.Class.Functions.TryGetValue("__next__", out var f)) {
 					var list = new List<object>();
-					var next = Evaluate(new FunctionCall("", [obj]) { Target = f });
+					var next = Evaluate(new FunctionCall(f.StartToken, "", [obj]) { Target = f });
 					while (next is not NullNode) {
 						list.Add(next);
-						next = Evaluate(new FunctionCall("", [obj]) { Target = f });
+						next = Evaluate(new FunctionCall(f.StartToken, "", [obj]) { Target = f });
 					}
 
 					return new CList(list);
@@ -491,7 +499,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		
 		object? first_value = null;
 		foreach (var (index, name) in node.Names.WithIndex()) {
-			var value = node.Values.Length > index ? Evaluate(node.Values[index]) : new NullNode();
+			var value = node.Values.Length > index ? Evaluate(node.Values[index]) : new NullNode(node.StartToken);
 			first_value ??= value;
 
 			if (name is List<string> l) {
@@ -622,7 +630,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			}
 		}
 
-		return new NullNode();
+		return new NullNode(node.StartToken);
 	}
 
 	public object? VisitBlock(BlockNode node) {
@@ -671,7 +679,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 			if (target is CObject co) {
 				if (co.Class.Functions.TryGetValue("__call__", out var f)) {
-					return Evaluate(new FunctionCall("", [co, ..args]) {
+					return Evaluate(new FunctionCall(f.StartToken, "", [co, ..args]) {
 						Target = f
 					});
 				}
@@ -679,7 +687,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 			if (target is InternalFunction i) {
 				try {
-					return i.Call(args.ToArray());
+					return i.Call(args.ToArray(), node.StartToken);
 				} catch (ReturnException re) {
 					return re.Value;
 				} catch (OutException re) {
@@ -718,7 +726,7 @@ public partial class Interpreter : INodeVisitor<object> {
 					}
 				} else if (lookup is CObject co) {
 					if (co.Class.Functions.TryGetValue("__call__", out var f)) {
-						return Evaluate(new FunctionCall("", [co, ..args]) {
+						return Evaluate(new FunctionCall(f.StartToken, "", [co, ..args]) {
 							Target = f
 						});
 					}
@@ -726,7 +734,7 @@ public partial class Interpreter : INodeVisitor<object> {
 					throw new RuntimeError($"Cannot call value: `{Misc.FormatValue(co)}`");
 				} else if (lookup is InternalFunction internalF) {
 					try {
-						return internalF.Call(args.ToArray());
+						return internalF.Call(args.ToArray(), node.StartToken);
 					} catch (ReturnException re) {
 						return re.Value;
 					} catch (OutException re) {
@@ -749,7 +757,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				try {
 					// safe binding of args -> default to NullNode when missing
 					for (int i = 0; i < func.Args.Length; i++) {
-						object val = i < args.Count ? args[i] : new NullNode();
+						object val = i < args.Count ? args[i] : new NullNode(func.StartToken);
 						env.Define(func.Args[i], val);
 					}
 
@@ -773,7 +781,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public object? VisitFunctionDef(FunctionDef node) {
-		env.Define(node.Name, new FunctionNode(node.Args, node.Block!));
+		env.Define(node.Name, new FunctionNode(node.StartToken, node.Args, node.Block!));
 		return null;
 	}
 
@@ -789,9 +797,11 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object VisitBreak(BreakNode node) {
 		if (node.Value != null) {
 			ExBreak.Value = Evaluate(node.Value);
+			ExBreak.StartToken = node.StartToken;
 			throw ExBreak;
 		}
 
+		BreakNull.StartToken = node.StartToken;
 		throw BreakNull;
 	}
 
@@ -805,6 +815,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public object VisitContinue(ContinueNode node) {
+		ContinueNull.StartToken = node.StartToken;
 		throw ContinueNull;
 	}
 
@@ -826,7 +837,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			env.Pop();
 		}
 
-		return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+		return ReturnValues.Count > 0 ? ReturnValues : new NullNode(node.StartToken);
 	}
 
 	public object? VisitFOR(ForNode node) {
@@ -864,7 +875,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				}
 			}
 
-			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+			return ReturnValues.Count > 0 ? ReturnValues : new NullNode(node.StartToken);
 		}
 
 		if (iterable is CList list) {
@@ -887,7 +898,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				}
 			}
 
-			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+			return ReturnValues.Count > 0 ? ReturnValues : new NullNode(node.StartToken);
 		}
 
 		if (iterable is CString c) {
@@ -907,7 +918,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				}
 			}
 
-			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+			return ReturnValues.Count > 0 ? ReturnValues : new NullNode(node.StartToken);
 		}
 
 		if (iterable is string str) {
@@ -927,7 +938,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				}
 			}
 
-			return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+			return ReturnValues.Count > 0 ? ReturnValues : new NullNode(node.StartToken);
 		}
 
 		if (iterable is CObject obj) {
@@ -935,14 +946,14 @@ public partial class Interpreter : INodeVisitor<object> {
 				while (true) {
 					env.Push();
 					try {
-						var value = Evaluate(new FunctionCall("", [obj]) { Target = f });
+						var value = Evaluate(new FunctionCall(f.StartToken, "", [obj]) { Target = f });
 						if (value is NullNode)
-							return ReturnValues.Count > 0 ? ReturnValues : new NullNode();
+							return ReturnValues.Count > 0 ? ReturnValues : new NullNode(f.StartToken);
 
 						env.Define(node.VarName, value);
 						Evaluate(node.Block);
 					} catch (BreakException be) {
-						return be.Value ?? (ReturnValues.Count > 0 ? ReturnValues : new NullNode());
+						return be.Value ?? (ReturnValues.Count > 0 ? ReturnValues : new NullNode(f.StartToken));
 					} catch (OutException be) {
 						if (be.Value != null)
 							ReturnValues.Add(be.Value);
@@ -988,14 +999,14 @@ public partial class Interpreter : INodeVisitor<object> {
 			}
 		}
 
-		return new NullNode();
+		return new NullNode(node.StartToken);
 	}
 
 	public object VisitClassDef(ClassDef node) {
 		var class_value = new CClass(node.Name, node.Constructor, this);
 
 		foreach (var f in node.Functions) {
-			class_value.Functions.Add(f.Name, new FunctionNode(f.Args, f.Block!));
+			class_value.Functions.Add(f.Name, new FunctionNode(f.StartToken, f.Args, f.Block!));
 		}
 
 		foreach (var l in node.Lets) {
@@ -1122,7 +1133,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			Evaluate(b);
 			env = original;
 
-			Evaluate(new UsingDirective(node.Names, new Dictionary<string, string>(), []));
+			Evaluate(new UsingDirective(node.StartToken, node.Names, new Dictionary<string, string>(), []));
 		}
 
 		return null;
@@ -1394,7 +1405,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			if (!t.IsPublic) return;
 
 			// Factory for creating instances
-			object? Factory(object?[] callArgs) {
+			object? Factory(Token? _, object?[] callArgs) {
 				var ctors = t.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
 					.OrderByDescending(c => c.GetParameters().Length)
 					.ToArray();

@@ -12,23 +12,23 @@ public static class Commands {
 		if (File.Exists($"{exe_dir}/include.crpkg")) {
 			var (_, includes) = CrpkgZip.ReadPackage($"{exe_dir}/include.crpkg", false);
 			foreach (var (key, value) in includes) {
-				program.Includes[key] = value;
+				program.Includes[key.FullName] = value;
 			}
 		}
 
-		program.RunBuild(entry!, files);
+		program.RunBuild(new FileInfo(entry!), files);
 	}
 
 	public static void RunProgram() {
 		var program = new Program(false);
 		var files = program.CollectFiles("src/main.cb");
-		program.RunProgram(files.Item1, files.Item2);
+		program.RunProgram(new FileInfo(files.Item1), files.Item2);
 	}
 	
 	public static void RunFile(string path) {
 		var program = new Program(false);
 		var files = program.CollectFiles(path);
-		program.RunProgram(files.Item1, files.Item2);
+		program.RunProgram(new FileInfo(files.Item1), files.Item2);
 	}
 
 	public static void Build(List<string> args) {
@@ -42,7 +42,7 @@ public static class Commands {
 	
 		var program = new Program(true);
 		var (entry, files) = program.CollectFiles(entry_point);
-		files.Add(entry);
+		files.Add(new FileInfo(entry));
 	
 		Console.WriteLine($"Collected files: {Misc.FormatValue(files, true)}");
 	

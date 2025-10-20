@@ -19,6 +19,7 @@
       <w>pcall</w>
       <w>puncs</w>
       <w>runtimeconfig</w>
+      <w>tostring</w>
     </words>
   </dictionary>
 </component>

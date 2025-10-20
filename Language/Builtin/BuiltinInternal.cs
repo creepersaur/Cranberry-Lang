@@ -28,6 +28,22 @@ public static class BuiltinInternal {
 
 		return new NullNode();
 	}
+	
+	public static Node Error(Token start_token, object?[] args) {
+		if (args.Length == 0) {
+			Console.WriteLine("");
+
+			return new NullNode();
+		}
+		
+		string output = "";
+
+		foreach (var t in args) {
+			output += Misc.FormatValue(t!) + " ";
+		}
+
+		throw new ExecutionError(start_token, output[..^1]);
+	}
 
 	public static double ToNumber(object? arg) {
 		try {
@@ -106,7 +122,7 @@ public static class BuiltinInternal {
 			CFile => "file",
 			CDirectory => "directory",
 			
-			_ => args[0].GetType().Name
+			_ => args[0]!.GetType().Name
 		});
 	}
 }

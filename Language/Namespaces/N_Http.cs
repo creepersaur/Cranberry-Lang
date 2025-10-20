@@ -12,7 +12,7 @@ namespace Cranberry.Namespaces;
 public class N_Http : CNamespace {
 	public N_Http(Interpreter interpreter) : base("Http", true) {
 		env.Variables.Push(new Dictionary<string, object> {
-			["get"] = new InternalFunction(args => {
+			["get"] = new InternalFunction((_, args) => {
 				if (args.Length < 1 || args.Length > 2)
 					throw new RuntimeError("get(url, headers?) expects 1 or 2 arguments.");
 
@@ -44,7 +44,7 @@ public class N_Http : CNamespace {
 				return new CString(data);
 			}),
 
-			["post"] = new InternalFunction(args => {
+			["post"] = new InternalFunction((_, args) => {
 				if (args.Length < 2 || args.Length > 3)
 					throw new RuntimeError("post(url, body, headers?) expects 2 or 3 arguments.");
 
@@ -86,7 +86,7 @@ public class N_Http : CNamespace {
 				return new CString(data);
 			}),
 			
-			["listen"] = new InternalFunction(args => {
+			["listen"] = new InternalFunction((_, args) => {
 				if (args.Length != 2)
 					throw new RuntimeError("listen(port, callback) expects 2 arguments: port (number) and callback (function).");
 
@@ -119,8 +119,8 @@ public class N_Http : CNamespace {
 						var req = new CDict(reqDict.Select(pair => new KeyValuePair<object, object>(pair.Key, pair.Value)).ToDictionary());
 
 						var resultObj = args[1] switch {
-							InternalFunction i => i.Call(req),
-							FunctionNode i => interpreter.Evaluate(new FunctionCall("", [req]) {
+							InternalFunction i => i.Call([req]),
+							FunctionNode i => interpreter.Evaluate(new FunctionCall(null, "", [req]) {
 								Target = i
 							}),
 							_ => null

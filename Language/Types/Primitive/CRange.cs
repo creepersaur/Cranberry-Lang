@@ -18,11 +18,11 @@ public class CRange(double start, double end, double step, bool inclusive) : IMe
 	public object GetMember(object? member) {
 		if (member is string name) {
 			return name switch {
-				"length" => new NumberNode(Math.Abs(Start - End)),
-				"start" => new NumberNode(Start),
-				"end" => new NumberNode(End),
-				"step" => new NumberNode(Step),
-				"inclusive" => new BoolNode(Inclusive),
+				"length" => new NumberNode(null, Math.Abs(Start - End)),
+				"start" => new NumberNode(null, Start),
+				"end" => new NumberNode(null, End),
+				"step" => new NumberNode(null, Step),
+				"inclusive" => new BoolNode(null, Inclusive),
 			
 				_ => throw new RuntimeError($"Tried getting unknown member `{member}` on type `Range`")
 			};
