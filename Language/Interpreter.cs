@@ -331,6 +331,8 @@ public partial class Interpreter : INodeVisitor<object> {
 					).ParseExpression()
 				))!;
 			});
+			
+			result = result.Replace(@"\{", "{").Replace(@"\}", "}");
 
 			return new CString(result);
 		}
@@ -1204,7 +1206,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 
-	[GeneratedRegex(@"\{(.*?)\}")]
+	[GeneratedRegex(@"(?<!\\)\{(.*?)(?<!\\)\}")]
 	private static partial Regex MyRegex();
 
 	private Assembly LoadAssemblySafe(string modulePath) {

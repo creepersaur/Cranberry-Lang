@@ -87,6 +87,9 @@ public class Program {
 						return ErrorPrinter.PrintErrorLine(e.StartToken, null);
 					}
 					return ErrorPrinter.PrintError(e, $"RuntimeError");
+				} catch (ParseError e) {
+					ErrorPrinter.PrintError(e, $"ParseError at line {e.Token!.Line}:{e.Token!.Col}, file `{e.Token.FileName}`");
+					return ErrorPrinter.PrintErrorLine(e.Token, ConsoleColor.Magenta);
 				}
 			}
 		} finally {

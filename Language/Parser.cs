@@ -703,9 +703,10 @@ namespace Cranberry {
 			var tok = PeekAhead();
 			string token = tok?.Value ?? "";
 
-			if (token == "-" || token == "+" || token == "!" || token == "$") {
+			if (token is "-" or "+" or "!" or "$") {
 				Advance();
-				return new UnaryOpNode(start_token, token, ParsePower());
+
+				return new UnaryOpNode(start_token, token, ParseUnary());
 			}
 
 			return ParsePower();
