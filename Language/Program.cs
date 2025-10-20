@@ -53,7 +53,7 @@ public class Program {
 			foreach (var node in ast) {
 				if (node is BinaryOpNode b) {
 					var e = new RuntimeError($"Unexpected binary operation (`{b.Op}`).", b.StartToken);
-					ErrorPrinter.PrintError(e, $"ParseError at line {e.StartToken!.Line}:{e.StartToken!.Col}, file `{e.StartToken.FileName}`");
+					ErrorPrinter.PrintError(e, $"ParseError at line {e.StartToken!.Line}:{e.StartToken!.Col + 1}, file `{e.StartToken.FileName}`");
 					return ErrorPrinter.PrintErrorLine(e.StartToken, ConsoleColor.Magenta, true);
 				}
 			}
@@ -64,11 +64,11 @@ public class Program {
 				} catch (ReturnException) {
 					return null;
 				} catch (ExecutionError e) {
-					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col}, file `{e.StartToken.FileName}`");
+					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
 				} catch (OutException) {
 				} catch (RuntimeError e) {
 					if (e.StartToken != null)
-						return ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col}, file `{e.StartToken.FileName}`");
+						return ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
 					return ErrorPrinter.PrintError(e, $"RuntimeError");
 				}
 			}
@@ -79,11 +79,11 @@ public class Program {
 				} catch (ReturnException) {
 					return null;
 				} catch (ExecutionError e) {
-					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col}, file `{e.StartToken.FileName}`");
+					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
 				} catch (OutException) {
 				} catch (RuntimeError e) {
 					if (e.StartToken != null) {
-						ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col}, file `{e.StartToken.FileName}`");
+						ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
 						return ErrorPrinter.PrintErrorLine(e.StartToken, null);
 					}
 					return ErrorPrinter.PrintError(e, $"RuntimeError");

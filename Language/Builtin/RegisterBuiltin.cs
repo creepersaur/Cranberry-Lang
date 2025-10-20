@@ -50,7 +50,7 @@ public abstract class RegisterBuiltin {
 			if (func is FunctionNode f) {
 				try {
 					return new CList([
-						true, interpreter.Evaluate(new FunctionCall(null, "", args) {
+						true, interpreter.Evaluate(new FunctionCall(null, "", list_args.ToArray()) {
 							Target = f
 						})
 					], true);
@@ -61,7 +61,7 @@ public abstract class RegisterBuiltin {
 
 			if (func is InternalFunction i) {
 				try {
-					return new CList([true, i.Call(args!) ?? new NullNode()], true);
+					return new CList([true, i.Call(list_args.ToArray()!) ?? new NullNode()], true);
 				} catch (Exception e) {
 					return new CList([false, e.Message], true);
 				}
