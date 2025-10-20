@@ -5,9 +5,9 @@ using Cranberry.Types;
 // ReSharper disable LoopCanBeConvertedToQuery
 namespace Cranberry.Builtin;
 
-public static class BuiltinFunctions {
-	public static Node Print(List<object> args, bool new_line = false) {
-		if (args.Count == 0) {
+public static class BuiltinInternal {
+	public static Node Print(object?[] args, bool new_line = false) {
+		if (args.Length == 0) {
 			if (new_line) Console.WriteLine("");
 			else Console.Write("");
 
@@ -17,7 +17,7 @@ public static class BuiltinFunctions {
 		string output = "";
 
 		foreach (var t in args) {
-			output += Misc.FormatValue(t) + " ";
+			output += Misc.FormatValue(t!) + " ";
 		}
 
 		if (new_line) {
@@ -46,16 +46,16 @@ public static class BuiltinFunctions {
 		}
 	}
 
-	public static string? ToString(object arg) {
+	public static string? ToString(object? arg) {
 		try {
-			return Misc.FormatValue(arg);
+			return Misc.FormatValue(arg!);
 		} catch {
 			// ignored
-			throw new RuntimeError($"Cannot convert `{arg}` to a number");
+			throw new RuntimeError($"Cannot convert `{arg}` to a string");
 		}
 	}
 
-	public static string Format(List<object> args) {
+	public static string Format(object?[] args) {
 		var enumerator = args.GetEnumerator();
 		enumerator.MoveNext();
 
@@ -79,9 +79,9 @@ public static class BuiltinFunctions {
 		return template;
 	}
 
-	public static CString Typeof(List<object> args) {
-		if (args.Count > 1 && Misc.IsTruthy(args[1]))
-			return new CString(args[0].GetType().ToString());
+	public static CString Typeof(object?[] args) {
+		if (args.Length > 1 && Misc.IsTruthy(args[1]))
+			return new CString(args[0]!.GetType().ToString());
 		
 		return new CString(args[0] switch {
 			CString => "string",

@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Cranberry.Builtin;
 using Cranberry.Errors;
 using Cranberry.External;
+using Cranberry.Language.Builtin;
 using Cranberry.Namespaces;
 using Cranberry.Nodes;
 using Cranberry.Types;
@@ -35,6 +36,7 @@ public partial class Interpreter : INodeVisitor<object> {
 	public Interpreter(bool is_build) {
 		IsBuild = is_build;
 		Namespaces.Add("Std", new StandardNamespace(this));
+		RegisterBuiltin.Register(this, env);
 	}
 
 	public object Evaluate(Node node) {
@@ -438,8 +440,8 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		switch (node.Type) {
-			case "string": return new CString(BuiltinFunctions.ToString(value)!);
-			case "number": return BuiltinFunctions.ToNumber(value);
+			case "string": return new CString(BuiltinInternal.ToString(value)!);
+			case "number": return BuiltinInternal.ToNumber(value);
 			case "bool": return Misc.IsTruthy(value);
 			case "char": {
 				if (Misc.IsNumber(value))
@@ -649,26 +651,6 @@ public partial class Interpreter : INodeVisitor<object> {
 			if (x is Node n) return Evaluate(n);
 			return x;
 		})!);
-
-		switch (node.Name) {
-			case "print": return BuiltinFunctions.Print(args);
-			case "println": return BuiltinFunctions.Print(args, true);
-			case "format": return BuiltinFunctions.Format(args);
-			case "typeof": return BuiltinFunctions.Typeof(args);
-			case "List": {
-				if (args.Count == 1) {
-					return new CList([args[0]]);
-				}
-
-				if (args is [_, double d]) return new CList(new object[Convert.ToInt32(d)].Select(_ => args[0]).ToList());
-
-				if (args.Count == 0)
-					return new CList([]);
-
-				throw new RuntimeError("List() got invalid arguments. (It can take no arguments, a value, and optional size amount.)");
-			}
-			case "Dict": return new CDict(new Dictionary<object, object>());
-		}
 
 		FunctionNode? func = null;
 
