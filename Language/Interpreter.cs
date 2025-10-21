@@ -104,29 +104,27 @@ public partial class Interpreter : INodeVisitor<object> {
 	public object VisitVariable(VariableNode node) => env.Get(node.Name);
 
 	public object VisitBinaryOp(BinaryOpNode node) {
-		object leftVal = Evaluate(node.Left);
-		object rightVal = Evaluate(node.Right);
 
 		return node.Op switch {
 			// Addition - handle string concatenation
-			"+" => HandleAddition(leftVal, rightVal),
-			"-" => HandleSubtraction(leftVal, rightVal),
-			"*" => HandleMultiplication(leftVal, rightVal),
-			"/" => HandleDivision(leftVal, rightVal),
-			"^" => Math.Pow(Convert.ToDouble(leftVal), Convert.ToDouble(rightVal)),
-			"%" => Convert.ToDouble(leftVal) % Convert.ToDouble(rightVal),
-			"//" => Math.Floor(Convert.ToDouble(leftVal) / Convert.ToDouble(rightVal)),
+			"+" => HandleAddition(Evaluate(node.Left), Evaluate(node.Right)),
+			"-" => HandleSubtraction(Evaluate(node.Left), Evaluate(node.Right)),
+			"*" => HandleMultiplication(Evaluate(node.Left), Evaluate(node.Right)),
+			"/" => HandleDivision(Evaluate(node.Left), Evaluate(node.Right)),
+			"^" => Math.Pow(Convert.ToDouble(Evaluate(node.Left)), Convert.ToDouble(Evaluate(node.Right))),
+			"%" => Convert.ToDouble(Evaluate(node.Left)) % Convert.ToDouble(Evaluate(node.Right)),
+			"//" => Math.Floor(Convert.ToDouble(Evaluate(node.Left)) / Convert.ToDouble(Evaluate(node.Right))),
 
 			// Comparisons - handle different types
-			"==" => AreEqual(leftVal, rightVal),
-			"!=" => !AreEqual(leftVal, rightVal),
-			"<" => CompareValues(leftVal, rightVal) < 0,
-			">" => CompareValues(leftVal, rightVal) > 0,
-			"<=" => CompareValues(leftVal, rightVal) <= 0,
-			">=" => CompareValues(leftVal, rightVal) >= 0,
+			"==" => AreEqual(Evaluate(node.Left), Evaluate(node.Right)),
+			"!=" => !AreEqual(Evaluate(node.Left), Evaluate(node.Right)),
+			"<" => CompareValues(Evaluate(node.Left), Evaluate(node.Right)) < 0,
+			">" => CompareValues(Evaluate(node.Left), Evaluate(node.Right)) > 0,
+			"<=" => CompareValues(Evaluate(node.Left), Evaluate(node.Right)) <= 0,
+			">=" => CompareValues(Evaluate(node.Left), Evaluate(node.Right)) >= 0,
 
-			"&&" => Misc.IsTruthy(leftVal) && Misc.IsTruthy(rightVal),
-			"||" => Misc.IsTruthy(leftVal) || Misc.IsTruthy(rightVal),
+			"&&" => Misc.IsTruthy(Evaluate(node.Left)) && Misc.IsTruthy(Evaluate(node.Right)),
+			"||" => Misc.IsTruthy(Evaluate(node.Left)) || Misc.IsTruthy(Evaluate(node.Right)),
 
 			_ => throw new RuntimeError($"Unknown binary expression: {node.Op}")
 		};
@@ -431,7 +429,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public object VisitFallback(FallbackNode node) {
 		var left = Evaluate(node.Left);
-		return Misc.IsTruthy(left) ? left : Evaluate(node.Right);
+		return left is null or NullNode ? Evaluate(node.Right) : left;
 	}
 
 	public object VisitCast(CastNode node) {
@@ -743,26 +741,21 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		if (func != null) {
-			env.Push();
+			env.Push(func.Env);
 			try {
-				env.Push(func.Env!);
-				try {
-					// safe binding of args -> default to NullNode when missing
-					for (int i = 0; i < func.Args.Length; i++) {
-						object val = i < args.Count ? args[i] : new NullNode(func.StartToken);
-						env.Define(func.Args[i], val);
-					}
+				// safe binding of args -> default to NullNode when missing
+				for (int i = 0; i < func.Args.Length; i++) {
+					object val = i < args.Count ? args[i] : new NullNode(func.StartToken);
+					env.Define(func.Args[i], val);
+				}
 
-					try {
-						var rv = Evaluate(func.Block);
-						return rv;
-					} catch (ReturnException re) {
-						return re.Value;
-					} catch (OutException re) {
-						return re.Value;
-					}
-				} finally {
-					env.Pop(); // pop func.Env!
+				try {
+					var rv = Evaluate(func.Block);
+					return rv;
+				} catch (ReturnException re) {
+					return re.Value;
+				} catch (OutException re) {
+					return re.Value;
 				}
 			} finally {
 				env.Pop(); // pop the initial push()

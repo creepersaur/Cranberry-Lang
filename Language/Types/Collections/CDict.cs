@@ -17,7 +17,7 @@ public class CDict : IMemberAccessible {
 				return func;
 		}
 
-		throw new RuntimeError($"Tried to get unknown member or value: `{member}` on `dict`. (Maybe try using `.GetOrElse(key, value)`)");
+		throw new RuntimeError($"Tried to get unknown member or value: `{member}` on `dict`. (Maybe try using `.get_or_else(key, value)`)");
 	}
 
 	public void SetMember(object? member, object? value) {

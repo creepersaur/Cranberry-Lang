@@ -87,11 +87,11 @@ public static class ExternalManager {
 			if (targetType.IsAssignableFrom(clrObj.Type)) {
 				return clrObj.Instance;  // Return the actual CLR object
 			}
-        
+
 			// Try to convert the wrapped instance
 			return Convert.ChangeType(clrObj.Instance, targetType);
 		}
-		
+
 		// If already compatible:
 		if (targetType.IsInstanceOfType(cranVal)) return cranVal;
 
@@ -100,20 +100,20 @@ public static class ExternalManager {
 			// Replace these checks with your actual runtime types.
 			string s when targetType == typeof(string) || targetType == typeof(object) => s,
 			CString s when targetType == typeof(string) || targetType == typeof(object) => s.Value,
-			
+
 			// suppose your numeric runtime is double/float
 			double d when targetType == typeof(int) => Convert.ToInt32(d),
 			double d when targetType == typeof(long) => Convert.ToInt64(d),
 			double d when targetType == typeof(float) => Convert.ToSingle(d),
 			double d when targetType == typeof(double) => d,
 			double d when targetType == typeof(object) => d,
-			
+
 			_ => Convert.ChangeType(cranVal, targetType)
 		};
 
 		// fallback: try System.Convert
 	}
-	
+
 	public static Dictionary<string, Func<object[], object>> RegisterAllManagedFunctionsFromAssembly(string modulePath)
     {
         if (!File.Exists(modulePath))
@@ -153,49 +153,52 @@ public static class ExternalManager {
             // Create a wrapper which will pick the best overload at call time
             object Wrapper(object[] args)
             {
-                // Try to find an overload that matches parameter count and convertible args
-                foreach (var mi in overloads)
-                {
-                    var pars = mi.GetParameters();
-                    if (pars.Length != args.Length) continue;
+				// Try to find an overload that matches parameter count and convertible args
+				foreach (var mi in overloads)
+				{
+					var pars = mi.GetParameters();
+					if (pars.Length != args.Length) continue;
 
-                    object[] invokeArgs = new object[args.Length];
-                    bool ok = true;
+					object[] invokeArgs = new object[args.Length];
+					bool ok = true;
 
-                    for (int i = 0; i < args.Length; i++)
-                    {
-                        try
-                        {
-                            // Reuse your ConvertToClr logic (private method). We call it through reflection-like approach
-                            var converted = ConvertToClr(args[i], pars[i].ParameterType);
-                            invokeArgs[i] = converted!;
-                        }
-                        catch
-                        {
-                            ok = false;
-                            break;
-                        }
-                    }
+					for (int i = 0; i < args.Length; i++)
+					{
+						try
+						{
+							// Reuse your ConvertToClr logic (private method). We call it through reflection-like approach
+							var converted = ConvertToClr(args[i], pars[i].ParameterType);
+							invokeArgs[i] = converted!;
+						}
+						catch
+						{
+							ok = false;
+							break;
+						}
+					}
 
-                    if (!ok) continue;
+					if (!ok) continue;
 
-                    try
-                    {
-                        var result = mi.Invoke(null, invokeArgs);
-                        return result!;
-                    }
-                    catch (TargetInvocationException)
-                    {
-                        // If the target threw, bubble useful info up.
-                        throw;
-                    }
-                    catch
-                    {
-                        // Ignore
-                    }
-                }
+					try
+					{
+						var result = mi.Invoke(null, invokeArgs);
+						return result!;
+					}
+					catch (TargetInvocationException)
+					{
+						// If the target threw, bubble useful info up.
+						throw;
+					}
+					catch
+					{
+						// Ignore
+					}
+				}
 
                 // If we got here, no overload matched
+				// foreach (var i in args) {
+				// 	Console.WriteLine("Argument `{0}`: {1}", i, i.GetType());
+				// }
                 throw new ArgumentException($"No matching overload found for {methodName} with {args.Length} arguments.");
             }
 
