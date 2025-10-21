@@ -398,7 +398,7 @@ namespace Cranberry {
 		}
 
 		private LetNode ParseLet(bool constant = false) {
-			var start_token = PeekAhead(0)!;
+			var start_token = PeekAhead()!;
 			
 			Advance();
 			var names = new List<object>();

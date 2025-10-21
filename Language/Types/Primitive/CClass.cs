@@ -63,8 +63,9 @@ public class CClass(string name, FunctionNode? constructor, Interpreter interpre
 
 	public void SetMember(object? member, object? value) {
 		if (value is FunctionNode f) {
-			Functions[(string)member!] = f;
-			return;
+			if (member is CString or string)
+				Functions[(string)member] = f;
+			else throw new RuntimeError("Can only set functions on class with string names.");
 		}
 
 		if (member is not CString && member is not string)

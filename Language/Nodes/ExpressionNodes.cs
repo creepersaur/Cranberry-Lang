@@ -176,10 +176,10 @@ public class MemberAccessNode(Token start_token, Node target, Node member) : Nod
 	public override string ToString() => $"{Target}.{Member}";
 }
 
-public class MemberAssignmentNode(Token start_token, Node target, Node member, Node value) : Node(start_token) {
+public class MemberAssignmentNode(Token start_token, Node target, Node member, object value) : Node(start_token) {
 	public readonly Node Target = target;
 	public readonly Node Member = member;
-	public readonly Node Value = value;
+	public readonly object Value = value;
 
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitMemberAssignment(this);

@@ -57,7 +57,7 @@ public class Program {
 					return ErrorPrinter.PrintErrorLine(e.StartToken, ConsoleColor.Magenta, true);
 				}
 			}
-
+			
 			foreach (var node in important) {
 				try {
 					RunNode(node, path);
@@ -67,8 +67,10 @@ public class Program {
 					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
 				} catch (OutException) {
 				} catch (RuntimeError e) {
-					if (e.StartToken != null)
-						return ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
+					if (e.StartToken != null) {
+						ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
+						return ErrorPrinter.PrintErrorLine(e.StartToken, null);
+					}
 					return ErrorPrinter.PrintError(e, $"RuntimeError");
 				}
 			}
@@ -95,13 +97,13 @@ public class Program {
 		} finally {
 			interpreter.env = previousEnv;
 		}
-
+		
 		return null;
 	}
 
-	public void RunNode(Node node, FileInfo path) {
+	public object? RunNode(Node node, FileInfo path) {
 		try {
-			interpreter!.Evaluate(node);
+			return interpreter!.Evaluate(node);
 		} catch (BreakException e) {
 			throw new RuntimeError("`break` must only be used in loops.", e.StartToken ?? node.StartToken);
 		} catch (ContinueException e) {
@@ -135,6 +137,8 @@ public class Program {
 				} else throw new RuntimeError($"Failed to include file or directory: `{p}`");
 			}
 		}
+
+		return null;
 	}
 
 	public (string, List<FileInfo>) CollectFiles(string entry_point) {

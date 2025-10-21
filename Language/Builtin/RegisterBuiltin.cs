@@ -50,7 +50,7 @@ public abstract class RegisterBuiltin {
 			if (func is FunctionNode f) {
 				try {
 					return new CList([
-						true, interpreter.Evaluate(new FunctionCall(null, "", list_args.ToArray()) {
+						true, interpreter.Evaluate(new FunctionCall(f.StartToken, "", list_args.ToArray()) {
 							Target = f
 						})
 					], true);

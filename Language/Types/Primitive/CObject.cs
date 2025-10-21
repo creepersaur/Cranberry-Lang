@@ -9,8 +9,14 @@ public class CObject(CClass from_class) : IMemberAccessible {
 
 	public object? GetMember(object? member) {
 		if (member is string m) {
-			if (Properties.TryGetValue(m, out var value)) return value;
-			if (Class.Functions.TryGetValue(m, out var node)) return new ObjectMethod(this, node);
+			if (Properties.TryGetValue(m, out var value)) {
+				if (value is FunctionNode f)
+					return new ObjectMethod(this, f);
+				return value;
+			}
+			if (Class.Functions.TryGetValue(m, out var node)) {
+				return new ObjectMethod(this, node);
+			}
 		}
 		
 		throw new RuntimeError($"Tried to get unknown member: `{member}` on `Object:{Class.Name}`.");
@@ -32,9 +38,8 @@ public class CObject(CClass from_class) : IMemberAccessible {
 
 	public override string ToString() {
 		if (Class.Functions.TryGetValue("__tostring__", out var f)) {
-			var string_func = new ObjectMethod(this, f);
-			var value = Program.interpreter!.Evaluate(new FunctionCall(null, "", [string_func.Target]) {
-				Target = string_func.Func
+			var value = Program.interpreter!.Evaluate(new FunctionCall(f.StartToken, "", [this]) {
+				Target = f
 			});
 
 			if (value == null)
