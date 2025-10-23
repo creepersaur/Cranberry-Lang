@@ -51,7 +51,7 @@ public class N_Http : CNamespace {
 				var url = args[0] switch {
 					CString c => c.Value,
 					string s => s,
-					_ => throw new RuntimeError("post(url, body): url must be a string.")
+					_ => throw new RuntimeError("post(url, body, headers?): url must be a string.")
 				};
 
 				string payload = args[1] switch {
@@ -60,32 +60,36 @@ public class N_Http : CNamespace {
 					CList o => JsonSerializer.Serialize(o.Items),
 					CDict o => JsonSerializer.Serialize(o.Items),
 					{ } o => JsonSerializer.Serialize(o),
-					_ => throw new RuntimeError("post(url, body): body cannot be nil.")
+					_ => throw new RuntimeError("post(url, body, headers?): body cannot be nil.")
 				};
 
 				var client = new HttpClient();
 				client.DefaultRequestHeaders.Add("User-Agent", "CranberryApp");
 
 				// Optional headers
-				if (args.Length == 3) {
+				if (args.Length > 2) {
 					if (args[2] is CDict headersDict) {
 						foreach (var kv in headersDict.Items) {
 							string key = kv.Key.ToString()!;
 							string value = kv.Value.ToString()!;
-							if (!client.DefaultRequestHeaders.Contains(key))
-								client.DefaultRequestHeaders.Add(key, value);
+							client.DefaultRequestHeaders.TryAddWithoutValidation(key, value);
 						}
 					} else {
-						throw new RuntimeError("Post(url, body, headers): headers must be a dictionary.");
+						throw new RuntimeError("Post(url, body, headers, headers?): headers must be a dictionary.");
 					}
 				}
 
-				using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+				string contentType = "application/json";
+				if (args.Length > 2 && args[2] is CDict headers && headers.Items.TryGetValue("Content-Type", out var ct))
+					contentType = ct.ToString()!;
+
+				HttpContent content = new StringContent(payload, Encoding.UTF8, contentType);
 				var response = client.PostAsync(url, content).GetAwaiter().GetResult();
+
 				string data = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
 				return new CString(data);
 			}),
-			
+
 			["listen"] = new InternalFunction((_, args) => {
 				if (args.Length != 2)
 					throw new RuntimeError("listen(port, callback) expects 2 arguments: port (number) and callback (function).");
@@ -149,7 +153,7 @@ public class N_Http : CNamespace {
 						} else if (resultObj is CList list) {
 							body = JsonSerializer.Serialize(list.Items);
 						}
-						
+
 						// Apply headers
 						foreach (var kv in headers)
 							response.Headers[kv.Key] = kv.Value;

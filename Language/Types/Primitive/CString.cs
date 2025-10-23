@@ -117,6 +117,13 @@ public class CString(string value) : IMemberAccessible {
 					return new CString(Value.Replace(oldv, newv));
 				}),
 
+				"remove" => new InternalFunction((_, args) => {
+					if (args.Length != 1) throw new RuntimeError("`remove(index)` expects 1 int argument.");
+					if (args[0] is double x)
+						return new CString(Value.Remove(Convert.ToInt32(x)));
+					throw new RuntimeError("`remove(index)` expects 1 int argument.");
+				}),
+
 				"contains" => new InternalFunction((_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`contains(substr)` expects 1 argument.");
 					string s = args[0] switch {
