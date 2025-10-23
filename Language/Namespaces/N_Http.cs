@@ -168,6 +168,22 @@ public class N_Http : CNamespace {
 					}
 				}
 			}),
+			
+			["url_encode"] = new InternalFunction((_, args) => {
+				if (args.Length != 1)
+					throw new RuntimeError("urlencode(data: dict) expects 1 argument.");
+
+				if (args[0] is CDict data) {
+					var encoded = "";
+					foreach (var (key, value) in data.Items) {
+						encoded += "&" + $"{key}".Replace(" ", "20%") + "=" + $"{value}".Replace(" ", "20%");
+					}
+
+					return new CString(encoded[1..]);
+				}
+
+				throw new RuntimeError("urlencode(data) expects 1 dictionary argument.");
+			})
 		});
 	}
 }

@@ -119,8 +119,10 @@ public class CString(string value) : IMemberAccessible {
 
 				"remove" => new InternalFunction((_, args) => {
 					if (args.Length != 1) throw new RuntimeError("`remove(index)` expects 1 int argument.");
-					if (args[0] is double x)
-						return new CString(Value.Remove(Convert.ToInt32(x)));
+					if (args[0] is double x) {
+						Value.Remove(Convert.ToInt32(x));
+						return new NullNode();
+					}
 					throw new RuntimeError("`remove(index)` expects 1 int argument.");
 				}),
 

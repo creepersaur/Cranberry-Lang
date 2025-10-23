@@ -20,6 +20,7 @@
       <w>puncs</w>
       <w>runtimeconfig</w>
       <w>tostring</w>
+      <w>urlencode</w>
     </words>
   </dictionary>
 </component>
