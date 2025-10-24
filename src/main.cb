@@ -1,3 +1,6 @@
-let x = 10
+signal my_signal
 
-print($"The value of x is {x}")
+my_signal.connect(fn(name) {
+	println($"Hello there, {name}")
+})
+my_signal.emit("John")

@@ -35,6 +35,7 @@ public interface INodeVisitor<out T> {
 	T? VisitInternalFunction(InternalFunction node);
 	T VisitFallback(FallbackNode node);
 	T VisitCast(CastNode node);
+	void VisitSignal(SignalNode node);
 	
 	// Statements
 	

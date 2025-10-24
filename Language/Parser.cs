@@ -64,6 +64,10 @@ namespace Cranberry {
 				return ParseUsingDirective();
 			}
 
+			if (token == "signal") {
+				return ParseSignal();
+			}
+
 			if (token == "namespace") {
 				return ParseNamespace();
 			}
@@ -174,7 +178,6 @@ namespace Cranberry {
 							}
 
 							if (Check(",")) Advance();
-							else break;
 						}
 
 						Expect("}");
@@ -349,10 +352,15 @@ namespace Cranberry {
 				if (a == null) throw new ParseError("Unexpected EOF while parsing parameters.", a!);
 				args.Add(a.Value);
 				SkipNewlines();
+				
+				if (Check(":")) {
+					while (!Check(",") && !Check(")")) Advance();
+				}
+				
 				if (Check(",")) {
 					Advance();
 					SkipNewlines();
-				} else break;
+				}
 			}
 
 			Expect(")");
@@ -418,7 +426,6 @@ namespace Cranberry {
 					destructured.Add(dName!.Value);
 
 					if (PeekAhead()?.Value == ",") Advance();
-					else break;
 				}
 
 				Expect(")");
@@ -482,6 +489,18 @@ namespace Cranberry {
 			return new LetNode(start_token, names.ToArray(), Enumerable.Repeat(new NullNode(start_token), names.Count).ToArray<Node>(), constant);
 		}
 
+		private SignalNode ParseSignal() {
+			var start_token = PeekAhead()!;
+			Advance();
+			SkipNewlines();
+			
+			var name = Advance();
+			if (!IsIdentifier(name))
+				throw new ParseError($"Expected identifier as name. Got `{name}`", name ?? start_token);
+
+			return new SignalNode(start_token, name!.Value);
+		}
+		
 		private SwitchNode ParseSwitch() {
 			Token start_token = PeekAhead()!;
 			Advance();
@@ -515,7 +534,6 @@ namespace Cranberry {
 					newCases.Add(ParseExpression());
 
 					if (Check(",")) Advance();
-					else break;
 				}
 
 				SkipNewlines();
@@ -542,7 +560,6 @@ namespace Cranberry {
 				names.Add(n.Value);
 
 				if (Check(",")) Advance();
-				else break;
 			}
 
 			Expect("=");
@@ -840,7 +857,6 @@ namespace Cranberry {
 					SkipNewlines();
 
 					if (Check(",")) Advance();
-					else break;
 				}
 
 				Expect(")");
@@ -866,7 +882,6 @@ namespace Cranberry {
 			while (!Check("]")) {
 				items.Add(ParseExpression());
 				if (Check(",")) Advance();
-				else break;
 			}
 
 			Expect("]");
@@ -1022,7 +1037,7 @@ namespace Cranberry {
 						if (Check(",")) {
 							Advance();
 							SkipNewlines();
-						} else break;
+						}
 					}
 
 					Expect(")");
@@ -1055,7 +1070,7 @@ namespace Cranberry {
 						if (PeekAhead()?.Value == ",") {
 							Advance();
 							SkipNewlines();
-						} else break;
+						}
 					}
 
 					expr = new ListNode(start_token, expressions, true);
@@ -1085,10 +1100,14 @@ namespace Cranberry {
 				args.Add(Advance()!.Value);
 				SkipNewlines();
 
+				if (Check(":")) {
+					while (!Check(",") && !Check(")")) Advance();
+				}
+
 				if (Check(",")) {
 					Advance();
 					SkipNewlines();
-				} else break;
+				}
 			}
 
 			Expect(")");

@@ -2,7 +2,8 @@
 
 public class ParseError(string message, Token? token = null) : Exception(message) {
 	// Token can be null (EOF) so make it nullable.
-	public readonly Token? Token = token;
+	public Token? Token = token;
+	public bool FullLine = false;
 
 	public override string ToString() {
 		try {
