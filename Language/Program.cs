@@ -47,14 +47,14 @@ public class Program {
 				}
 			} catch (ParseError e) {
 				ErrorPrinter.PrintError(e, $"ParseError at line {e.Token!.Line}:{e.Token!.Col}, file `{e.Token.FileName}`");
-				return ErrorPrinter.PrintErrorLine(e.Token, ConsoleColor.Magenta);
+				return ErrorPrinter.PrintErrorLine(e.Token, ConsoleColor.Magenta, e.FullLine);
 			}
 
 			foreach (var node in ast) {
 				if (node is BinaryOpNode b) {
 					var e = new RuntimeError($"Unexpected binary operation (`{b.Op}`).", b.StartToken);
 					ErrorPrinter.PrintError(e, $"ParseError at line {e.StartToken!.Line}:{e.StartToken!.Col + 1}, file `{e.StartToken.FileName}`");
-					return ErrorPrinter.PrintErrorLine(e.StartToken, ConsoleColor.Magenta, true);
+					return ErrorPrinter.PrintErrorLine(e.StartToken, ConsoleColor.Magenta, e.FullLine);
 				}
 			}
 			
@@ -69,7 +69,7 @@ public class Program {
 				} catch (RuntimeError e) {
 					if (e.StartToken != null) {
 						ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
-						return ErrorPrinter.PrintErrorLine(e.StartToken, null);
+						return ErrorPrinter.PrintErrorLine(e.StartToken, null, e.FullLine);
 					}
 					return ErrorPrinter.PrintError(e, $"RuntimeError");
 				}
@@ -86,12 +86,12 @@ public class Program {
 				} catch (RuntimeError e) {
 					if (e.StartToken != null) {
 						ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
-						return ErrorPrinter.PrintErrorLine(e.StartToken, null);
+						return ErrorPrinter.PrintErrorLine(e.StartToken, null, e.FullLine);
 					}
 					return ErrorPrinter.PrintError(e, $"RuntimeError");
 				} catch (ParseError e) {
 					ErrorPrinter.PrintError(e, $"ParseError at line {e.Token!.Line}:{e.Token!.Col}, file `{e.Token.FileName}`");
-					return ErrorPrinter.PrintErrorLine(e.Token, ConsoleColor.Magenta);
+					return ErrorPrinter.PrintErrorLine(e.Token, ConsoleColor.Magenta, e.FullLine);
 				}
 			}
 		} finally {

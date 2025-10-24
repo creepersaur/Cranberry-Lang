@@ -2,6 +2,7 @@
 
 public class RuntimeError(string message, Token? start_token = null) : Exception(message) {
 	public Token? StartToken = start_token;
+	public bool FullLine = false;
 	public override string ToString() => $"RuntimeError: {Message}";
 }
 

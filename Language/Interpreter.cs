@@ -85,6 +85,10 @@ public partial class Interpreter : INodeVisitor<object> {
 		return new CList(node.Items.Select(Evaluate).ToList(), node.IsTuple);
 	}
 
+	public void VisitSignal(SignalNode node) {
+		env.Define(node.Name, new CSignal(this));
+	}
+
 	public object VisitInternalFunction(InternalFunction node) => node;
 
 	public CDict VisitDict(DictNode node) {
@@ -312,12 +316,22 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (node.Op == "$" && value is CString template) {
 			string result = MyRegex().Replace(template.Value, match => {
 				string key = match.Groups[1].Value;
-				return Misc.FormatValue(Evaluate(
-					new Parser(
-						new Lexer(key, FileName, FilePath).GetTokens().ToArray(),
-						new FileInfo(FilePath)
-					).ParseExpression()
-				))!;
+				try {
+					return Misc.FormatValue(Evaluate(
+						new Parser(
+							new Lexer(key, FileName, FilePath).GetTokens().ToArray(),
+							new FileInfo(FilePath)
+						).ParseExpression()
+					))!;
+				} catch (ParseError e) {
+					e.Token = node.StartToken;
+					e.FullLine = true;
+					throw;
+				} catch (RuntimeError e) {
+					e.StartToken = node.StartToken;
+					e.FullLine = true;
+					throw;
+				}
 			});
 			
 			result = result.Replace(@"\{", "{").Replace(@"\}", "}");

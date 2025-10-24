@@ -218,3 +218,12 @@ public class CastNode(Token start_token, string type, object to_cast) : Node(sta
 		return visitor.VisitCast(this);
 	}
 }
+
+public class SignalNode(Token start_token, string name) : Node(start_token) {
+	public readonly string Name = name;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		visitor.VisitSignal(this);
+		return null;
+	}
+}

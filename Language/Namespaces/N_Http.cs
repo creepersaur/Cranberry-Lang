@@ -183,7 +183,11 @@ public class N_Http : CNamespace {
 				}
 
 				throw new RuntimeError("urlencode(data) expects 1 dictionary argument.");
-			})
+			}),
+			
+			["WebsocketClient"] = new InternalFunction((_, args) => {
+				return null;
+			}),
 		});
 	}
 }
