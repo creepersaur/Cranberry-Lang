@@ -182,6 +182,16 @@ public class CList : IMemberAccessible {
 					if (args.Length != 0) throw new RuntimeError("`to_list()` expects 0 arguments.");
 					return new CList(Items.Copy());
 				}
+			),
+
+			// convenience: convert to a mutable list copy
+			FuncGen.FuncInternal(
+			"reverse",
+			(_, args) => {
+				if (args.Length != 0) throw new RuntimeError("`reverse()` expects 0 arguments.");
+				Items.Reverse();
+				return this;
+			}
 			)
 		]);
 
