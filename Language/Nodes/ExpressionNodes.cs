@@ -210,6 +210,16 @@ public class FallbackNode(Token start_token, Node left, Node right) : Node(start
 	}
 }
 
+public class TernaryConditionNode(Token start_token, Node condition, Node left, Node right) : Node(start_token) {
+	public readonly Node Condition = condition;
+	public readonly Node Left = left;
+	public readonly Node Right = right;
+
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitTernaryCondition(this);
+	}
+}
+
 public class CastNode(Token start_token, string type, object to_cast) : Node(start_token) {
 	public readonly string Type = type;
 	public readonly object ToCast = to_cast;

@@ -602,7 +602,7 @@ namespace Cranberry {
 		////////////////////////////////////////////////////////////
 		public Node ParseExpression() {
 			SkipNewlines();
-			return ParseLogical();
+			return ParseTernaryCondition();
 		}
 
 		// Handles logical operators with lower precedence than comparisons
@@ -687,7 +687,7 @@ namespace Cranberry {
 
 		private Node ParseTerm() {
 			Token start_token = PeekAhead()!;
-			Node left = ParseFallback();
+			Node left = ParseUnary();
 
 			while (PeekAhead() != null) {
 				var opTok = PeekAhead();
@@ -696,8 +696,25 @@ namespace Cranberry {
 				if (op != "*" && op != "/" && op != "%" && op != "//") break;
 
 				Advance();
-				Node right = ParseFallback();
+				Node right = ParseUnary();
 				left = new BinaryOpNode(start_token, left, op, right);
+			}
+
+			return left;
+		}
+
+		private Node ParseTernaryCondition() {
+			Token start_token = PeekAhead()!;
+			Node left = ParseFallback();
+
+			if (Check("?")) {
+				Advance();
+				var first = ParseExpression();
+				SkipNewlines();
+				Expect(":");
+				Advance();
+				var second = ParseExpression();
+				return new TernaryConditionNode(start_token, left, first, second);
 			}
 
 			return left;
@@ -705,7 +722,7 @@ namespace Cranberry {
 
 		private Node ParseFallback() {
 			Token start_token = PeekAhead()!;
-			Node left = ParseUnary();
+			Node left = ParseLogical();
 
 			if (Check("??")) {
 				Advance();

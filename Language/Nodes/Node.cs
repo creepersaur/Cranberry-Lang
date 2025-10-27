@@ -34,6 +34,7 @@ public interface INodeVisitor<out T> {
 	T? VisitMemberShorthandAssignment(MemberShorthandAssignmentNode node);
 	T? VisitInternalFunction(InternalFunction node);
 	T VisitFallback(FallbackNode node);
+	T VisitTernaryCondition(TernaryConditionNode node);
 	T VisitCast(CastNode node);
 	void VisitSignal(SignalNode node);
 	

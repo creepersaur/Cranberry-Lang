@@ -446,6 +446,10 @@ public partial class Interpreter : INodeVisitor<object> {
 		return left is null or NullNode ? Evaluate(node.Right) : left;
 	}
 
+	public object VisitTernaryCondition(TernaryConditionNode node) {
+		return Misc.IsTruthy(Evaluate(node.Condition)) ? Evaluate(node.Left) : Evaluate(node.Right);
+	}
+
 	public object VisitCast(CastNode node) {
 		object value;
 		if (node.ToCast is Node n)
