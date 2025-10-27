@@ -1,4 +1,5 @@
-﻿using Cranberry.Builtin;
+﻿using System.Text;
+using Cranberry.Builtin;
 using Cranberry.Errors;
 using Cranberry.Nodes;
 
@@ -159,6 +160,13 @@ public class CString(string value) : IMemberAccessible {
 					if (args[1] is not double len) throw new RuntimeError("`sub` length must be a number.");
 					var length = Convert.ToInt32(len);
 					return new CString(Value.Substring(start, length));
+				}),
+
+				"bytes" => new InternalFunction((_, args) => {
+					if (args.Length != 0) throw new RuntimeError("`bytes()` expects 0 arguments.");
+					byte[] bytes = Encoding.UTF8.GetBytes(Value);
+
+					return new CList(bytes.Select(object (x) => Convert.ToDouble(x)).ToList());
 				}),
 				
 				"is_digit" => new InternalFunction((_, args) => {
