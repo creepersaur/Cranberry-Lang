@@ -279,6 +279,11 @@ namespace Cranberry {
 			if (!IsIdentifier(varNameToken)) {
 				throw new ParseError("For-loop variable name must be an identifier", varNameToken!);
 			}
+			SkipNewlines();
+
+			if (Check(":")) {
+				while (!Check("in")) Advance();
+			}
 
 			Expect("in");
 			Advance();
@@ -424,6 +429,12 @@ namespace Cranberry {
 					}
 
 					destructured.Add(dName!.Value);
+					
+					SkipNewlines();
+
+					if (Check(":")) {
+						while (!Check(",") && !Check(")")) Advance();
+					}
 
 					if (PeekAhead()?.Value == ",") Advance();
 				}
@@ -436,6 +447,11 @@ namespace Cranberry {
 				throw new ParseError($"Expected identifier as variable name, got: `{TokenToDisplay(firstName)}`", firstName!);
 			} else {
 				names.Add(firstName!.Value);
+				SkipNewlines();
+
+				if (Check(":")) {
+					while (!Check(",") && !Check("\n") && !Check("=")) Advance();
+				}
 			}
 
 			while (Check(",")) {
@@ -453,6 +469,14 @@ namespace Cranberry {
 						}
 
 						destructured.Add(dName!.Value);
+					
+						SkipNewlines();
+
+						if (Check(":")) {
+							while (!Check(",") && !Check(")")) Advance();
+						}
+
+						if (PeekAhead()?.Value == ",") Advance();
 					}
 
 					Expect(")");
@@ -463,8 +487,15 @@ namespace Cranberry {
 					throw new ParseError($"Expected identifier as variable name or destructuring, got: `{TokenToDisplay(name)}`", name!);
 				} else {
 					names.Add(name!.Value);
+					SkipNewlines();
+
+					if (Check(":")) {
+						while (!Check(",") && !Check("\n") && !Check("=")) Advance();
+					}
 				}
 			}
+			
+			SkipNewlines();
 
 			// Initialization
 			if (Check("=")) {
