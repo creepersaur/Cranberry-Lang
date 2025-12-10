@@ -1,4 +1,4 @@
-﻿using Cranberry.Builtin;
+using Cranberry.Builtin;
 using Cranberry.Errors;
 using Cranberry.Types;
 
@@ -72,7 +72,8 @@ public class N_Random : CNamespace {
 		AddNoArgs("int", () => (double)Random.Shared.NextInt64());
 		AddBinary("int_range",
 			(min, max) => (double)Random.Shared.NextInt64(
-				Convert.ToInt64(Math.Abs(min - max) < TOLERANCE ? min : Math.Max(min, max)),
+				// fixed the random number picking thingy for u - your welcome :D - Bashee302 / Red Spirit
+				Convert.ToInt64(Math.Abs(min - max) < TOLERANCE ? min : Math.Min(min, max)),
 				Convert.ToInt64(Math.Abs(min - max) < TOLERANCE ? max : Math.Max(min, max)) + 1
 			)
 		);
