@@ -18,7 +18,7 @@ if (args.Length < 1 || args[0] == "help" || args[0] == "-h") {
 	Console.WriteLine(" > --version | -v       [Get the current version*.]");
 	Console.WriteLine(" > init                 [Initialize a new project in the working directory]");
 	Console.WriteLine(" > new <name>           [Create a new project in a new directory]");
-	Console.WriteLine(" > <file> <args>               [Run the project]");
+	Console.WriteLine(" > <file> <args>        [Run the project]");
 	Console.WriteLine(" > run <args>           [Run the project]");
 	Console.WriteLine(" > build                [Build the project into a standalone package (in /build/debug)]");
 	Console.WriteLine(" > build --release      [Create a release build with a smaller file size (in /build/release)]");

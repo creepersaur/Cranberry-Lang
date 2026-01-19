@@ -6,6 +6,10 @@ namespace Cranberry.External;
 
 public static class ConvertCLR {
 	public static object ToClr(object obj) {
+		// If this is a Cranberry wrapper exposing an Internal CLR instance, unwrap it.
+		if (obj is IExternalObject ext)
+			return ext.Internal;
+
 		return obj switch {
 			CString c => c.Value,
 			double d => d,
