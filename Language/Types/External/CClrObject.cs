@@ -25,6 +25,10 @@ public class CClrObject(object? instance, Type? type = null) : IMemberAccessible
 		return new CClrObject(val);
 	}
 
+	public object? ConstructNew(object[] args) {
+		return Activator.CreateInstance(Type, args);
+	}
+
 	// Called for `obj.member`
 	public object GetMember(object? member) {
 		if (member is not string name)
@@ -96,7 +100,7 @@ public class CClrObject(object? instance, Type? type = null) : IMemberAccessible
 				}
 
 				throw new RuntimeError($"No matching instance overload for {Type.FullName}.{name} with {callArgs?.Length ?? 0} args.\n{errors}");
-			});
+			}, methods[0]);
 		}
 
 		// Not found

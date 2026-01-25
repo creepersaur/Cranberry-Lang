@@ -1,11 +1,12 @@
 ﻿using System.Collections;
 using System.Reflection;
+using Cranberry.Nodes;
 using Cranberry.Types;
 
 namespace Cranberry.External;
 
 public static class ConvertCLR {
-	public static object ToClr(object obj) {
+	public static object? ToClr(object obj) {
 		// If this is a Cranberry wrapper exposing an Internal CLR instance, unwrap it.
 		if (obj is IExternalObject ext)
 			return ext.Internal;
@@ -17,7 +18,8 @@ public static class ConvertCLR {
 			string s => s,
 			bool b => b,
 			CList l => l.Items.Select(ToClr).ToArray(),
-			CDict D => D.Items.Select(object (x) => new KeyValuePair<object, object>(ToClr(x.Key), ToClr(x.Value))).ToArray(),
+			CDict D => D.Items.Select(object (x) => new KeyValuePair<object?, object?>(ToClr(x.Key), ToClr(x.Value))).ToArray(),
+			NullNode => null,
 			_ => obj
 		}; 
 	}
@@ -108,44 +110,44 @@ public static class ConvertCLR {
 		}
 
 		// 3) If the type has exactly one public instance property or field that is a simple CLR type, unwrap it
-		if (TryGetSinglePrimitiveMemberValue(obj, out var singleVal)) {
-			return ToCranberry(singleVal);
-		}
+		// if (TryGetSinglePrimitiveMemberValue(obj, out var singleVal)) {
+		// 	return ToCranberry(singleVal);
+		// }
 
 		// 4) For types from 3rd-party libraries (like Raylib-cs), attempt to produce a dict of public members
-		var publicProps = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-			.Where(p => p.GetMethod != null).ToArray();
-		var publicFields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
+		// var publicProps = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+		// 	.Where(p => p.GetMethod != null).ToArray();
+		// var publicFields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
 
-		if (publicProps.Length > 0 || publicFields.Length > 0) {
-			var dictPairs = new List<KeyValuePair<object, object>>();
-			foreach (var p in publicProps) {
-				object? val;
-				try {
-					val = p.GetValue(obj);
-				} catch {
-					val = null;
-				}
+		// if (publicProps.Length > 0 || publicFields.Length > 0) {
+		// 	var dictPairs = new List<KeyValuePair<object, object>>();
+		// 	foreach (var p in publicProps) {
+		// 		object? val;
+		// 		try {
+		// 			val = p.GetValue(obj);
+		// 		} catch {
+		// 			val = null;
+		// 		}
 
-				dictPairs.Add(new KeyValuePair<object, object>(p.Name, ToCranberry(val)!));
-			}
+		// 		dictPairs.Add(new KeyValuePair<object, object>(p.Name, ToCranberry(val)!));
+		// 	}
 
-			foreach (var f in publicFields) {
-				object? val;
-				try {
-					val = f.GetValue(obj);
-				} catch {
-					val = null;
-				}
+		// 	foreach (var f in publicFields) {
+		// 		object? val;
+		// 		try {
+		// 			val = f.GetValue(obj);
+		// 		} catch {
+		// 			val = null;
+		// 		}
 
-				// avoid duplicate keys if property with same name exists
-				if (!dictPairs.Any(kv => kv.Key.Equals(f.Name)))
-					dictPairs.Add(new KeyValuePair<object, object>(f.Name, ToCranberry(val)!));
-			}
+		// 		// avoid duplicate keys if property with same name exists
+		// 		if (!dictPairs.Any(kv => kv.Key.Equals(f.Name)))
+		// 			dictPairs.Add(new KeyValuePair<object, object>(f.Name, ToCranberry(val)!));
+		// 	}
 
-			// If we collected any members, return as CDict (struct-like)
-			if (dictPairs.Count > 0) return new CDict(dictPairs.ToDictionary());
-		}
+		// 	// If we collected any members, return as CDict (struct-like)
+		// 	if (dictPairs.Count > 0) return new CDict(dictPairs.ToDictionary());
+		// }
 
 		// 5) IDictionary (non-generic or generic) -> CDict
 		if (obj is IDictionary dict) {
@@ -181,7 +183,7 @@ public static class ConvertCLR {
 		}
 
 		// Fallback -> return original CLR object (host object)
-		return obj;
+		return new CClrObject(obj);
 	}
 
 	// Helpers --------------------------------------------------------------

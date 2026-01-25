@@ -21,16 +21,16 @@ public partial class Interpreter : INodeVisitor<object> {
 	public readonly bool IsBuild;
 	private readonly Dictionary<string, CNamespace> Namespaces = new();
 	private const double TOLERANCE = 1e-9;
-	
+
 	// --- assembly loading helpers ---
 	private readonly Dictionary<string, Assembly> _loadedAssemblies = new(StringComparer.OrdinalIgnoreCase);
-	
+
 	// STATIC EXCEPTIONS
 	private static readonly ReturnException ReturnNull = new(null);
 	private static readonly BreakException BreakNull = new(null);
 	private static readonly OutException OutNull = new(null);
 	private static readonly ContinueException ContinueNull = new();
-	
+
 	private static readonly ReturnException ExReturn = new(null);
 	private static readonly BreakException ExBreak = new(null);
 	private static readonly OutException ExOut = new(null);
@@ -333,7 +333,7 @@ public partial class Interpreter : INodeVisitor<object> {
 					throw;
 				}
 			});
-			
+
 			result = result.Replace(@"\{", "{").Replace(@"\}", "}");
 
 			return new CString(result);
@@ -375,7 +375,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (target is IMemberAccessible access) {
 			var value = node.Value;
 			if (node.Value is Node n) value = Evaluate(n);
-			
+
 			access.SetMember(Evaluate(node.Member), value);
 			return value;
 		}
@@ -463,39 +463,39 @@ public partial class Interpreter : INodeVisitor<object> {
 			case "number": return BuiltinInternal.ToNumber(value);
 			case "bool": return Misc.IsTruthy(value);
 			case "char": {
-				if (Misc.IsNumber(value))
-					return (char)Convert.ToByte(value);
+					if (Misc.IsNumber(value))
+						return (char)Convert.ToByte(value);
 
-				if (value is CString c)
-					return Convert.ToChar(c.Value);
+					if (value is CString c)
+						return Convert.ToChar(c.Value);
 
-				try {
-					return (char)value;
-				} catch {
-					// ignored
-				}
-
-				break;
-			}
-
-			case "list": {
-				if (value is CList) return value;
-				if (value is CDict dict) return dict.Items.Values;
-				if (value is CString c) return new CList(c.Value.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
-				if (value is string s) return new CList(s.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
-				if (value is CObject obj && obj.Class.Functions.TryGetValue("__next__", out var f)) {
-					var list = new List<object>();
-					var next = Evaluate(new FunctionCall(f.StartToken, "", [obj]) { Target = f });
-					while (next is not NullNode) {
-						list.Add(next);
-						next = Evaluate(new FunctionCall(f.StartToken, "", [obj]) { Target = f });
+					try {
+						return (char)value;
+					} catch {
+						// ignored
 					}
 
-					return new CList(list);
+					break;
 				}
 
-				break;
-			}
+			case "list": {
+					if (value is CList) return value;
+					if (value is CDict dict) return dict.Items.Values;
+					if (value is CString c) return new CList(c.Value.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
+					if (value is string s) return new CList(s.ToCharArray().Select(object (x) => new CString(x.ToString())).ToList());
+					if (value is CObject obj && obj.Class.Functions.TryGetValue("__next__", out var f)) {
+						var list = new List<object>();
+						var next = Evaluate(new FunctionCall(f.StartToken, "", [obj]) { Target = f });
+						while (next is not NullNode) {
+							list.Add(next);
+							next = Evaluate(new FunctionCall(f.StartToken, "", [obj]) { Target = f });
+						}
+
+						return new CList(list);
+					}
+
+					break;
+				}
 		}
 
 		throw new RuntimeError($"Cannot cast to type {node.Type}.");
@@ -507,7 +507,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public object? VisitLet(LetNode node, bool no_define = false) {
 		var fake_define = new Dictionary<string, object>();
-		
+
 		object? first_value = null;
 		foreach (var (index, name) in node.Names.WithIndex()) {
 			var value = node.Values.Length > index ? Evaluate(node.Values[index]) : new NullNode(node.StartToken);
@@ -534,8 +534,8 @@ public partial class Interpreter : INodeVisitor<object> {
 					if (no_define) fake_define.Add((string)name, value);
 					else env.DefineConstant((string)name, value);
 				else
-				if (no_define) fake_define.Add((string)name, value);
-				else env.Define((string)name, value);
+					if (no_define) fake_define.Add((string)name, value);
+					else env.Define((string)name, value);
 			}
 		}
 
@@ -687,7 +687,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 			if (target is CObject co) {
 				if (co.Class.Functions.TryGetValue("__call__", out var f)) {
-					return Evaluate(new FunctionCall(f.StartToken, "", [co, ..args]) {
+					return Evaluate(new FunctionCall(f.StartToken, "", [co, .. args]) {
 						Target = f
 					});
 				}
@@ -713,7 +713,26 @@ public partial class Interpreter : INodeVisitor<object> {
 			if (target is ExternFunction ef) {
 				// convert Cranberry runtime values into plain CLR values expected by wrapper
 				var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
-				var resultClr = ef.Invoke(clrArgs);
+				foreach (var arg in clrArgs) {
+					Console.WriteLine("ARGUMENT RECEIVED: {0}", arg);
+				}
+				var resultClr = ef.Invoke(clrArgs!);
+				// convert back into Cranberry runtime type
+				return ConvertCLR.ToCranberry(resultClr!);
+			}
+
+			if (target is CClrType clrType) {
+				// convert Cranberry runtime values into plain CLR values expected by wrapper
+				var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
+				var resultClr = clrType.ConstructNew(clrArgs!);
+				// convert back into Cranberry runtime type
+				return ConvertCLR.ToCranberry(resultClr!);
+			}
+
+			if (target is CClrObject clrObject) {
+				// convert Cranberry runtime values into plain CLR values expected by wrapper
+				var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
+				var resultClr = clrObject.ConstructNew(clrArgs!);
 				// convert back into Cranberry runtime type
 				return ConvertCLR.ToCranberry(resultClr!);
 			}
@@ -734,7 +753,7 @@ public partial class Interpreter : INodeVisitor<object> {
 					}
 				} else if (lookup is CObject co) {
 					if (co.Class.Functions.TryGetValue("__call__", out var f)) {
-						return Evaluate(new FunctionCall(f.StartToken, "", [co, ..args]) {
+						return Evaluate(new FunctionCall(f.StartToken, "", [co, .. args]) {
 							Target = f
 						});
 					}
@@ -751,7 +770,19 @@ public partial class Interpreter : INodeVisitor<object> {
 				} else if (lookup is ExternFunction ef) {
 					// convert Cranberry runtime values into plain CLR values expected by wrapper
 					var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
-					var resultClr = ef.Invoke(clrArgs);
+					var resultClr = ef.Invoke(clrArgs!);
+					// convert back into Cranberry runtime type
+					return ConvertCLR.ToCranberry(resultClr!);
+				} else if (lookup is CClrType clrType) {
+					// convert Cranberry runtime values into plain CLR values expected by wrapper
+					var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
+					var resultClr = clrType.ConstructNew(clrArgs!);
+					// convert back into Cranberry runtime type
+					return ConvertCLR.ToCranberry(resultClr!);
+				} else if (lookup is CClrObject clrObject) {
+					// convert Cranberry runtime values into plain CLR values expected by wrapper
+					var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
+					var resultClr = clrObject.ConstructNew(clrArgs!);
 					// convert back into Cranberry runtime type
 					return ConvertCLR.ToCranberry(resultClr!);
 				}
@@ -851,18 +882,18 @@ public partial class Interpreter : INodeVisitor<object> {
 			var step = range.Step;
 
 			for (double i = Convert.ToDouble(range.Start);
-			     (Convert.ToDouble(step) < 0) switch {
-				     true => range.Inclusive switch {
-					     true => i >= Convert.ToDouble(range.End),
-					     _ => i > Convert.ToDouble(range.End)
-				     },
-				     _ => range.Inclusive switch {
-					     true => i <= Convert.ToDouble(range.End),
-					     _ => i < Convert.ToDouble(range.End)
-				     }
-			     };
-			     i += Convert.ToDouble(step)
-			    ) {
+				 (Convert.ToDouble(step) < 0) switch {
+					 true => range.Inclusive switch {
+						 true => i >= Convert.ToDouble(range.End),
+						 _ => i > Convert.ToDouble(range.End)
+					 },
+					 _ => range.Inclusive switch {
+						 true => i <= Convert.ToDouble(range.End),
+						 _ => i < Convert.ToDouble(range.End)
+					 }
+				 };
+				 i += Convert.ToDouble(step)
+				) {
 				env.Push();
 				try {
 					env.Define(node.VarName, i);
@@ -1014,7 +1045,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 		foreach (var l in node.Lets) {
 			class_value.Lets.Add(l);
-			
+
 			if (VisitLet(l, true) is Dictionary<string, object> def) {
 				foreach (var (key, value) in def) {
 					if (value is FunctionNode f) {
@@ -1022,8 +1053,7 @@ public partial class Interpreter : INodeVisitor<object> {
 							throw new RuntimeError($"Function `{key}` already exists in class.", l.StartToken);
 						Console.WriteLine("New function {0} :> {1}", key, value);
 						class_value.Functions.Add(key, f);
-					}
-					else class_value.Values.Add(key, value);
+					} else class_value.Values.Add(key, value);
 				}
 			}
 		}
@@ -1192,7 +1222,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (string.Equals(node.Name, "include", StringComparison.OrdinalIgnoreCase)) {
 			if (node.Args.Length < 1)
 				throw new RuntimeError("`@include(path/path list, recursive?)` decorator expects at least one argument: the path to the file/folder.");
-			
+
 			var file_path = Evaluate(node.Args[0]);
 			var recursive = node.Args.Length > 1 && Misc.IsTruthy(Evaluate(node.Args[1]));
 
@@ -1209,7 +1239,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 			throw new RuntimeError("`@include(path/path list, recursive?)` only takes string path or list of paths.");
 		}
-		
+
 		throw new RuntimeError($"Unknown decorator `@{node.Name}`.");
 	}
 
@@ -1226,13 +1256,13 @@ public partial class Interpreter : INodeVisitor<object> {
 			return existing;
 
 
-// Create resolver for this path
+		// Create resolver for this path
 		var resolver = new AssemblyDependencyResolver(modulePath);
 		// _resolvers[modulePath] = resolver;
 
 
 		try {
-// Hook up a resolving handler that uses the resolver to find dependency paths
+			// Hook up a resolving handler that uses the resolver to find dependency paths
 			AssemblyLoadContext.Default.Resolving += (context, name) => {
 				try {
 					var depPath = resolver.ResolveAssemblyToPath(name);
@@ -1240,11 +1270,11 @@ public partial class Interpreter : INodeVisitor<object> {
 						return context.LoadFromAssemblyPath(depPath);
 					}
 				} catch {
-// swallow here and let fallback occur
+					// swallow here and let fallback occur
 				}
 
 
-// last ditch: probe same directory for simple name
+				// last ditch: probe same directory for simple name
 				var probe = Path.Combine(Path.GetDirectoryName(modulePath)!, name.Name + ".dll");
 				if (File.Exists(probe)) return context.LoadFromAssemblyPath(probe);
 				return null;
@@ -1268,17 +1298,15 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public void ImportAssemblyFunctions(string modulePath) {
-// Accept either absolute path or relative path; expand and validate
+		// Accept either absolute path or relative path; expand and validate
 		var absPath = Path.GetFullPath(modulePath);
 		if (!File.Exists(absPath)) throw new FileNotFoundException($"DLL not found: {absPath}");
 
-
 		var asm = LoadAssemblySafe(absPath);
 
-
-// Prefer if ExternalManager exposes an Assembly-aware API. Try both.
+		// Prefer if ExternalManager exposes an Assembly-aware API. Try both.
 		try {
-// If ExternalManager has an Assembly-based register, use it (preferred)
+			// If ExternalManager has an Assembly-based register, use it (preferred)
 			var method = typeof(ExternalManager).GetMethod("RegisterAllManagedFunctionsFromAssembly", [typeof(Assembly)]);
 			if (method != null) {
 				var wrappers = (Dictionary<string, Delegate>)method.Invoke(null, [asm])!;
@@ -1393,7 +1421,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 
-// Fallback: try the path-based API
+		// Fallback: try the path-based API
 		var wrappersFallback = ExternalManager.RegisterAllManagedFunctionsFromAssembly(absPath);
 		foreach (var kv in wrappersFallback) {
 			var methodName = kv.Key;
@@ -1449,7 +1477,7 @@ public partial class Interpreter : INodeVisitor<object> {
 				throw new RuntimeError($"No matching constructor found for {t.FullName} with {(callArgs?.Length ?? 0)} args.");
 			}
 
-			var clrTypeObj = new CClrType(t, Factory);
+			var clrTypeObj = new CClrType(modulePath, t, Factory);
 
 			// Define the type in the current environment (use simple name for accessibility)
 			env.Define(t.Name, clrTypeObj);

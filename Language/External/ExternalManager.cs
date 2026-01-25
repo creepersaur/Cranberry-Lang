@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using System.Collections.Concurrent;
 using Cranberry.Types;
+using Cranberry.Nodes;
+using Cranberry.Builtin;
 
 namespace Cranberry.External;
 
@@ -82,6 +84,9 @@ public static class ExternalManager {
 	public static object? ConvertToClr(object? cranVal, Type targetType) {
 		if (cranVal == null) return targetType.IsValueType ? Activator.CreateInstance(targetType) : null;
 
+		if (cranVal is IExternalObject ext)
+			return ext.Internal;
+
 		if (cranVal is CClrObject clrObj) {
 			// Check if the wrapped type matches or is assignable to target
 			if (targetType.IsAssignableFrom(clrObj.Type)) {
@@ -92,12 +97,34 @@ public static class ExternalManager {
 			return Convert.ChangeType(clrObj.Instance, targetType);
 		}
 
+		// if (cranVal is InternalFunction func) {
+		// 	Console.WriteLine("Internal method is {0}", func.InternalMethod!.GetType());
+		// 	return func.InternalMethod;
+		// } 
+
+		if (cranVal is InternalFunction func) {
+			// If the caller expects a delegate, create one
+			if (typeof(Delegate).IsAssignableFrom(targetType)
+				&& func.InternalMethod is MethodInfo mi) {
+
+				return Delegate.CreateDelegate(
+					targetType,
+					mi.IsStatic ? null : mi.DeclaringType!.IsValueType ? null : null,
+					mi
+				);
+			}
+
+			return func.InternalMethod;
+		}
+
 		// If already compatible:
 		if (targetType.IsInstanceOfType(cranVal)) return cranVal;
 
 		return cranVal switch {
 			// If cranVal is your runtime wrapper types (CString, CNumber, etc.), unwrap them here.
 			// Replace these checks with your actual runtime types.
+			NullNode => null,
+
 			string s when targetType == typeof(string) || targetType == typeof(object) => s,
 			CString s when targetType == typeof(string) || targetType == typeof(object) => s.Value,
 
@@ -114,64 +141,53 @@ public static class ExternalManager {
 		// fallback: try System.Convert
 	}
 
-	public static Dictionary<string, Func<object[], object>> RegisterAllManagedFunctionsFromAssembly(string modulePath)
-    {
-        if (!File.Exists(modulePath))
-            throw new FileNotFoundException($"DLL not found: {modulePath}");
+	public static Dictionary<string, Func<object[], object>> RegisterAllManagedFunctionsFromAssembly(string modulePath) {
+		if (!File.Exists(modulePath))
+			throw new FileNotFoundException($"DLL not found: {modulePath}");
 
-        var asm = Assembly.LoadFrom(modulePath);
+		var asm = Assembly.LoadFrom(modulePath);
 
-        // group methods by simple name (overloads will be a list)
-        var methodGroups = new Dictionary<string, List<MethodInfo>>(StringComparer.OrdinalIgnoreCase);
+		// group methods by simple name (overloads will be a list)
+		var methodGroups = new Dictionary<string, List<MethodInfo>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var t in asm.GetExportedTypes())
-        {
-            // only public types
-            if (!t.IsPublic) continue;
+		foreach (var t in asm.GetExportedTypes()) {
+			// only public types
+			if (!t.IsPublic) continue;
 
-            foreach (var m in t.GetMethods(BindingFlags.Public | BindingFlags.Static))
-            {
-                // skip special names / property accessors
-                if (m.IsSpecialName) continue;
+			foreach (var m in t.GetMethods(BindingFlags.Public | BindingFlags.Static)) {
+				// skip special names / property accessors
+				if (m.IsSpecialName) continue;
 
-                if (!methodGroups.TryGetValue(m.Name, out var list))
-                {
-                    list = new List<MethodInfo>();
-                    methodGroups[m.Name] = list;
-                }
-                list.Add(m);
-            }
-        }
+				if (!methodGroups.TryGetValue(m.Name, out var list)) {
+					list = new List<MethodInfo>();
+					methodGroups[m.Name] = list;
+				}
+				list.Add(m);
+			}
+		}
 
-        var wrappers = new Dictionary<string, Func<object[], object>>(StringComparer.OrdinalIgnoreCase);
+		var wrappers = new Dictionary<string, Func<object[], object>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var kv in methodGroups)
-        {
-            var methodName = kv.Key;
-            var overloads = kv.Value.ToArray();
+		foreach (var kv in methodGroups) {
+			var methodName = kv.Key;
+			var overloads = kv.Value.ToArray();
 
-            // Create a wrapper which will pick the best overload at call time
-            object Wrapper(object[] args)
-            {
+			// Create a wrapper which will pick the best overload at call time
+			object Wrapper(object[] args) {
 				// Try to find an overload that matches parameter count and convertible args
-				foreach (var mi in overloads)
-				{
+				foreach (var mi in overloads) {
 					var pars = mi.GetParameters();
 					if (pars.Length != args.Length) continue;
 
 					object[] invokeArgs = new object[args.Length];
 					bool ok = true;
 
-					for (int i = 0; i < args.Length; i++)
-					{
-						try
-						{
+					for (int i = 0; i < args.Length; i++) {
+						try {
 							// Reuse your ConvertToClr logic (private method). We call it through reflection-like approach
 							var converted = ConvertToClr(args[i], pars[i].ParameterType);
 							invokeArgs[i] = converted!;
-						}
-						catch
-						{
+						} catch {
 							ok = false;
 							break;
 						}
@@ -179,39 +195,34 @@ public static class ExternalManager {
 
 					if (!ok) continue;
 
-					try
-					{
+					try {
 						var result = mi.Invoke(null, invokeArgs);
 						return result!;
-					}
-					catch (TargetInvocationException)
-					{
+					} catch (TargetInvocationException) {
 						// If the target threw, bubble useful info up.
 						throw;
-					}
-					catch
-					{
+					} catch {
 						// Ignore
 					}
 				}
 
-                // If we got here, no overload matched
+				// If we got here, no overload matched
 				// foreach (var i in args) {
 				// 	Console.WriteLine("Argument `{0}`: {1}", i, i.GetType());
 				// }
-                throw new ArgumentException($"No matching overload found for {methodName} with {args.Length} arguments.");
-            }
+				throw new ArgumentException($"No matching overload found for {methodName} with {args.Length} arguments.");
+			}
 
-            // register wrapper in our runtime dictionary (module-specific keys handled by RegisterManagedFunctionFromAssembly style)
-            var key = MakeKey(modulePath, methodName);
-            _externs[key] = Wrapper;
-            // also register by bare name so scripts that just call MethodName(...) can resolve (optional)
-            if (!_externs.ContainsKey(methodName))
-                _externs[methodName] = Wrapper;
+			// register wrapper in our runtime dictionary (module-specific keys handled by RegisterManagedFunctionFromAssembly style)
+			var key = MakeKey(modulePath, methodName);
+			_externs[key] = Wrapper;
+			// also register by bare name so scripts that just call MethodName(...) can resolve (optional)
+			if (!_externs.ContainsKey(methodName))
+				_externs[methodName] = Wrapper;
 
-            wrappers[methodName] = Wrapper;
-        }
+			wrappers[methodName] = Wrapper;
+		}
 
-        return wrappers;
-    }
+		return wrappers;
+	}
 }

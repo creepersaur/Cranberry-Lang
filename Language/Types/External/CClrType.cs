@@ -9,9 +9,11 @@ namespace Cranberry.Types {
 	// It is an InternalFunction (so it can be called) and IMemberAccessible so you can do Color.RAYWHITE
 	public class CClrType : InternalFunction, IMemberAccessible {
 		public readonly Type ClrType;
+		public readonly string ModulePath;
 
 		// factoryFunc: called with Cranberry args (raw runtime values), return value must be a Cranberry value (e.g. CClrObject)
-		public CClrType(Type type, Func<Token?, object?[], object?> factoryFunc) : base(factoryFunc) {
+		public CClrType(string modulePath, Type type, Func<Token?, object?[], object?> factoryFunc) : base(factoryFunc) {
+			ModulePath = modulePath;
 			ClrType = type;
 		}
 
@@ -29,7 +31,11 @@ namespace Cranberry.Types {
 			return new CClrObject(val);
 		}
 
-		public object GetMember(object? member) {
+		public object? ConstructNew(object[] args) {
+			return Activator.CreateInstance(ClrType, args);
+		}
+
+		public new object GetMember(object? member) {
 			if (member is not string name) throw new RuntimeError("Type member must be a string.");
 
 			// 1) Static field
