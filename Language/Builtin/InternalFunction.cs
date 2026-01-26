@@ -4,9 +4,10 @@ using Cranberry.Types;
 
 namespace Cranberry.Builtin;
 
-public class InternalFunction(Func<Token?, object?[], object?> func, object? internalMethod = null) : Node(null), IMemberAccessible {
+public class InternalFunction(Func<Token?, object?[], object?> func, object? internalMethod = null, object? internalTarget = null) : Node(null), IMemberAccessible {
 	// THE INTERNAL METHOD THAT CClrObject writes to.
 	public object? InternalMethod = internalMethod ?? func;
+	public object? InternalTarget = internalTarget;
 	public object? Call(object[] args, Token? start_token = null) => func(start_token, args);
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {

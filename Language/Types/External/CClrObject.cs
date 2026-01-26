@@ -93,14 +93,14 @@ public class CClrObject(object? instance, Type? type = null) : IMemberAccessible
 						var result = mi.Invoke(Instance, invokeArgs);
 						return WrapClr(result);
 					} catch (TargetInvocationException tie) {
-						throw tie.InnerException ?? tie;
+						throw new RuntimeError((tie.InnerException ?? tie).ToString());
 					} catch (Exception invEx) {
 						errors.AppendLine($"Invocation of {mi} failed: {invEx.Message}");
 					}
 				}
 
 				throw new RuntimeError($"No matching instance overload for {Type.FullName}.{name} with {callArgs?.Length ?? 0} args.\n{errors}");
-			}, methods[0]);
+			}, methods[0], Instance);
 		}
 
 		// Not found

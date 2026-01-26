@@ -92,7 +92,7 @@ namespace Cranberry.Types {
 					}
 
 					throw new RuntimeError($"No matching static overload for {ClrType.FullName}.{name} with {(callArgs?.Length ?? 0)} args.\n{errors}");
-				});
+				}, methods[0]);
 			}
 
 			throw new RuntimeError($"Static member `{name}` not found on type `{ClrType.FullName}`.");

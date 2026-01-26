@@ -97,11 +97,6 @@ public static class ExternalManager {
 			return Convert.ChangeType(clrObj.Instance, targetType);
 		}
 
-		// if (cranVal is InternalFunction func) {
-		// 	Console.WriteLine("Internal method is {0}", func.InternalMethod!.GetType());
-		// 	return func.InternalMethod;
-		// } 
-
 		if (cranVal is InternalFunction func) {
 			// If the caller expects a delegate, create one
 			if (typeof(Delegate).IsAssignableFrom(targetType)
@@ -109,7 +104,7 @@ public static class ExternalManager {
 
 				return Delegate.CreateDelegate(
 					targetType,
-					mi.IsStatic ? null : mi.DeclaringType!.IsValueType ? null : null,
+					mi.IsStatic ? null : (func.InternalTarget ?? (mi.DeclaringType!.IsValueType ? null : null)),
 					mi
 				);
 			}
