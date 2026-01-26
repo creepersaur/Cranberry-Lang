@@ -99,13 +99,13 @@ public class ForNode(Token start_token, string var_name, Node iterable, BlockNod
 	}
 }
 
-public class SwitchNode(Token start_token, Node expr, (Node[], BlockNode)[] cases, BlockNode? default_case) : Node(start_token) {
+public class MatchNode(Token start_token, Node expr, (Node[], BlockNode)[] cases, (string, BlockNode)? default_case) : Node(start_token) {
 	public readonly Node Expr = expr;
 	public readonly (Node[], BlockNode)[] Cases = cases;
-	public readonly BlockNode? DefaultCase = default_case;
+	public readonly (string, BlockNode)? DefaultCase = default_case;
 	
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
-		return visitor.VisitSwitch(this);
+		return visitor.VisitMatch(this);
 	}
 }
 

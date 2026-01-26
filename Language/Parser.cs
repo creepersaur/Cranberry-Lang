@@ -532,13 +532,13 @@ namespace Cranberry {
 			return new SignalNode(start_token, name!.Value);
 		}
 		
-		private SwitchNode ParseSwitch() {
+		private MatchNode ParseMatch() {
 			Token start_token = PeekAhead()!;
 			Advance();
 
 			var expr = ParseExpression();
 			var cases = new List<(Node[], BlockNode)>();
-			BlockNode? defaultCase = null;
+			(string, BlockNode)? defaultCase = null;
 
 			Expect("{");
 			Advance();
@@ -546,15 +546,15 @@ namespace Cranberry {
 			while (!Check("}")) {
 				SkipNewlines();
 
-				if (Check("_")) {
+				if (IsIdentifier(PeekAhead())) {
 					if (defaultCase != null)
-						throw new RuntimeError("`switch` statements can have only 1 default case.");
+						throw new RuntimeError("`match` statements can have only 1 default case.");
 
-					Advance();
+					var name = Advance();
 					Expect("=>");
 					Advance();
 
-					defaultCase = ParseBlock(true);
+					defaultCase = (name!.Value, ParseBlock(true));
 					continue;
 				}
 
@@ -578,7 +578,7 @@ namespace Cranberry {
 			Expect("}");
 			Advance();
 
-			return new SwitchNode(start_token, expr, cases.ToArray(), defaultCase);
+			return new MatchNode(start_token, expr, cases.ToArray(), defaultCase);
 		}
 
 		private AssignmentNode ParseAssignment() {
@@ -1042,7 +1042,7 @@ namespace Cranberry {
 				return new OutNode(start_token, ParseExpression());
 			}
 
-			if (token == "switch") return ParseSwitch();
+			if (token == "match") return ParseMatch();
 
 			// inline lambda: fn (...) { ... }
 			if (token == "fn") {

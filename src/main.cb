@@ -1,6 +1,4 @@
-signal my_signal
-
-my_signal.connect(fn(name) {
-	println($"Hello there, {name}")
-})
-my_signal.emit("John")
+match 1 + 3 {
+	2 => println("yes")
+	other => println("NO. The value is actually:\n\t", other)
+}

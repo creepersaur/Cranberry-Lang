@@ -51,7 +51,7 @@ public interface INodeVisitor<out T> {
 	T? VisitScope(ScopeNode node);
 	T? VisitWhile(WhileNode node);
 	T? VisitFOR(ForNode node);
-	T? VisitSwitch(SwitchNode node);
+	T? VisitMatch(MatchNode node);
 	T? VisitUsingDirective(UsingDirective node);
 	T? VisitNamespaceDirective(NamespaceDirective node);
 	T? VisitDecorator(DecoratorNode node);

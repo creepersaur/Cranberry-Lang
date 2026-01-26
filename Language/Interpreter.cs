@@ -1002,7 +1002,7 @@ public partial class Interpreter : INodeVisitor<object> {
 		throw new RuntimeError($"Cannot loop over `{Evaluate(node.Iterable).GetType()}`. Expected iterable.");
 	}
 
-	public object? VisitSwitch(SwitchNode node) {
+	public object? VisitMatch(MatchNode node) {
 		var value = Evaluate(node.Expr);
 
 		foreach (var (cases, block) in node.Cases) {
@@ -1025,7 +1025,9 @@ public partial class Interpreter : INodeVisitor<object> {
 		if (node.DefaultCase != null) {
 			env.Push();
 			try {
-				Evaluate(node.DefaultCase);
+				(string name, BlockNode block) = node.DefaultCase.Value;
+				env.Define(name, value);
+				Evaluate(block);
 			} catch (OutException re) {
 				return re.Value;
 			} finally {
