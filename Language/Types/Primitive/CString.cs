@@ -47,6 +47,8 @@ public class CString(string value) : IMemberAccessible {
 
 		if (member is string name)
 			return name switch {
+				"value" => Value,
+
 				"length" => new InternalFunction((_, args) => {
 					if (args.Length != 0)
 						throw new RuntimeError("`length()` expects 0 arguments.");
