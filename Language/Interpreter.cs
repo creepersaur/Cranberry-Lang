@@ -235,7 +235,13 @@ public partial class Interpreter : INodeVisitor<object>
 		// String multiplication
 		if (left is CString l && right is double)
 		{
-			return string.Concat(Enumerable.Repeat(l.Value, Convert.ToInt32(right)));
+			return new CString(string.Concat(Enumerable.Repeat(l.Value, Convert.ToInt32(right))));
+		}
+
+		// String multiplication
+		if (left is string ls && right is double)
+		{
+			return new CString(string.Concat(Enumerable.Repeat(ls, Convert.ToInt32(right))));
 		}
 
 		if (left is CObject cl)
