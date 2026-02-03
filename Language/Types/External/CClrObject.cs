@@ -75,11 +75,30 @@ public class CClrObject(object? instance, Type? type = null) : IMemberAccessible
 					var ok = true;
 					for (int i = 0; i < pars.Length; i++) {
 						try {
-							var conv = ExternalManager.ConvertToClr(callArgs![i], pars[i].ParameterType);
+							if (callArgs![i] is CPointer cp) {
+								invokeArgs[i] = cp.Address;
+								continue;
+							}
+							if (callArgs![i] is double d && (pars[i].ParameterType == typeof(uint) || pars[i].ParameterType == typeof(nuint)) && (d < 0 || d > uint.MaxValue)) {
+								throw new RuntimeError($"Value {d} is out of range for a uint (0 to 4.29b)");
+							}
+							if (pars[i].ParameterType == typeof(UIntPtr)) {
+								invokeArgs[i] = new UIntPtr((nuint)(double)callArgs![i]!);
+								continue;
+							} else if (pars[i].ParameterType == typeof(IntPtr)) {
+								invokeArgs[i] = new IntPtr((uint)(double)callArgs![i]!);
+								continue;
+							} else if (pars[i].ParameterType.IsPrimitive) {
+								invokeArgs[i] = Convert.ChangeType(callArgs![i]!, pars[i].ParameterType);
+								continue;
+							}
+							var rawValue = ExternalManager.ConvertToClr(callArgs![i], pars[i].ParameterType);
 							// handle nullable value types
-							if (conv == null && pars[i].ParameterType.IsValueType)
+							if (rawValue == null && pars[i].ParameterType.IsValueType) {
 								invokeArgs[i] = Activator.CreateInstance(pars[i].ParameterType)!;
-							else invokeArgs[i] = conv!;
+							} else {
+								invokeArgs[i] = rawValue!;
+							}
 						} catch (Exception ex) {
 							ok = false;
 							errors.AppendLine($"arg[{i}] -> {pars[i].ParameterType.Name} failed: {ex.Message}");

@@ -39,6 +39,14 @@ public abstract class RegisterBuiltin {
 
 			return BuiltinInternal.Typeof(args);
 		}));
+
+		env.Define("addrof", new InternalFunction((_, args) => {
+			if (args.Length == 0)
+				throw new RuntimeError("`addressof(obj, type?)` expects at least 1 argument.");
+
+			return BuiltinInternal.AddrOf(args);
+		}));
+		
 		env.Define("pcall", new InternalFunction((_, args) => {
 			if (args.Length < 1)
 				throw new RuntimeError("`pcall(fn, ...)` expects at least one argument. (Function to be called)");
