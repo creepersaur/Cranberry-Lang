@@ -1,4 +1,5 @@
 ﻿using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Cranberry.Packager;
@@ -18,7 +19,7 @@ public static class CrpkgZip {
 		// Create a `cranberry.srcConfig`
 		var srcConfigEntry = archive.CreateEntry(".srcConfig", compression);
 		var srcConfigStream = srcConfigEntry.Open();
-		srcConfigStream.Write(Encoding.ASCII.GetBytes(Path.GetFileName(entryPoint)));
+		srcConfigStream.Write(Encoding.ASCII.GetBytes(entryPoint));
 		srcConfigStream.Close();
 
 		// PACK MAIN PROGRAM
@@ -50,12 +51,12 @@ public static class CrpkgZip {
 		}
 	}
 
-	public static void Build(string entryPoint, FileInfo[] inputFilePaths, BuildConfig config) {
+	public static void Build(string entryPoint, FileInfo[] inputFilePaths, BuildConfig config, bool is_logged) {
 		bool is_release = config.Profile == "release";
 		if (is_release)
 			BuildDir = "build/release";
 		
-		Console.WriteLine($"Build dir is: {BuildDir}");
+		if (is_logged) Console.WriteLine($"Build output directory: {BuildDir}");
 		
 		if (Directory.Exists(BuildDir))
 			Directory.Delete(BuildDir, true);
@@ -66,12 +67,16 @@ public static class CrpkgZip {
 		var exe_path = Environment.ProcessPath ?? System.Reflection.Assembly.GetEntryAssembly()!.Location;
 		var exe_dir = Path.GetDirectoryName(exe_path);
 
-		File.Copy(exe_path, $"{BuildDir}/{config.Name}.exe");
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+			File.Copy(exe_path, $"{BuildDir}/{config.Name}.exe");
+        } else {
+			File.Copy(exe_path, $"{BuildDir}/{config.Name}");
+		}
 		File.Copy($"{exe_dir}/Cranberry.dll", $"{BuildDir}/Cranberry.dll");
 		File.Copy($"{exe_dir}/Cranberry.runtimeconfig.json", $"{BuildDir}/Cranberry.runtimeconfig.json");
 	}
 
-	public static (string?, Dictionary<FileInfo, string>) ReadPackage(string crpkgPath, bool is_main = true) {
+	public static (string?, Dictionary<string, string>) ReadPackage(string crpkgPath, bool is_main = true) {
 		using var fs = File.OpenRead(crpkgPath);
 		using var archive = new ZipArchive(fs, ZipArchiveMode.Read, leaveOpen: false);
 
@@ -85,13 +90,13 @@ public static class CrpkgZip {
 		}
 
 		// Read all other files
-		var files = new Dictionary<FileInfo, string>();
+		var files = new Dictionary<string, string>();
 		foreach (var entry in archive.Entries) {
 			using var s = entry.Open();
 			using var sr = new StreamReader(s, Encoding.UTF8);
 
 			string fileData = sr.ReadToEnd();
-			files.Add(new FileInfo(entry.Name), fileData);
+			files.Add(entry.FullName, fileData);
 		}
 
 		return (configData, files);

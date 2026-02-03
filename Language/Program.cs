@@ -166,12 +166,12 @@ public class Program {
 		RunFile(File.ReadAllText(entry.FullName), entry);
 	}
 
-	public void RunBuild(FileInfo entry, Dictionary<FileInfo, string> files) {
+	public void RunBuild(string entry, Dictionary<string, string> files) {
 		foreach (var (name, data) in files) {
-			if (name != entry && name.Name != ".srcConfig")
-				RunFile(data, name);
+			if (name != entry && name != ".srcConfig")
+				RunFile(data, new FileInfo(name));
 		}
 
-		RunFile(files[entry], entry);
+		RunFile(files[entry], new FileInfo(entry));
 	}
 }
