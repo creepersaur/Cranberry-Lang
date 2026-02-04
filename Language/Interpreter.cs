@@ -724,9 +724,9 @@ public partial class Interpreter : INodeVisitor<object> {
 			if (target is ExternFunction ef) {
 				// convert Cranberry runtime values into plain CLR values expected by wrapper
 				var clrArgs = args.Select(ConvertCLR.ToClr).ToArray();
-				foreach (var arg in clrArgs) {
-					Console.WriteLine("ARGUMENT RECEIVED: {0}", arg);
-				}
+				// foreach (var arg in clrArgs) {
+				// 	Console.WriteLine("ARGUMENT RECEIVED: {0}", arg);
+				// }
 				var resultClr = ef.Invoke(clrArgs!);
 				// convert back into Cranberry runtime type
 				return ConvertCLR.ToCranberry(resultClr!);
@@ -1064,7 +1064,7 @@ public partial class Interpreter : INodeVisitor<object> {
 					if (value is FunctionNode f) {
 						if (class_value.Functions.ContainsKey(key))
 							throw new RuntimeError($"Function `{key}` already exists in class.", l.StartToken);
-						Console.WriteLine("New function {0} :> {1}", key, value);
+						// Console.WriteLine("New function {0} :> {1}", key, value);
 						class_value.Functions.Add(key, f);
 					} else class_value.Values.Add(key, value);
 				}

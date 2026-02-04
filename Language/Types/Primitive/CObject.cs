@@ -20,7 +20,7 @@ public class CObject(CClass from_class) : IMemberAccessible {
 			}
 		}
 		
-		Console.WriteLine(Misc.FormatValue(Properties));
+		// Console.WriteLine(Misc.FormatValue(Properties));
 		
 		throw new RuntimeError($"Tried to get unknown member: `{member}` on `Object:{Class.Name}`.");
 	}
