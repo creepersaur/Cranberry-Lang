@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using Cranberry.Types;
 using Cranberry.Nodes;
 using Cranberry.Builtin;
+using System.Runtime.InteropServices;
 
 namespace Cranberry.External;
 
@@ -23,47 +24,81 @@ public static class ExternalManager {
 		// try load the assembly (will throw if not a .NET assembly)
 		var asm = Assembly.LoadFrom(modulePath);
 
-		// find candidate MethodInfo(s)
-		MethodInfo? method = null;
+		// 1) Collect all candidates by name
+		List<MethodInfo> allCandidates = new();
+
 		if (!string.IsNullOrEmpty(typeName)) {
 			var type = asm.GetType(typeName, throwOnError: true);
-			method = type!.GetMethods(BindingFlags.Public | BindingFlags.Static)
-				.FirstOrDefault(m => string.Equals(m.Name, functionName, StringComparison.OrdinalIgnoreCase));
+			allCandidates.AddRange(
+				type!.GetMethods(BindingFlags.Public | BindingFlags.Static)
+					.Where(m => string.Equals(m.Name, functionName, StringComparison.OrdinalIgnoreCase))
+			);
 		} else {
-			// search types for a public static method with that name
 			foreach (var t in asm.GetExportedTypes()) {
-				var mi = t.GetMethods(BindingFlags.Public | BindingFlags.Static)
-					.FirstOrDefault(m => string.Equals(m.Name, functionName, StringComparison.OrdinalIgnoreCase));
-				if (mi != null) {
-					method = mi;
-					break;
-				}
+				allCandidates.AddRange(
+					t.GetMethods(BindingFlags.Public | BindingFlags.Static)
+						.Where(m => string.Equals(m.Name, functionName, StringComparison.OrdinalIgnoreCase))
+				);
 			}
 		}
 
-		if (method == null)
-			throw new InvalidOperationException($"Method '{functionName}' not found as a public static in any exported type of {modulePath}.");
+		if (allCandidates.Count == 0)
+			throw new InvalidOperationException(
+				$"Method '{functionName}' not found as a public static in any exported type of {modulePath}."
+			);
 
-		var key = MakeKey(modulePath, functionName);
-		_externs[key] = Wrapper;
-		return;
+		// 2) Prefer managed overloads
+		MethodInfo[] managed = allCandidates
+			.Where(m =>
+				!m.IsDefined(typeof(DllImportAttribute), false)
+			)
+			.ToArray();
 
-		// Build wrapper that accepts object[] args and returns object
+		MethodInfo selected;
+
+		if (managed.Length == 1) {
+			selected = managed[0];
+		} else if (managed.Length > 1) {
+			// Multiple managed overloads → ambiguous
+			throw new InvalidOperationException(
+				$"Multiple managed overloads found for '{functionName}'. " +
+				$"Disambiguate using typeName.\n" +
+				string.Join("\n", managed.Select(m => "  " + m))
+			);
+		} else {
+			// 3) Fallback: allow pointer/native overloads
+			var native = allCandidates.ToArray();
+
+			if (native.Length == 1) {
+				selected = native[0];
+			} else {
+				throw new InvalidOperationException(
+					$"No managed overload found for '{functionName}', and multiple native overloads exist. " +
+					$"Disambiguate using typeName.\n" +
+					string.Join("\n", native.Select(m => "  " + m))
+				);
+			}
+		}
+
+		// 4) Build wrapper
 		object Wrapper(object[] args) {
-			var pars = method.GetParameters();
-			if (pars.Length != args.Length) throw new ArgumentException($"Wrong argument count for {functionName}. Expected {pars.Length} but got {args.Length}.");
+			var pars = selected.GetParameters();
+			if (pars.Length != args.Length)
+				throw new ArgumentException(
+					$"Wrong argument count for {functionName}. Expected {pars.Length} but got {args.Length}."
+				);
 
-			// convert each argument to the parameter type (naive)
 			object[] invokeArgs = new object[args.Length];
 			for (int i = 0; i < args.Length; i++) {
-				var targetType = pars[i].ParameterType;
-				invokeArgs[i] = ConvertToClr(args[i], targetType)!;
+				invokeArgs[i] = ConvertToClr(args[i], pars[i].ParameterType)!;
 			}
 
-			// If method belongs to a static generic type/method, reflection can be more complex; this handles the common case.
-			var result = method.Invoke(null, invokeArgs);
-			return result!;
+			return selected.Invoke(null, invokeArgs)!;
 		}
+
+		// 5) Register
+		var key = MakeKey(modulePath, functionName);
+		_externs[key] = Wrapper;
 	}
 
 	public static bool TryResolve(string modulePath, string functionName, out Func<object[], object>? func) {
