@@ -80,6 +80,8 @@ public class N_Math : CNamespace {
 		AddBinary("min", (a, b) => Math.Min(a, b));
 		AddTernary("clamp", (v, lo, hi) => Math.Clamp(v, lo, hi));
 
+		AddUnary("rad", x => double.DegreesToRadians(x));
+		AddUnary("deg", x => double.RadiansToDegrees(x));
 		AddUnary("sin", x => Math.Sin(x));
 		AddUnary("cos", x => Math.Cos(x));
 		AddUnary("tan", x => Math.Tan(x));
