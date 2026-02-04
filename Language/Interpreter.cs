@@ -1221,16 +1221,10 @@ public partial class Interpreter : INodeVisitor<object> {
 			var funcName = node.Func!.Name;
 			var symbolToFind = explicitSymbol ?? funcName;
 
-			Console.WriteLine($"Trying to register: {symbolToFind}");
-
 			ExternalManager.RegisterManagedFunctionFromAssembly(modulePath.Value, symbolToFind);
-			
-			Console.WriteLine($"RegisterManagedFunctionFromAssembly completed: {symbolToFind}");
 			
 			if (!ExternalManager.TryResolve(modulePath.Value, symbolToFind, out var wrapper))
 				throw new Exception($"Failed to register external function {symbolToFind} from {modulePath.Value}");
-
-			Console.WriteLine($"TryResolve completed: {symbolToFind}");
 
 			var arity = node.Func.Args.Length;
 			var extFunc = new ExternFunction(modulePath.Value, symbolToFind, wrapper!, arity);
