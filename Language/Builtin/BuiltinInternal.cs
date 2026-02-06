@@ -111,7 +111,7 @@ public static class BuiltinInternal {
 			bool => "bool",
 			null => "null",
 			NullNode => "null",
-			CClass => "class",
+			CClass cl => cl.Name,
 			CObject c => c.Class.Name,
 			FunctionNode => "function",
 			InternalFunction => "function",
