@@ -832,7 +832,7 @@ namespace Cranberry {
 				}
 
 				// member access .foo
-				if (Check(".")) {
+				if (Check(".") || Check("::")) {
 					Advance(); // consume '.'
 					var memberTok = Advance()!;
 					if (!IsIdentifier(memberTok)) {
