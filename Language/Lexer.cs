@@ -11,7 +11,7 @@ public class Token(string value, int line, int col, string filename, string file
 	public readonly string FileName = filename;
 	public readonly string FilePath = filepath;
 
-	public override string ToString() => Value;
+	public override string ToString() => $"`{Value}` <{Line} : {Col}>";
 	public static explicit operator string(Token t) => t.Value;
 }
 
@@ -25,7 +25,7 @@ public class Lexer {
 	private readonly string FileName;
 	private readonly string FilePath;
 	private int Pos;
-	private int Line;
+	private int Line = 1;
 	private int Col;
 	private char? CurChar;
 
@@ -39,16 +39,16 @@ public class Lexer {
 	}
 
 	public void Advance() {
+		if (CurChar == '\n') {
+			Line++;
+			Col = -1;
+		} else Col++;
 		Pos += 1;
 		if (Pos < Text.Length) {
 			CurChar = Text[Pos];
 		} else {
 			CurChar = null; // CurChar should be null if there are no more characters
 		}
-		if (CurChar == '\n') {
-			Line++;
-			Col = -1;
-		} else Col++;
 	}
 
 	private static bool IsPunctuation(char? c) => c.HasValue && PUNCTUATION.Contains(c.Value);
@@ -294,7 +294,7 @@ public class Lexer {
 		return tokens;
 	}
 
-	public static void PrintTokens<T>(List<T> l) {
+	public static void PrintTokens(List<Token> l) {
 		Console.ForegroundColor = ConsoleColor.White;
 		Console.WriteLine("[TOKENS]: {");
 
@@ -302,7 +302,7 @@ public class Lexer {
 			Console.ForegroundColor = ConsoleColor.Green;
 			Console.Write($"    {i}");
 			Console.ForegroundColor = ConsoleColor.White;
-			Console.Write(",");
+			Console.WriteLine(",");
 		}
 
 		Console.WriteLine("\n}");

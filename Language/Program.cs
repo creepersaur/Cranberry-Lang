@@ -22,6 +22,7 @@ public class Program {
 			interpreter.env = original_env;
 
 			var tokens = new Lexer(text, path.Name, path.FullName).GetTokens();
+			// Lexer.PrintTokens(tokens);
 			var parser = new Parser(tokens.ToArray(), path);
 
 			var ast = new List<Node>(Math.Max(16, tokens.Count / 4));
@@ -65,6 +66,8 @@ public class Program {
 					return null;
 				} catch (ExecutionError e) {
 					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
+				} catch (AssertionError e) {
+					return ErrorPrinter.PrintError(e, $"AssertionError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
 				} catch (OutException) {
 				} catch (RuntimeError e) {
 					if (e.StartToken != null) {
@@ -81,17 +84,21 @@ public class Program {
 				} catch (ReturnException) {
 					return null;
 				} catch (ExecutionError e) {
-					return ErrorPrinter.PrintError(e, $"ExecutionError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
+					ErrorPrinter.PrintError(e, "ExecutionError");
+					return ErrorPrinter.PrintErrorLine(e.StartToken, null, false);
+				} catch (AssertionError e) {
+					ErrorPrinter.PrintError(e, "AssertionError");
+					return ErrorPrinter.PrintErrorLine(e.StartToken, null, false);
 				} catch (OutException) {
 				} catch (RuntimeError e) {
 					if (e.StartToken != null) {
-						ErrorPrinter.PrintError(e, $"RuntimeError at line {e.StartToken.Line}:{e.StartToken.Col + 1}, file `{e.StartToken.FileName}`");
+						ErrorPrinter.PrintError(e, "RuntimeError");
 						return ErrorPrinter.PrintErrorLine(e.StartToken, null, e.FullLine);
 					}
-					return ErrorPrinter.PrintError(e, $"RuntimeError");
+					return ErrorPrinter.PrintError(e, "RuntimeError");
 				} catch (ParseError e) {
-					ErrorPrinter.PrintError(e, $"ParseError at line {e.Token!.Line}:{e.Token!.Col}, file `{e.Token.FileName}`");
-					return ErrorPrinter.PrintErrorLine(e.Token, ConsoleColor.Magenta, e.FullLine);
+					ErrorPrinter.PrintError(e, "ParseError");
+					return ErrorPrinter.PrintErrorLine(e.Token!, ConsoleColor.Magenta, e.FullLine);
 				}
 			}
 		} finally {

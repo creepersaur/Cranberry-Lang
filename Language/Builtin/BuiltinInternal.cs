@@ -46,6 +46,23 @@ public static class BuiltinInternal {
 		throw new ExecutionError(start_token, output[..^1]);
 	}
 
+	public static Node Assert(Token start_token, object?[] args) {
+		if (args.Length == 0) {
+			throw new RuntimeError("`assert(condition, ...)` expects at least 1 argument.", start_token);
+		}
+
+		var condition = args[0];
+		if (Misc.IsTruthy(condition)) return new NullNode();
+
+		string output = "";
+
+		foreach (var t in args[1..]) {
+			output += Misc.FormatValue(t!) + " ";
+		}
+
+		throw new AssertionError(start_token, output[..^1]);
+	}
+
 	public static double ToNumber(object? arg) {
 		try {
 			if (arg is CString c)

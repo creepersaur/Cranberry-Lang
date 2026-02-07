@@ -10,3 +10,8 @@ public class ExecutionError(Token start_token, string message) : Exception(messa
 	public readonly Token StartToken = start_token;
 	public override string ToString() => $"ExecutionError: {Message}";
 }
+
+public class AssertionError(Token start_token, string message) : Exception(message) {
+	public readonly Token StartToken = start_token;
+	public override string ToString() => $"AssertionError: {Message}";
+}

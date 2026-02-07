@@ -10,6 +10,7 @@ public abstract class RegisterBuiltin {
 		env.Define("print", new InternalFunction((_, args) => BuiltinInternal.Print(args)));
 		env.Define("println", new InternalFunction((_, args) => BuiltinInternal.Print(args, true)));
 		env.Define("error", new InternalFunction((start_token, args) => BuiltinInternal.Error(start_token!, args)));
+		env.Define("assert", new InternalFunction((start_token, args) => BuiltinInternal.Assert(start_token!, args)));
 		env.Define("format", new InternalFunction((_, args) => BuiltinInternal.Format(args)));
 		
 		// Actually CastNode parsed internally, show function externally
