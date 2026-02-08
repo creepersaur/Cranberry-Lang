@@ -660,7 +660,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			Evaluate(statement);
 		}
 
-		return null;
+		return new NullNode(node.StartToken);
 	}
 
 	public object? VisitScope(ScopeNode node) {
