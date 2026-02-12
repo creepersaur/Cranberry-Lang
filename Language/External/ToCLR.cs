@@ -27,7 +27,7 @@ public static class ConvertCLR {
 	public static object? ToCranberry(object? obj) {
 		switch (obj) {
 			case null:
-				return null;
+				return new NullNode();
 			// Already a Cranberry runtime object
 			case CString:
 			case CList:
