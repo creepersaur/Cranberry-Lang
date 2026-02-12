@@ -69,6 +69,7 @@ public class N_Task : CNamespace {
 
 				return DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 			}),
+
 			["spawn"] = new InternalFunction((_, args) => {
 				if (args.Length < 1 || args[0] is not FunctionNode func)
 					throw new RuntimeError("spawn(fn, ...) expects first argument as function.");
@@ -76,12 +77,40 @@ public class N_Task : CNamespace {
 				var new_args = args.ToList();
 				new_args.RemoveAt(0);
 
-				var thread = new Thread(() => interpreter1.VisitFunctionCall(new FunctionCall(null, "", new_args.ToArray()) {
+				var task = Task.Run(() => interpreter1.VisitFunctionCall(new FunctionCall(null, "", [.. new_args]) {
 					Target = func
 				}));
-				thread.Start();
-				return new NullNode();
+
+				return new CTask(task);
 			}),
+
+			["Thread"] = new InternalFunction((_, args) => {
+				if (args.Length < 1 || args[0] is not FunctionNode func)
+					throw new RuntimeError("Thread(fn, ...) expects first argument as function.");
+
+				var new_args = args.ToList();
+				new_args.RemoveAt(0);
+
+				CThread cthread = null!;
+
+				var thread = new Thread(() => {
+					try {
+						var result = interpreter1.VisitFunctionCall(new FunctionCall(null, "", [.. new_args]) {
+							Target = func
+						});
+
+						cthread.SetResult(result);
+					} catch (Exception ex) {
+						cthread.SetException(ex);
+					}
+				});
+
+				cthread = new CThread(thread);
+
+				thread.Start();
+				return cthread;
+			}),
+
 			["stopwatch"] = new InternalFunction((_, args) => {
 				if (args.Length != 0)
 					throw new RuntimeError("stopwatch() expects 0 arguments.");

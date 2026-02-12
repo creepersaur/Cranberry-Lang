@@ -48,9 +48,9 @@ public class CPointer : IMemberAccessible, IDisposable {
 					return new NullNode();
 				}),
 
-				_ => throw new RuntimeError($"Tried getting unknown member `{member}` on type `string`")
+				_ => throw new RuntimeError($"Tried getting unknown member `{member}` on type `CPointer`")
 			};
 
-		throw new RuntimeError($"Tried getting unknown member `{member}` on type `string`");
+		throw new RuntimeError($"Tried getting unknown member `{member}` on type `CPointer`");
 	}
 }
