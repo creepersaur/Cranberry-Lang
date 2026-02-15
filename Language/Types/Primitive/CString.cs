@@ -77,6 +77,15 @@ public class CString(string value) : IMemberAccessible {
 					return new CString(Value.ToUpper());
 				}),
 
+				"reverse" => new InternalFunction((_, args) => {
+					if (args.Length != 0)
+						throw new RuntimeError("`reverse()` expects 0 arguments.");
+
+					char[] charArray = Value.ToCharArray();
+					Array.Reverse(charArray);
+					return new CString(new string(charArray));
+				}),
+
 				"split" => new InternalFunction((_, args) => {
 					if (args.Length > 1)
 						throw new RuntimeError("`split(separator)` expects 0-1 arguments.");

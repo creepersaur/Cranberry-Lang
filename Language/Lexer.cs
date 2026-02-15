@@ -64,6 +64,21 @@ public class Lexer {
 	}
 
 	private static string ProcessEscapeSequences(string str) {
+		// Handle Unicode escapes (\uHHHH) - 4 hex digits
+		str = System.Text.RegularExpressions.Regex.Replace(
+			str,
+			@"\\u([0-9A-Fa-f]{4})",
+			m => ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString()
+		);
+
+		// Handle hex escapes (\xHH)
+		str = System.Text.RegularExpressions.Regex.Replace(
+			str,
+			@"\\x([0-9A-Fa-f]{2})",
+			m => ((char)Convert.ToInt32(m.Groups[1].Value, 16)).ToString()
+		);
+
+		// Then handle regular escapes
 		return str.Replace("\\n", "\n")
 			.Replace("\\t", "\t")
 			.Replace("\\#", "#")
