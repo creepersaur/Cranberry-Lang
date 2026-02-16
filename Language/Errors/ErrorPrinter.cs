@@ -59,7 +59,7 @@ public abstract partial class ErrorPrinter {
 			Console.WriteLine($"{new string(' ', line_number.Length)}{start_indent}{new string('^', start_token.Value.Length)}");
 		}
 		if (start_token.Line < 2) {
-			Console.WriteLine(":");
+			Console.WriteLine("");
 		}
 		Console.ResetColor();
 		return null;
