@@ -1,2 +1,4 @@
-﻿bin/*
+﻿/obj
+/bin
+bin/*
 obj/*
