@@ -37,7 +37,7 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public Interpreter(bool is_build) {
 		IsBuild = is_build;
-		
+
 		var StdNamespace = new StandardNamespace(this);
 		Namespaces.Add("Std", StdNamespace);
 		env.DefineNamespace(StdNamespace);
@@ -401,47 +401,46 @@ public partial class Interpreter : INodeVisitor<object> {
 		var target = Evaluate(node.Target);
 
 		if (target is IMemberAccessible access) {
-			var currentValue = Evaluate(node.Value);
-			var other = Evaluate(new MemberAccessNode(node.StartToken, node.Target, node.Member));
+			var currentValue = Evaluate(new MemberAccessNode(node.StartToken, node.Target, node.Member));
 			object newValue;
 
 			switch (node.Op) {
 				case "+=":
 					if (node.Value == null) throw new RuntimeError("'+=' requires a value");
-					newValue = HandleAddition(other, currentValue);
+					newValue = HandleAddition(currentValue, currentValue);
 					break;
 
 				case "-=":
 					if (node.Value == null) throw new RuntimeError("'-=' requires a value");
-					newValue = Convert.ToDouble(other) - Convert.ToDouble(currentValue);
+					newValue = Convert.ToDouble(currentValue) - Convert.ToDouble(currentValue);
 					break;
 
 				case "*=":
 					if (node.Value == null) throw new RuntimeError("'*=' requires a value");
-					newValue = HandleMultiplication(other, currentValue);
+					newValue = HandleMultiplication(currentValue, currentValue);
 					break;
 
 				case "/=":
 					if (node.Value == null) throw new RuntimeError("'/=' requires a value");
-					newValue = Convert.ToDouble(other) / Convert.ToDouble(currentValue);
+					newValue = Convert.ToDouble(currentValue) / Convert.ToDouble(currentValue);
 					break;
 
 				case "^=":
 					if (node.Value == null) throw new RuntimeError("'^=' requires a value");
-					newValue = Math.Pow(Convert.ToDouble(other), Convert.ToDouble(currentValue));
+					newValue = Math.Pow(Convert.ToDouble(currentValue), Convert.ToDouble(currentValue));
 					break;
 
 				case "%=":
 					if (node.Value == null) throw new RuntimeError("'%=' requires a value");
-					newValue = Convert.ToDouble(other) % Convert.ToDouble(currentValue);
+					newValue = Convert.ToDouble(currentValue) % Convert.ToDouble(currentValue);
 					break;
 
 				case "++":
-					newValue = Convert.ToDouble(other) + 1;
+					newValue = Convert.ToDouble(currentValue) + 1;
 					break;
 
 				case "--":
-					newValue = Convert.ToDouble(other) - 1;
+					newValue = Convert.ToDouble(currentValue) - 1;
 					break;
 
 				default:
@@ -449,7 +448,9 @@ public partial class Interpreter : INodeVisitor<object> {
 			}
 
 			access.SetMember(Evaluate(node.Member), newValue);
-			return newValue;
+
+			if (node.IsPre) return newValue;
+			else return currentValue;
 		}
 
 		throw new RuntimeError($"Cannot access member '{node.Member}' on value '{target}'");
@@ -613,7 +614,9 @@ public partial class Interpreter : INodeVisitor<object> {
 		}
 
 		env.Set(node.Name, newValue);
-		return newValue;
+
+		if (node.IsPre) return newValue;
+		else return currentValue;
 	}
 
 	public object? VisitIF(IFNode node) {
@@ -1226,7 +1229,7 @@ public partial class Interpreter : INodeVisitor<object> {
 			var symbolToFind = explicitSymbol ?? funcName;
 
 			ExternalManager.RegisterManagedFunctionFromAssembly(modulePath.Value, symbolToFind);
-			
+
 			if (!ExternalManager.TryResolve(modulePath.Value, symbolToFind, out var wrapper))
 				throw new Exception($"Failed to register external function {symbolToFind} from {modulePath.Value}");
 

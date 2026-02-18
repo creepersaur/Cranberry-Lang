@@ -357,11 +357,11 @@ namespace Cranberry {
 				if (a == null) throw new ParseError("Unexpected EOF while parsing parameters.", a!);
 				args.Add(a.Value);
 				SkipNewlines();
-				
+
 				if (Check(":")) {
 					while (!Check(",") && !Check(")")) Advance();
 				}
-				
+
 				if (Check(",")) {
 					Advance();
 					SkipNewlines();
@@ -412,7 +412,7 @@ namespace Cranberry {
 
 		private LetNode ParseLet(bool constant = false) {
 			var start_token = PeekAhead()!;
-			
+
 			Advance();
 			var names = new List<object>();
 			var firstName = Advance();
@@ -429,7 +429,7 @@ namespace Cranberry {
 					}
 
 					destructured.Add(dName!.Value);
-					
+
 					SkipNewlines();
 
 					if (Check(":")) {
@@ -469,7 +469,7 @@ namespace Cranberry {
 						}
 
 						destructured.Add(dName!.Value);
-					
+
 						SkipNewlines();
 
 						if (Check(":")) {
@@ -494,14 +494,14 @@ namespace Cranberry {
 					}
 				}
 			}
-			
+
 			SkipNewlines();
 
 			// Initialization
 			if (Check("=")) {
 				var equals = Advance();
 				SkipNewlines();
-				
+
 				if (PeekAhead() == null) {
 					throw new ParseError("Expected value after `=`.", equals);
 				}
@@ -524,14 +524,14 @@ namespace Cranberry {
 			var start_token = PeekAhead()!;
 			Advance();
 			SkipNewlines();
-			
+
 			var name = Advance();
 			if (!IsIdentifier(name))
 				throw new ParseError($"Expected identifier as name. Got `{name}`", name ?? start_token);
 
 			return new SignalNode(start_token, name!.Value);
 		}
-		
+
 		private MatchNode ParseMatch() {
 			Token start_token = PeekAhead()!;
 			Advance();
@@ -583,7 +583,7 @@ namespace Cranberry {
 
 		private AssignmentNode ParseAssignment() {
 			Token start_token = PeekAhead()!;
-			
+
 			var names = new List<string>();
 			while (!Check("=")) {
 				var n = Advance();
@@ -618,13 +618,16 @@ namespace Cranberry {
 
 			string varName = varTok.Value;
 			string op = opTok.Value; // consume `+=`
+			bool is_pre = true;
 
 			Node? value = null;
-			if (op != "++" && op != "--") {
+			if (op is "++" or "--") {
+				is_pre = false;
+			} else {
 				value = ParseExpression(); // right side
 			}
 
-			return new ShorthandAssignmentNode(start_token, varName, op, value);
+			return new ShorthandAssignmentNode(start_token, varName, op, value, is_pre);
 		}
 
 
@@ -718,7 +721,7 @@ namespace Cranberry {
 
 		private Node ParseTerm() {
 			Token start_token = PeekAhead()!;
-			Node left = ParseUnary();
+			Node left = ParsePreIncrement();
 
 			while (PeekAhead() != null) {
 				var opTok = PeekAhead();
@@ -727,7 +730,7 @@ namespace Cranberry {
 				if (op != "*" && op != "/" && op != "%" && op != "//") break;
 
 				Advance();
-				Node right = ParseUnary();
+				Node right = ParsePreIncrement();
 				left = new BinaryOpNode(start_token, left, op, right);
 			}
 
@@ -763,6 +766,37 @@ namespace Cranberry {
 			return left;
 		}
 
+		private Node ParsePreIncrement() {
+			Token start_token = PeekAhead()!;
+			var tok = PeekAhead();
+			string token = tok?.Value ?? "";
+
+			if (token is "++" or "--") {
+				Advance();
+
+				var expr = ParseExpression();
+
+				if (expr is MemberAccessNode m) {
+					return new MemberShorthandAssignmentNode(
+						m.StartToken,
+						m.Target,
+						m.Member,
+						new NullNode(start_token),
+						token
+					);
+				} else if (expr is VariableNode v) {
+					return new ShorthandAssignmentNode(
+						v.StartToken,
+						v.Name,
+						token,
+						new NullNode(start_token)
+					);
+				}
+			}
+
+			return ParsePower();
+		}
+
 		private Node ParseUnary() {
 			Token start_token = PeekAhead()!;
 			var tok = PeekAhead();
@@ -774,7 +808,7 @@ namespace Cranberry {
 				return new UnaryOpNode(start_token, token, ParseUnary());
 			}
 
-			return ParsePower();
+			return ParsePreIncrement();
 		}
 
 		private Node ParsePower() {
@@ -842,16 +876,46 @@ namespace Cranberry {
 					if (Check("=")) {
 						Advance();
 						var value = ParseExpression();
-						node = new MemberAssignmentNode(memberTok, node, new StringNode(memberTok, memberTok.Value), value);
+						node = new MemberAssignmentNode(memberTok,
+							node,
+							new StringNode(
+								memberTok,
+								memberTok.Value
+							),
+							value
+						);
 					} else if (Check("+=") || Check("-=") || Check("*=") || Check("/=") || Check("^=") || Check("%=")) {
 						var opTok = Advance()!;
 						var value = ParseExpression();
-						node = new MemberShorthandAssignmentNode(memberTok, node, new StringNode(memberTok, memberTok.Value), value, opTok.Value);
+						node = new MemberShorthandAssignmentNode(memberTok,
+							node,
+							new StringNode(
+								memberTok,
+								memberTok.Value
+							),
+							value,
+							opTok.Value
+						);
 					} else if (Check("++") || Check("--")) {
 						var opTok = Advance()!;
-						node = new MemberShorthandAssignmentNode(memberTok, node, new StringNode(memberTok, memberTok.Value), new NullNode(start_token), opTok.Value);
+						node = new MemberShorthandAssignmentNode(
+							memberTok,
+							node,
+							new StringNode(memberTok,
+							memberTok.Value),
+							new NullNode(start_token),
+							opTok.Value,
+							false
+						);
 					} else {
-						node = new MemberAccessNode(memberTok, node, new StringNode(memberTok, memberTok.Value));
+						node = new MemberAccessNode(
+							memberTok,
+							node,
+							new StringNode(
+								memberTok,
+								memberTok.Value
+							)
+						);
 					}
 
 					continue;
@@ -867,16 +931,38 @@ namespace Cranberry {
 					if (Check("=")) {
 						Advance();
 						var value = ParseExpression();
-						node = new MemberAssignmentNode(start_token, node, member, value);
+						node = new MemberAssignmentNode(
+							start_token,
+							node,
+							member,
+							value
+						);
 					} else if (Check("+=") || Check("-=") || Check("*=") || Check("/=") || Check("^=") || Check("%=")) {
 						var opTok = Advance()!;
 						var value = ParseExpression();
-						node = new MemberShorthandAssignmentNode(start_token, node, member, value, opTok.Value);
+						node = new MemberShorthandAssignmentNode(
+							start_token,
+							node,
+							member,
+							value,
+							opTok.Value
+						);
 					} else if (Check("++") || Check("--")) {
 						var opTok = Advance()!;
-						node = new MemberShorthandAssignmentNode(start_token, node, member, new NullNode(start_token), opTok.Value);
+						node = new MemberShorthandAssignmentNode(
+							start_token,
+							node,
+							member,
+							new NullNode(start_token),
+							opTok.Value,
+							false
+						);
 					} else {
-						node = new MemberAccessNode(start_token, node, member);
+						node = new MemberAccessNode(
+							start_token,
+							node,
+							member
+						);
 					}
 
 					continue;
@@ -978,19 +1064,19 @@ namespace Cranberry {
 			Token start_token = PeekAhead()!;
 			var tokenTok = PeekAhead();
 			if (tokenTok == null) {
-				var lines = File.ReadLines(file_info.FullName).ToArray();	
+				var lines = File.ReadLines(file_info.FullName).ToArray();
 				throw new ParseError(
 					"Unexpected end of file [EOF]. Expected more tokens.",
 					new Token(
 						"[EOF]",
-						lines.Length, 
-						lines.Last().Length, 
-						file_info.Name, 
+						lines.Length,
+						lines.Last().Length,
+						file_info.Name,
 						file_info.FullName
 					)
 				);
 			}
-			
+
 			string token = tokenTok.Value;
 
 			// number literal
@@ -1090,7 +1176,7 @@ namespace Cranberry {
 
 					Expect(")");
 					Advance();
-					
+
 					return new FunctionCall(start_token, varName, args.ToArray());
 				}
 

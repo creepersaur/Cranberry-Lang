@@ -1,4 +1,8 @@
-match 1 + 3 {
-	2 => println("yes")
-	other => println("NO. The value is actually:\n\t", other)
+let d = {
+	"hello": {
+		"foo": 10
+	}
 }
+
+println(++d["hello"]["foo"])
+println(d)

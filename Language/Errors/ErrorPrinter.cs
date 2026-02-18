@@ -47,7 +47,11 @@ public abstract partial class ErrorPrinter {
 		if (start_token.Line > 1) {
 			line_number = "";
 			Console.ForegroundColor = color ?? ConsoleColor.Blue;
-			Console.Write($"  {start_token.Line + 1} |    ");
+			if (full_line) {
+				Console.Write($"  {start_token.Line + 1} |    ");
+			} else {
+				Console.Write($"  {start_token.Line + 1} |     ");
+			}
 		} else {
 			Console.Write("  ");
 		}

@@ -145,10 +145,11 @@ public class AssignmentNode(Token start_token, string[] names, Node[] values) : 
 	}
 }
 
-public class ShorthandAssignmentNode(Token start_token, string name, string op, Node? value) : Node(start_token) {
+public class ShorthandAssignmentNode(Token start_token, string name, string op, Node? value, bool is_pre = true) : Node(start_token) {
 	public readonly string Name = name;
 	public readonly string Op = op;
 	public readonly Node? Value = value;
+	public readonly bool IsPre = is_pre;
     
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitShorthandAssignment(this);
@@ -188,11 +189,12 @@ public class MemberAssignmentNode(Token start_token, Node target, Node member, o
 	public override string ToString() => $"{Target}.{Member}";
 }
 
-public class MemberShorthandAssignmentNode(Token start_token, Node target, Node member, Node value, string op) : Node(start_token) {
+public class MemberShorthandAssignmentNode(Token start_token, Node target, Node member, Node value, string op, bool is_pre = true) : Node(start_token) {
 	public readonly Node Target = target;
 	public readonly Node Member = member;
 	public readonly Node Value = value;
 	public readonly string Op = op;
+	public readonly bool IsPre = is_pre;
 
 	public override object? Accept<T>(INodeVisitor<T> visitor) {
 		return visitor.VisitMemberShorthandAssignment(this);
