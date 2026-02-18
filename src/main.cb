@@ -1,8 +1,1 @@
-let d = {
-	"hello": {
-		"foo": 10
-	}
-}
-
-println(++d["hello"]["foo"])
-println(d)
+println(-1)

@@ -721,7 +721,7 @@ namespace Cranberry {
 
 		private Node ParseTerm() {
 			Token start_token = PeekAhead()!;
-			Node left = ParsePreIncrement();
+			Node left = ParseUnary();
 
 			while (PeekAhead() != null) {
 				var opTok = PeekAhead();
@@ -730,7 +730,7 @@ namespace Cranberry {
 				if (op != "*" && op != "/" && op != "%" && op != "//") break;
 
 				Advance();
-				Node right = ParsePreIncrement();
+				Node right = ParseUnary();
 				left = new BinaryOpNode(start_token, left, op, right);
 			}
 
