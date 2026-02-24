@@ -76,6 +76,10 @@ namespace Cranberry {
 				return ParseFunctionDef();
 			}
 
+			if (token == "enum") {
+				return ParseEnumDef();
+			}
+
 			if (token == "class") {
 				return ParseClassDef();
 			}
@@ -579,6 +583,62 @@ namespace Cranberry {
 			Advance();
 
 			return new MatchNode(start_token, expr, cases.ToArray(), defaultCase);
+		}
+
+		private EnumDef ParseEnumDef() {
+			Token start_token = PeekAhead()!;
+			Advance();
+			SkipNewlines();
+
+			var NameToken = Advance();
+			if (!IsIdentifier(NameToken)) {
+				throw new ParseError("Function name must be an identifier.", NameToken!);
+			}
+
+			SkipNewlines();
+
+			Expect("{");
+			Advance();
+
+			SkipNewlines();
+			var members = new List<(string, Node)>();
+			var enum_id = 0;
+
+			while (!Check("}")) {
+				var member_name = Advance();
+				if (member_name == null)
+					throw new ParseError("Unexpected EOF while parsing parameters.", member_name!);
+				if (!IsIdentifier(member_name))
+					throw new ParseError("Enum member name should be an identifier.", member_name!);
+
+				SkipNewlines();
+
+				if (Check("=")) {
+					Advance();
+					SkipNewlines();
+
+					members.Add((
+						member_name.Value,
+						ParseExpression()
+					));
+				} else {
+					members.Add((
+						member_name.Value,
+						new NumberNode(member_name, enum_id++)
+					));
+				}
+
+				if (Check(",")) {
+					Advance();
+					SkipNewlines();
+				}
+			}
+
+			Expect("}");
+			Advance();
+			SkipNewlines();
+
+			return new EnumDef(start_token, NameToken!.Value, members.ToArray());
 		}
 
 		private AssignmentNode ParseAssignment() {
