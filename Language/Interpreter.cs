@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.ArrayExtensions;
+using System.Reflection;
 using System.Runtime.Loader;
 using System.Text.RegularExpressions;
 using Cranberry.Builtin;
@@ -620,8 +621,8 @@ public partial class Interpreter : INodeVisitor<object> {
 	}
 
 	public object? VisitIF(IFNode node) {
+		env.Push();
 		if (Misc.IsTruthy(Evaluate(node.Condition))) {
-			env.Push();
 			try {
 				return Evaluate(node.Then);
 			} catch (OutException re) {
@@ -629,6 +630,8 @@ public partial class Interpreter : INodeVisitor<object> {
 			} finally {
 				env.Pop();
 			}
+		} else {
+			env.Pop();
 		}
 
 		for (int i = 0; i < node.Elif.Length; i++) {
@@ -834,6 +837,16 @@ public partial class Interpreter : INodeVisitor<object> {
 
 	public object? VisitFunctionDef(FunctionDef node) {
 		env.Define(node.Name, new FunctionNode(node.StartToken, node.Args, node.Block!));
+		return null;
+	}
+
+	public object? VisitEnumDef(EnumDef node) {
+		Dictionary<string, object> members = new();
+		foreach (var (i, v) in node.Members) {
+			members.Add(i, Evaluate(v));
+		}
+
+		env.Define(node.Name, new CEnum(node.Name, members));
 		return null;
 	}
 

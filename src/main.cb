@@ -1,1 +1,7 @@
-println(-1)
+enum Hello {
+	INT,
+	PLUS
+}
+
+println(Hello::INT)
+println(Hello::PLUS)

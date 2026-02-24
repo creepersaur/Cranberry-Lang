@@ -39,6 +39,15 @@ public class FunctionDef(Token start_token, string name, string[] args, BlockNod
 	}
 }
 
+public class EnumDef(Token start_token, string name, (string, Node)[] members) : Node(start_token) {
+	public readonly string Name = name;
+	public readonly (string, Node)[] Members = members;
+	
+	public override object? Accept<T>(INodeVisitor<T> visitor) {
+		return visitor.VisitEnumDef(this);
+	}
+}
+
 public class ClassDef(Token start_token, string name, FunctionDef[] funcs, LetNode[] lets, FunctionNode? constructor) : Node(start_token) {
 	public readonly string Name = name;
 	public readonly FunctionDef[] Functions = funcs;
