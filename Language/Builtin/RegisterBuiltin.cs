@@ -47,7 +47,24 @@ public abstract class RegisterBuiltin {
 
 			return BuiltinInternal.AddrOf(args);
 		}));
-		
+
+		env.Define("exit", new InternalFunction((_, args) => {
+			if (args.Length > 0 && args[0] is double d) {
+				var exitCode = Convert.ToInt32(d);
+				Console.ForegroundColor = ConsoleColor.Magenta;
+				Console.WriteLine($"Exiting with exit code {exitCode}...");
+				Console.ForegroundColor = ConsoleColor.White;
+				Environment.Exit(exitCode);
+			} else {
+				Console.ForegroundColor = ConsoleColor.Magenta;
+				Console.WriteLine("Exiting with exit code 0...");
+				Console.ForegroundColor = ConsoleColor.White;
+				Environment.Exit(0);
+			}
+
+			return null;
+		}));
+
 		env.Define("pcall", new InternalFunction((_, args) => {
 			if (args.Length < 1)
 				throw new RuntimeError("`pcall(fn, ...)` expects at least one argument. (Function to be called)");

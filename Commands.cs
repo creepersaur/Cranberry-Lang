@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using Cranberry.Builtin;
+using Cranberry.Errors;
+using Cranberry.Nodes;
 using Cranberry.Packager;
 
 namespace Cranberry;
@@ -116,6 +118,84 @@ public static class Commands {
 
 	public static void New(List<string> args) {
 		Init($"{args[0]}/");
+	}
+
+	public static void Shell() {
+		var program = new Program(false);
+		var fileInfo = new FileInfo("<shell>");
+		
+		Console.ForegroundColor = ConsoleColor.Cyan;
+		Console.WriteLine("╔═════════════════════════════════════╗");
+		Console.WriteLine("║     Cranberry Interactive Shell     ║");
+		Console.WriteLine("║ Type 'exit()' or hit CTRL+C to quit ║");
+		Console.WriteLine("╚═════════════════════════════════════╝");
+		Console.ResetColor();
+		Console.WriteLine();
+
+		Console.CancelKeyPress += (s, e) => {
+			e.Cancel = true;
+			Environment.Exit(0);
+		};
+
+		while (true) {
+			Console.ForegroundColor = ConsoleColor.Green;
+			Console.Write(">| ");
+			Console.ResetColor();
+
+			var input = Console.ReadLine();
+			
+			if (string.IsNullOrWhiteSpace(input)) continue;
+
+			try {
+				var tokens = new Lexer(input, "<shell>", "<shell>").GetTokens();
+				var parser = new Parser(tokens.ToArray(), fileInfo);
+
+				while (parser.PeekAhead() != null) {
+					if (parser.Check(";") || parser.Check("\n")) {
+						parser.Advance();
+						continue;
+					}
+
+					var node = parser.Parse();
+					
+					try {
+						var result = program.RunNode(node, fileInfo);
+						
+						if (result != null && !(result is Node)) {
+							Console.ForegroundColor = ConsoleColor.Magenta;
+							Console.WriteLine($"→ {Misc.FormatValue(result, false)}");
+							Console.ResetColor();
+						}
+					} catch (ReturnException e) {
+						if (e.Value != null) {
+							Console.ForegroundColor = ConsoleColor.Magenta;
+							Console.WriteLine($"→ {Misc.FormatValue(e.Value, false)}");
+							Console.ResetColor();
+						}
+					} catch (RuntimeError e) {
+						Console.ForegroundColor = ConsoleColor.Red;
+						Console.WriteLine($"RuntimeError: {e.Message}");
+						Console.ResetColor();
+					} catch (ExecutionError e) {
+						Console.ForegroundColor = ConsoleColor.Red;
+						Console.WriteLine($"ExecutionError: {e.Message}");
+						Console.ResetColor();
+					}
+
+					if (parser.Check(";") || parser.Check("\n")) {
+						parser.Advance();
+					}
+				}
+			} catch (ParseError e) {
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine($"ParseError: {e.Message}");
+				Console.ResetColor();
+			} catch (Exception e) {
+				Console.ForegroundColor = ConsoleColor.Red;
+				Console.WriteLine($"Error: {e.Message}");
+				Console.ResetColor();
+			}
+		}
 	}
 
 	public static string TerminalFolderLink(string caption, string url) {

@@ -18,6 +18,7 @@ if (args.Length < 1 || args[0] == "help" || args[0] == "-h") {
 	Console.WriteLine(" > --version | -v       [Get the current version*.]");
 	Console.WriteLine(" > init                 [Initialize a new project in the working directory]");
 	Console.WriteLine(" > new <name>           [Create a new project in a new directory]");
+	Console.WriteLine(" > shell                [Start an interactive Cranberry shell]");
 	Console.WriteLine(" > <file> <args>        [Run the project]");
 	Console.WriteLine(" > run <args>           [Run the project]");
 	Console.WriteLine(" > build                [Build the project into a standalone package (in /build/debug)]");
@@ -40,6 +41,8 @@ if (File.Exists(cmd)) {
 	Commands.RunFile(cmd);
 } else if (cmd == "run") {
 	Commands.RunProgram();
+} else if (cmd == "shell") {
+	Commands.Shell();
 } else if (cmd == "build") {
 	Commands.Build(Args);
 } else if (cmd == "init") {
