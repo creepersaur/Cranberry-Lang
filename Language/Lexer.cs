@@ -42,11 +42,11 @@ public class Lexer {
 			CurChar = Text[0]; // Initialize current character at the start
 	}
 
-	public void Reset(string? text = null) {
+	public void Reset(string? text = null, char? new_instr = null) {
 		Pos = -1;
 		Line = -1;
 		CurChar = null;
-		InStr = null;
+		InStr = new_instr;
 		if (text is string t) Text = t.ToCharArray();
 		Advance();
 	}

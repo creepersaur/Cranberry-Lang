@@ -5,11 +5,10 @@ namespace Cranberry;
 
 class Shell {
 	public static bool multilineActive = false;
-	public static char? inString = null;
+	static char? old_instr = null;
 	static int parenCount = 0;
 	static int bracketCount = 0;
 	static int braceCount = 0;
-	static List<char> quotes = new();
 	static string[] keywords = ["let", "const", "enum", "class", "constructor", "using", "namespace", "in", "loop", "while", "for", "break", "return", "out", "continue", "fn", "if", "else", "@", "=>"];
 	static string[] constants = ["true", "false", "nil"];
 	static Lexer lexer = new("", "<stdio>", "<stdio>", false);
@@ -23,10 +22,13 @@ class Shell {
 			Console.ForegroundColor = ConsoleColor.Black;
 			Console.Write("... ");
 		} else {
+			lexer.InStr = null;
 			Console.ForegroundColor = ConsoleColor.Green;
 			Console.Write(">>> ");
 		}
 		Console.ResetColor();
+
+		old_instr = lexer.InStr;
 
 		while (true) {
 			var keyInfo = Console.ReadKey(true);
@@ -43,14 +45,12 @@ class Shell {
 			}
 
 			// 2. Handle Editing
-			if (keyInfo.Key == ConsoleKey.Enter) {
-				multilineActive = IsIncomplete();
-				break;
-			}
 			if (keyInfo.Key == ConsoleKey.Backspace && cursorIndex > 0) {
+				MultilineDeletionFix(buffer[cursorIndex - 1]);
 				buffer.Remove(cursorIndex - 1, 1);
 				cursorIndex--;
 			} else if (keyInfo.Key == ConsoleKey.Delete && cursorIndex < buffer.Length) {
+				MultilineDeletionFix(buffer[cursorIndex]);
 				buffer.Remove(cursorIndex, 1);
 			} else if (keyInfo.Key == ConsoleKey.Tab) {
 				const int tabSize = 4;
@@ -66,41 +66,16 @@ class Shell {
 			}
 
 			// Handle multi-lines
-			if (keyInfo.KeyChar == '(') {
-				parenCount++;
-			} else if (keyInfo.KeyChar == ')') {
-				parenCount--;
-			}
-
-			if (keyInfo.KeyChar == '[') {
-				bracketCount++;
-			} else if (keyInfo.KeyChar == ']') {
-				bracketCount--;
-			}
-
-			if (keyInfo.KeyChar == '{') {
-				braceCount++;
-			} else if (keyInfo.KeyChar == '}') {
-				braceCount--;
-			}
-
-			if (keyInfo.KeyChar == '"' || keyInfo.KeyChar == '\'' || keyInfo.KeyChar == '`') {
-				if (quotes.Contains(keyInfo.KeyChar)) {
-					quotes.Remove(keyInfo.KeyChar);
-				} else if (quotes.Count == 0) {
-					quotes.Add(keyInfo.KeyChar);
-				}
-			}
+			HandleMultilines(keyInfo);
 
 			// Redraw the line
 			RenderLine(buffer.ToString(), 0);
-			Console.SetCursorPosition(promptWidth + cursorIndex, Console.CursorTop);
-		}
+			if (keyInfo.Key == ConsoleKey.Enter) {
+				multilineActive = IsIncomplete();
+				break;
+			}
 
-		if (quotes.Count > 0) {
-			inString = quotes[0];
-		} else {
-			inString = null;
+			Console.SetCursorPosition(promptWidth + cursorIndex, Console.CursorTop);
 		}
 
 		return buffer.ToString();
@@ -119,8 +94,7 @@ class Shell {
 
 		Console.ResetColor();
 
-		lexer.Reset(text);
-		lexer.InStr = inString;
+		lexer.Reset(text, old_instr);
 		var tokens = lexer.GetTokens();
 
 		foreach ((int i, Token match) in tokens.WithIndex()) {
@@ -135,6 +109,8 @@ class Shell {
 			else if (constants.Contains(token))
 				Console.ForegroundColor = ConsoleColor.Red; // Highlight constants
 			else if (token.StartsWith("\"") || token.StartsWith("'") || token.StartsWith("`"))
+				Console.ForegroundColor = ConsoleColor.DarkYellow; // Highlight strings
+			else if (token.EndsWith("\"") || token.EndsWith("'") || token.EndsWith("`"))
 				Console.ForegroundColor = ConsoleColor.DarkYellow; // Highlight strings
 			else if (token == "self")
 				Console.ForegroundColor = ConsoleColor.Red; // Highlight `self`
@@ -164,7 +140,42 @@ class Shell {
 	}
 
 	public static bool IsIncomplete() {
-		return parenCount > 0 || bracketCount > 0 || braceCount > 0
-				|| quotes.Count > 0;
+		return parenCount > 0 || bracketCount > 0 || braceCount > 0 || lexer.InStr != null;
+	}
+
+	static void HandleMultilines(ConsoleKeyInfo keyInfo) {
+		if (keyInfo.KeyChar == '(') {
+			parenCount++;
+		} else if (keyInfo.KeyChar == ')') {
+			parenCount--;
+		}
+
+		if (keyInfo.KeyChar == '[') {
+			bracketCount++;
+		} else if (keyInfo.KeyChar == ']') {
+			bracketCount--;
+		}
+
+		if (keyInfo.KeyChar == '{') {
+			braceCount++;
+		} else if (keyInfo.KeyChar == '}') {
+			braceCount--;
+		}
+	}
+
+	static void MultilineDeletionFix(char c) {
+		if (c == '(') {
+			parenCount--;
+		} else if (c == ')') {
+			parenCount++;
+		} else if (c == '[') {
+			braceCount--;
+		} else if (c == ']') {
+			braceCount++;
+		} else if (c == '{') {
+			braceCount--;
+		} else if (c == '}') {
+			braceCount++;
+		}
 	}
 }
