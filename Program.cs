@@ -42,7 +42,7 @@ if (File.Exists(cmd)) {
 } else if (cmd == "run") {
 	Commands.RunProgram();
 } else if (cmd == "shell") {
-	Commands.Shell();
+	Commands.RunShell();
 } else if (cmd == "build") {
 	Commands.Build(Args);
 } else if (cmd == "init") {

@@ -120,7 +120,7 @@ public static class Commands {
 		Init($"{args[0]}/");
 	}
 
-	public static void Shell() {
+	public static void RunShell() {
 		var program = new Program(false);
 		var fileInfo = new FileInfo("<shell>");
 		
@@ -138,11 +138,14 @@ public static class Commands {
 		};
 
 		while (true) {
-			Console.ForegroundColor = ConsoleColor.Green;
-			Console.Write(">| ");
-			Console.ResetColor();
-
-			var input = Console.ReadLine();
+			var input_lines = new List<string>{Shell.GetInput()};
+			Console.WriteLine();
+			
+			while (Shell.multilineActive) {
+				input_lines.Add(Shell.GetInput());
+				Console.WriteLine();
+			}
+			var input = string.Join("\n", input_lines);
 			
 			if (string.IsNullOrWhiteSpace(input)) continue;
 
@@ -162,14 +165,14 @@ public static class Commands {
 						var result = program.RunNode(node, fileInfo);
 						
 						if (result != null && !(result is Node)) {
-							Console.ForegroundColor = ConsoleColor.Magenta;
-							Console.WriteLine($"→ {Misc.FormatValue(result, false)}");
+							Console.ForegroundColor = ConsoleColor.Black;
+							Console.WriteLine($"{Misc.FormatValue(result, true)}");
 							Console.ResetColor();
 						}
 					} catch (ReturnException e) {
 						if (e.Value != null) {
 							Console.ForegroundColor = ConsoleColor.Magenta;
-							Console.WriteLine($"→ {Misc.FormatValue(e.Value, false)}");
+							Console.WriteLine($"{Misc.FormatValue(e.Value, true)}");
 							Console.ResetColor();
 						}
 					} catch (RuntimeError e) {

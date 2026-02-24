@@ -4,38 +4,51 @@ using System.Text;
 
 namespace Cranberry;
 
-public class Token(string value, int line, int col, string filename, string filepath) {
+public class Token(string value, int line, int col, string filename, string filepath, bool instr) {
 	public readonly string Value = value;
 	public readonly int Line = line;
 	public readonly int Col = col;
 	public readonly string FileName = filename;
 	public readonly string FilePath = filepath;
+	public bool InStr = instr;
 
 	public override string ToString() => $"`{Value}` <{Line} : {Col}>";
 	public static explicit operator string(Token t) => t.Value;
 }
 
 public class Lexer {
-	private static readonly char[] PUNCTUATION = "\n!@$%^&*()[]{},./:;\\-=+~<>?".ToCharArray();
+	private static readonly char[] PUNCTUATION = " \t\n!@$%^&*()[]{},./:;\\-=+~<>?".ToCharArray();
 	public static readonly char[] QUOTES = "\"\'`".ToCharArray();
 	private static readonly char[] SPACE = " \t\r".ToCharArray(); // NOTE: \n is in punctuation
 	private static readonly string[] DOUBLE_PUNCS = "+= -= *= /= ++ -- // .. == != >= <= => ?? :: && ||".Split();
 
-	private readonly char[] Text;
+	public char[] Text;
+	public char? InStr = null;
 	private readonly string FileName;
 	private readonly string FilePath;
 	private int Pos;
 	private int Line = 1;
 	private int Col;
 	private char? CurChar;
+	private bool IgnoreWhiteSpace = true;
 
-	public Lexer(string text, string filename, string filepath) {
+	public Lexer(string text, string filename, string filepath, bool whitepsace = true) {
 		Text = text.ToCharArray();
 		FileName = filename;
 		FilePath = filepath;
+		IgnoreWhiteSpace = whitepsace;
 
 		if (Text.Length > 0)
 			CurChar = Text[0]; // Initialize current character at the start
+	}
+
+	public void Reset(string? text = null) {
+		Pos = -1;
+		Line = -1;
+		CurChar = null;
+		InStr = null;
+		if (text is string t) Text = t.ToCharArray();
+		Advance();
 	}
 
 	public void Advance() {
@@ -53,7 +66,7 @@ public class Lexer {
 
 	private static bool IsPunctuation(char? c) => c.HasValue && PUNCTUATION.Contains(c.Value);
 	private static bool IsQuote(char? c) => c.HasValue && QUOTES.Contains(c.Value);
-	private static bool IsSpace(char? c) => c.HasValue && SPACE.Contains(c.Value);
+	private bool IsSpace(char? c) => IgnoreWhiteSpace && c.HasValue && SPACE.Contains(c.Value);
 	private static bool IsHexDigit(char c) => Uri.IsHexDigit(c);
 
 	private static int HexValue(char c) {
@@ -90,13 +103,12 @@ public class Lexer {
 	}
 
 	public void Add(List<Token> tokens, string t) {
-		tokens.Add(new Token(t, Line, Col - t.Length, FileName, FilePath));
+		tokens.Add(new Token(t, Line, Col - t.Length, FileName, FilePath, InStr != null));
 	}
 
 	public List<Token> GetTokens() {
 		var tokens = new List<Token>();
 		var curToken = "";
-		char? instr = null;
 		bool in_comment = false;
 		bool escaped = false;
 		Line = 1;
@@ -220,7 +232,7 @@ public class Lexer {
 
 
 			// Handle escape sequences inside strings
-			if (instr.HasValue && escaped) {
+			if (InStr.HasValue && escaped) {
 				curToken += CurChar;
 				escaped = false;
 				Advance();
@@ -228,26 +240,26 @@ public class Lexer {
 			}
 
 			// Check for backslash (escape character) inside strings
-			if (instr.HasValue && CurChar == '\\') {
+			if (InStr.HasValue && CurChar == '\\') {
 				curToken += CurChar;
 				escaped = true;
 				Advance();
 				continue;
 			}
 
-			if (IsSpace(CurChar) && !instr.HasValue) {
+			if (IsSpace(CurChar) && !InStr.HasValue) {
 				if (curToken.Length > 0) {
 					Add(tokens, curToken);
 					curToken = "";
 				}
-			} else if (CurChar == '#' && !instr.HasValue) {
+			} else if (CurChar == '#' && !InStr.HasValue) {
 				if (curToken.Length > 0) {
 					Add(tokens, curToken);
 					curToken = "";
 				}
 
 				in_comment = true;
-			} else if (IsPunctuation(CurChar) && !instr.HasValue) {
+			} else if (IsPunctuation(CurChar) && !InStr.HasValue) {
 				if (curToken.Length > 0 && curToken[^1] is 'e' or 'E' && float.TryParse(curToken[..^1], out float _) && CurChar is '+' or '-') {
 					curToken += CurChar;
 					Advance();
@@ -275,9 +287,9 @@ public class Lexer {
 					}
 				}
 			} else if (IsQuote(CurChar)) {
-				if (instr.HasValue) {
-					if (instr == CurChar) {
-						instr = null;
+				if (InStr.HasValue) {
+					if (InStr == CurChar) {
+						InStr = null;
 						curToken += CurChar;
 
 						Add(tokens, ProcessEscapeSequences(curToken));
@@ -292,7 +304,7 @@ public class Lexer {
 						Add(tokens, curToken);
 						curToken = "";
 					}
-					instr = CurChar;
+					InStr = CurChar;
 				}
 
 				curToken += CurChar;

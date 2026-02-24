@@ -31,7 +31,7 @@ namespace Cranberry {
 			if (got != token) {
 				throw new ParseError(
 					$"Expected '{token}', got '{got}'",
-					ahead ?? new Token("[EOF]", tokens[Pos - 1].Line, tokens[Pos - 1].Col + 2, tokens[Pos - 1].FileName, tokens[Pos - 1].FilePath)
+					ahead ?? new Token("[EOF]", tokens[Pos - 1].Line, tokens[Pos - 1].Col + 2, tokens[Pos - 1].FileName, tokens[Pos - 1].FilePath, false)
 				);
 			}
 		}
@@ -1132,7 +1132,8 @@ namespace Cranberry {
 						lines.Length,
 						lines.Last().Length,
 						file_info.Name,
-						file_info.FullName
+						file_info.FullName,
+						false
 					)
 				);
 			}
@@ -1316,7 +1317,7 @@ namespace Cranberry {
 			while (PeekAhead() != null && IsNewline()) Advance();
 		}
 
-		private static bool IsIdentifier(Token? token) {
+		public static bool IsIdentifier(Token? token) {
 			if (token == null) return false;
 			var v = token.Value;
 			if (v.Length == 0) return false;
