@@ -4,26 +4,28 @@ using System.Text;
 
 namespace Cranberry;
 
-public class Token(string value, int line, int col, string filename, string filepath, bool instr) {
+public class Token(string value, int line, int col, string filename, string filepath, bool instr, bool is_comment = false) {
 	public readonly string Value = value;
 	public readonly int Line = line;
 	public readonly int Col = col;
 	public readonly string FileName = filename;
 	public readonly string FilePath = filepath;
 	public bool InStr = instr;
+	public bool IsComment = is_comment;
 
 	public override string ToString() => $"`{Value}` <{Line} : {Col}>";
 	public static explicit operator string(Token t) => t.Value;
 }
 
 public class Lexer {
-	private static readonly char[] PUNCTUATION = " \t\n!@$%^&*()[]{},./:;\\-=+~<>?".ToCharArray();
+	private static readonly char[] PUNCTUATION = " \t\n!@$%^#&*()[]{},./:;\\-=+~<>?".ToCharArray();
 	public static readonly char[] QUOTES = "\"\'`".ToCharArray();
 	private static readonly char[] SPACE = " \t\r".ToCharArray(); // NOTE: \n is in punctuation
 	private static readonly string[] DOUBLE_PUNCS = "+= -= *= /= ++ -- // .. == != >= <= => ?? :: && ||".Split();
 
 	public char[] Text;
 	public char? InStr = null;
+	private bool InComment = false;
 	private readonly string FileName;
 	private readonly string FilePath;
 	private int Pos;
@@ -31,12 +33,14 @@ public class Lexer {
 	private int Col;
 	private char? CurChar;
 	private bool IgnoreWhiteSpace = true;
+	private bool LexComments = false;
 
-	public Lexer(string text, string filename, string filepath, bool whitepsace = true) {
+	public Lexer(string text, string filename, string filepath, bool whitepsace = true, bool lex_comments = false) {
 		Text = text.ToCharArray();
 		FileName = filename;
 		FilePath = filepath;
 		IgnoreWhiteSpace = whitepsace;
+		LexComments = lex_comments;
 
 		if (Text.Length > 0)
 			CurChar = Text[0]; // Initialize current character at the start
@@ -103,21 +107,26 @@ public class Lexer {
 	}
 
 	public void Add(List<Token> tokens, string t) {
-		tokens.Add(new Token(t, Line, Col - t.Length, FileName, FilePath, InStr != null));
+		tokens.Add(new Token(t, Line, Col - t.Length, FileName, FilePath, InStr != null, InComment));
 	}
 
 	public List<Token> GetTokens() {
 		var tokens = new List<Token>();
 		var curToken = "";
-		bool in_comment = false;
 		bool escaped = false;
 		Line = 1;
 		Col = 0;
+		InComment = false;
 
 		while (CurChar.HasValue) {
-			if (in_comment) {
+			if (InComment) {
 				if (CurChar == '\n') {
-					in_comment = false;
+					if (LexComments)
+						Add(tokens, curToken);
+						curToken = "";
+					InComment = false;
+				} else {
+					if (LexComments) curToken += CurChar;
 				}
 
 				Advance();
@@ -230,7 +239,6 @@ public class Lexer {
 				}
 			}
 
-
 			// Handle escape sequences inside strings
 			if (InStr.HasValue && escaped) {
 				curToken += CurChar;
@@ -258,7 +266,8 @@ public class Lexer {
 					curToken = "";
 				}
 
-				in_comment = true;
+				InComment = true;
+				if (LexComments) curToken += CurChar;
 			} else if (IsPunctuation(CurChar) && !InStr.HasValue) {
 				if (curToken.Length > 0 && curToken[^1] is 'e' or 'E' && float.TryParse(curToken[..^1], out float _) && CurChar is '+' or '-') {
 					curToken += CurChar;

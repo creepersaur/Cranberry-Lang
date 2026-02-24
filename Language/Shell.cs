@@ -11,7 +11,7 @@ class Shell {
 	static int braceCount = 0;
 	static string[] keywords = ["let", "const", "enum", "class", "constructor", "using", "namespace", "in", "loop", "while", "for", "break", "return", "out", "continue", "fn", "if", "else", "@", "=>"];
 	static string[] constants = ["true", "false", "nil"];
-	static Lexer lexer = new("", "<stdio>", "<stdio>", false);
+	static Lexer lexer = new("", "<stdio>", "<stdio>", false, true);
 
 	public static string GetInput() {
 		StringBuilder buffer = new StringBuilder();
@@ -100,7 +100,9 @@ class Shell {
 		foreach ((int i, Token match) in tokens.WithIndex()) {
 			string token = match.Value;
 
-			if (match.InStr) {
+			if (match.IsComment)
+				Console.ForegroundColor = ConsoleColor.Black;
+			else if (match.InStr) {
 				Console.ForegroundColor = ConsoleColor.DarkYellow; // Highlight InStrings
 			} else if (keywords.Contains(token))
 				Console.ForegroundColor = ConsoleColor.Magenta;
