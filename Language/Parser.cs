@@ -834,7 +834,7 @@ namespace Cranberry {
 			if (token is "++" or "--") {
 				Advance();
 
-				var expr = ParseExpression();
+				var expr = ParsePower();
 
 				if (expr is MemberAccessNode m) {
 					return new MemberShorthandAssignmentNode(
@@ -862,10 +862,10 @@ namespace Cranberry {
 			var tok = PeekAhead();
 			string token = tok?.Value ?? "";
 
-			if (token is "-" or "+" or "!" or "$") {
+			while (token is "-" or "+" or "!" or "$") {
 				Advance();
 
-				return new UnaryOpNode(start_token, token, ParseUnary());
+				return new UnaryOpNode(start_token, token, ParsePreIncrement());
 			}
 
 			return ParsePreIncrement();
